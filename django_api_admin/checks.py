@@ -1,3 +1,15 @@
+# -----------------------------------------------------------------------------
+# Portions of this file are from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+#
+# Additional code copyright (c) 2021 Muhammad Salah
+# Licensed under the MIT License
+#
+# This file includes both Django code and your my own contributions.
+# -----------------------------------------------------------------------------
+
 import collections
 from itertools import chain
 
@@ -799,7 +811,7 @@ class APIModelAdminChecks(APIBaseModelAdminChecks):
             return inline(obj.model, obj.admin_site).check()
 
     def _check_list_display(self, obj):
-        """Check that list_display only contains fields or usable attributes."""
+        """Check list_display only contains fields or usable attributes."""
 
         if not isinstance(obj.list_display, (list, tuple)):
             return must_be(

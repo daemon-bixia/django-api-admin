@@ -144,3 +144,4 @@ node_modules
 **/**.sql
 todo
 todo.md
+.notes

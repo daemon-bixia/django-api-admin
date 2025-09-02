@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# The code in this file is from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+# -----------------------------------------------------------------------------
+
 from django_api_admin.utils import get_model_from_relation
 from django_api_admin.exceptions import NotRelationField
 from django_api_admin.constants.vars import LOOKUP_SEP

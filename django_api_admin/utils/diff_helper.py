@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# The code in this file is from amirasaran (https://github.com/amirasaran)
+# Copyright (c) 2018 amirasaran
+# Licensed under the MIT License
+# -----------------------------------------------------------------------------
+
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _
 
