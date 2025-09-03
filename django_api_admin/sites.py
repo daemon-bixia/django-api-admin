@@ -201,7 +201,7 @@ class APIAdminSite():
 
         urlpatterns = [
             path('index/', self.get_index_view(), name='index'),
-            re_path(app_index_route, self.get_app_index_view(), name='app_list'),
+            re_path(app_index_route, self.get_app_index_view(), name='app_index'),
             path('user_info/', self.get_user_info_view(), name='user_info'),
             path('token/', self.get_token_view(), name='token_obtain_pair'),
             path('token/refresh/', self.get_token_refresh_view(),
@@ -232,7 +232,7 @@ class APIAdminSite():
             root_urls = [url for url in urlpatterns if
                          isinstance(url, URLPattern) and url.name]
             root_view = AdminAPIRootView.as_view(
-                root_urls=root_urls)
+                root_urls=root_urls, admin_site=self)
             urlpatterns.append(path('', root_view, name='api-root'))
         # add the swagger-ui url
         if self.include_swagger_ui_view:
