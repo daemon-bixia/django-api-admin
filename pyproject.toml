@@ -1,0 +1,33 @@
+[project]
+name = "django-api-admin"
+version = "1.2.2"
+description = "A RESTful API implementation of django.contrib.admin, designed for writing custom frontends."
+authors = [{name = "Muhammad Salah", email = "msbizzacc0unt@outlook.com"}]
+license-files = ["LICENSE", "LICENSE-*"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",  # Or your chosen license
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "django",
+    "djangorestframework",
+    "djangorestframework-simplejwt",
+    "drf-spectacular"
+]
+
+[project.optional-dependencies]
+dev = ["django-cors-headers"]
+
+[project.urls]
+Github = "https://github.com/demon-bixia/django-api-admin"
+
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["assets/**"]
+source-exclude = ["<root>/api_admin"]
+
+[build-system]
+requires = ["uv_build>=0.8.13,<0.9.0"]
+build-backend = "uv_build"

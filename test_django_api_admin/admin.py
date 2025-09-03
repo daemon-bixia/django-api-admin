@@ -74,6 +74,7 @@ class AuthorAPIAdmin(APIModelAdmin):
 # register in default admin site
 class BookInline(admin.TabularInline):
     model = Book
+    filter_horizontal = ('credits',)
 
 
 class PublisherAdmin(admin.ModelAdmin):
@@ -104,8 +105,6 @@ class AuthorAdmin(admin.ModelAdmin):
     )
     # a list of field names to exclude from the add/change form.
     exclude = ('gender',)
-
-    filter_horizontal = ('credits',)
 
     inlines = [BookInline]
 
