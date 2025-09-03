@@ -10,7 +10,7 @@ def tag_paths(urls, endpoints, site, result, tag_name):
             if result['paths'].get(endpoint_url, None):
                 endpoint_url_path = endpoint[1][1:] if endpoint[1].startswith(
                     '/') else endpoint[1]
-                if str(url.pattern) == endpoint_url_path and url.name != site.swagger_url_name:
+                if str(url.pattern) == endpoint_url_path:
                     for method, body in result['paths'][endpoint_url].items():
                         result['paths'][endpoint_url][method] = {
                             **body,
@@ -23,7 +23,7 @@ def modify_schema(result, generator, request, public):
     # change the api info
     result['info'] = {
         'title': _('Django API Admin'),
-        'description': _('A rewrite of django.contrib.admin as a Restful API, intended for use'
+        'description': _('A rewrite of django.contrib.admin as a Restful API, intended for use\t'
                          'in the process of creating custom admin panels using frontend frameworks like'
                          'react, and vue while maintaining an API similar to django.contrib.admin.'),
         'contact': 'msbizzacc0unt@gmail.com',

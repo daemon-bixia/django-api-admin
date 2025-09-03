@@ -13,16 +13,16 @@
 """
 API admin site.
 """
+from copy import copy
 from weakref import WeakSet
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.base import ModelBase
-from django.urls import (NoReverseMatch, URLPattern, include, path, re_path,
+from django.urls import (NoReverseMatch, URLPattern,  path, re_path, include,
                          reverse)
 from django.utils.text import capfirst
-from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
@@ -86,7 +86,6 @@ class APIAdminSite():
     admin_urls = {}
 
     # used for dynamically tagging views when generating schemas
-    swagger_url_name = "swagger-ui"
     url_prefix = None
 
     def __init__(self, include_auth=True, name="api_admin"):
@@ -167,7 +166,7 @@ class APIAdminSite():
             if not model._meta.swapped:
                 if options:
                     options['__module__'] = __name__
-                    admin_class = type("%APIAdmin" %
+                    admin_class = type("%sAPIAdmin" %
                                        model.__name__, (admin_class,), options)
 
                 # Instantiate the admin class to save in the registry
@@ -194,8 +193,15 @@ class APIAdminSite():
         return model in self._registry
 
     def get_urls(self):
+        # create the app index view route
+        valid_app_labels = set(model._meta.app_label for model,
+                               _ in self._registry.items())
+        app_index_route = r'^(?P<app_label>' + \
+            '|'.join(valid_app_labels) + ')/$'
+
         urlpatterns = [
             path('index/', self.get_index_view(), name='index'),
+            re_path(app_index_route, self.get_app_index_view(), name='app_list'),
             path('user_info/', self.get_user_info_view(), name='user_info'),
             path('token/', self.get_token_view(), name='token_obtain_pair'),
             path('token/refresh/', self.get_token_refresh_view(),
@@ -210,49 +216,44 @@ class APIAdminSite():
                  name='site_context'),
             path('admin_log/', self.get_admin_log_view(),
                  name='admin_log'),
-            path('schema/', self.get_schema_view(), name='schema')
         ]
 
-        # add the app index view
-        valid_app_labels = set(model._meta.app_label for model,
-                               model_admin in self._registry.items())
-        regex = r'^(?P<app_label>' + '|'.join(valid_app_labels) + ')/$'
-        urlpatterns.append(
-            re_path(regex, self.get_app_index_view(), name='app_list'))
+        # add view on site view
+        if self.include_view_on_site_view:
+            urlpatterns.append(path(
+                'on_site/<int:content_type_id>/<path:object_id>/',
+                self.get_view_on_site_view(),
+                name='view_on_site',
+            ))
+        # add api_root for browseable api
+        if self.include_root_view:
+            from django_api_admin.admin_views.admin_site_views.admin_api_root import AdminAPIRootView
 
-        self.site_urls = urlpatterns
-
+            root_urls = [url for url in urlpatterns if
+                         isinstance(url, URLPattern) and url.name]
+            root_view = AdminAPIRootView.as_view(
+                root_urls=root_urls)
+            urlpatterns.append(path('', root_view, name='api-root'))
         # add the swagger-ui url
         if self.include_swagger_ui_view:
             urlpatterns.append(path('schema/swagger-ui/',
                                     self.get_docs_view(),
-                                    name=self.swagger_url_name))
-        # add view on site view
-        if self.include_view_on_site_view:
-            urlpatterns.append(path(
-                'r/<int:content_type_id>/<path:object_id>/',
-                self.get_view_on_site_view(),
-                name='view_on_site',
-            ))
-        # add api_root for browsable api
-        if self.include_root_view:
-            from django_api_admin.admin_views.admin_site_views.admin_api_root import AdminAPIRootView
+                                    name="swagger-ui"))
 
-            # remove detail, redirect urls and urls with no names
-            excluded_url_names = ['app_list',
-                                  'view_on_site', 'language_catalog']
-            root_urls = [url for url in urlpatterns if
-                         isinstance(url, URLPattern) and url.name and url.name not in excluded_url_names]
-            root_view = AdminAPIRootView.as_view(
-                root_urls=root_urls)
-            urlpatterns.append(path('', root_view, name='api-root'))
+        # save these urls under site_urls for schema tagging
+        self.site_urls = copy(urlpatterns)
 
-        # finally add the model_admin urls
+        # add the model_admin urls
         for model, model_admin in self._registry.items():
             self.admin_urls[model] = model_admin.urls
-
         urlpatterns += [url for urls in self.admin_urls.values()
                         for url in urls]
+
+        # finally add the schema url and update the site_urls
+        schema_path = path(
+            'schema/', self.get_schema_view([path(f"{self.url_prefix}/", include(urlpatterns))]), name='schema')
+        urlpatterns.append(schema_path)
+        self.site_urls.append(schema_path)
 
         return urlpatterns
 
@@ -499,10 +500,10 @@ class APIAdminSite():
         }
         return ViewOnSiteView.as_view(**defaults)
 
-    def get_schema_view(self):
+    def get_schema_view(self, urlconf):
         from drf_spectacular.views import SpectacularAPIView
 
-        return SpectacularAPIView.as_view()
+        return SpectacularAPIView.as_view(urlconf=urlconf)
 
     def get_docs_view(self):
         from drf_spectacular.views import SpectacularSwaggerView
