@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
@@ -48,9 +48,13 @@ class AddView(APIView):
         serializer = self.serializer_class()
         data['fields'] = get_form_fields(serializer)
         data['config'] = get_form_config(self.model_admin)
-        inlines = get_inlines(request, self.model_admin)
-        if len(inlines):
-            data['inlines'] = inlines
+
+        # Include the model_admin's inlines in the form representation
+        if not self.model_admin.is_inline:
+            inlines = get_inlines(request, self.model_admin)
+            if len(inlines):
+                data['inlines'] = inlines
+
         return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):

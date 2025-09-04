@@ -13,7 +13,7 @@
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import models
-from django.urls import include, path
+from django.urls import path
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, smart_split, unescape_string_literal
@@ -32,7 +32,7 @@ from django_api_admin.constants.vars import LOOKUP_SEP
 
 class APIModelAdmin(BaseAPIModelAdmin):
     """
-    provides a restful version of django.contrib.admin.options.ModelAdmin.
+    Provides a restful version of django.contrib.admin.options.ModelAdmin.
     everything that is ui specific is handled by the ui
     filtering is also handled by the ui
     """
@@ -59,7 +59,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
     actions_selection_counter = True
     checks_class = APIModelAdminChecks
 
-    # these are the admin options used to customize the change list page interface
+    # These are the admin options used to customize the change list page interface
     # server-side customizations like list_select_related and actions are not included
     changelist_options = [
         # actions options
@@ -331,10 +331,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
                  name='%s_%s_change' % info),
         ]
 
-        # add Inline admins urls
-        for inline_class in self.inlines:
-            inline = inline_class(self.model, self.admin_site)
-            urlpatterns += inline.urls
+        # Add Inline admins urls
+        for inline_admin in self.get_inline_instances(None):
+            urlpatterns += inline_admin.urls
         return urlpatterns
 
     @property

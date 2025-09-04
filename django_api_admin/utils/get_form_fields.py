@@ -1,5 +1,3 @@
-from django.utils.translation import gettext_lazy as _
-
 from rest_framework import serializers
 from rest_framework.fields import _UnvalidatedField
 from rest_framework.utils.field_mapping import get_field_kwargs
@@ -16,13 +14,16 @@ def get_form_fields(serializer, change=False):
 
     # loop all serializer fields
     for name, field in serializer.fields.items():
-        # don't create a form field for the pk field
+        # Don't create a form field for the pk field, read_only, hidden, hyper linking, or method fields
         if name != 'pk' and not field.read_only and type(field).__name__ not in ['HiddenField',
                                                                                  'ReadOnlyField',
                                                                                  'SerializerMethodField',
                                                                                  'HyperlinkedIdentityField']:
-            # if it's a model field then get attributes for the child field not the model field it self
-            if type(field) == serializers.ModelField:
+
+            # If it's a ModelField then get the attributes of the mapped_field not the ModelField itself
+            # Hint: ModelField is a dynamic field ModelSerializers use to map a Django Model's Field instance to the...
+            # ...correct DRF Serializer class
+            if isinstance(type(field), serializers.ModelField):
                 field_kwargs = get_field_kwargs(
                     field.model_field.verbose_name, field.model_field)
                 field_kwargs.pop('model_field')
@@ -32,13 +33,13 @@ def get_form_fields(serializer, change=False):
             form_field = get_field_attributes(
                 name, field, change, serializer)
 
-            # include child fields
-            if type(field) in [serializers.ListField, serializers.DictField, serializers.HStoreField] and type(form_field['attrs']['child']) != _UnvalidatedField:
+            # Include child field for composite fields i.e ListField, DictField, HStoreField
+            if type(field) in [serializers.ListField, serializers.DictField, serializers.HStoreField] and isinstance(type(form_field['attrs']['child']), _UnvalidatedField):
                 form_field['attrs']['child'] = get_field_attributes(field.child.field_name, field.child,
                                                                     change,
                                                                     serializer)
-            # if no child set child to null
-            elif type(form_field['attrs'].get('child', None)) is _UnvalidatedField:
+            # If no child set child to null
+            elif isinstance(type(form_field['attrs'].get('child', None)), _UnvalidatedField):
                 form_field['attrs']['child'] = None
 
             form_fields.append(form_field)

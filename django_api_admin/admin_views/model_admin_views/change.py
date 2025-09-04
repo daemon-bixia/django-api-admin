@@ -49,9 +49,13 @@ class ChangeView(APIView):
         data = dict()
         data['fields'] = get_form_fields(serializer, change=True)
         data['config'] = get_form_config(self.model_admin)
-        inlines = get_inlines(request, self.model_admin, obj=obj)
-        if inlines:
-            data['inlines'] = inlines
+
+        # Include the model_admin's inlines in the form representation
+        if not self.model_admin.is_inline:
+            inlines = get_inlines(request, self.model_admin, obj=obj)
+            if inlines:
+                data['inlines'] = inlines
+
         return Response(data, status=status.HTTP_200_OK)
 
     def update(self, request, object_id):
