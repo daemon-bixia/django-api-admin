@@ -97,7 +97,7 @@ class BaseAPIModelAdmin:
 
         # dynamically construct a model serializer
         self.serializer_class = type(data['parent_class'])(
-            f'{self.model.__name__}AdminSerializer',
+            f'{'Inline' if self.is_inline else ''}{self.model.__name__}AdminSerializer',
             (data['parent_class'],),
             attrs
         )

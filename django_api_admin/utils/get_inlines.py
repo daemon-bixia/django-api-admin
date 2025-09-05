@@ -34,6 +34,7 @@ def get_inlines(request, model_admin, obj=None):
             for instance in related_instances:
                 serializer = serializer_class(instance=instance)
                 fields = get_form_fields(serializer, change=True)
+                # Hint: fk field value is inferred automatically from obj
                 remove_field(fields, fk.name)
                 fieldsets.append({'pk': instance.pk, 'fields': fields})
             inline['fieldsets'] = fieldsets
@@ -42,6 +43,8 @@ def get_inlines(request, model_admin, obj=None):
             serializer = serializer_class()
             fields = get_form_fields(serializer)
             # Remove the foreign key field used to tie the inline_model admin with the model_admin.
+            # Hint: we don't need to include the fk field in the form because it's inferred automatically based..
+            # ...on the data of the new object being added
             remove_field(fields, fk.name)
             inline['fields'] = fields
 

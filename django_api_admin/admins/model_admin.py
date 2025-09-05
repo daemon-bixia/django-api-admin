@@ -13,7 +13,7 @@
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import models
-from django.urls import path
+from django.urls import path, include
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, smart_split, unescape_string_literal
@@ -310,30 +310,29 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return actions
 
     def get_urls(self):
-        info = self.model._meta.app_label, self.model._meta.model_name
+        info = f'{self.model._meta.app_label}_{self.model._meta.model_name}'
         prefix = f'{self.model._meta.app_label}/{self.model._meta.model_name}'
         urlpatterns = [
-            path(f'{prefix}/list/', self.get_list_view(),
-                 name='%s_%s_list' % info),
+            path(f'{prefix}/list/', self.get_list_view(), name=f'{info}_list'),
             path(f'{prefix}/changelist/', self.get_changelist_view(),
-                 name='%s_%s_changelist' % info),
-            path(f'{prefix}/perform_action/', self.get_handle_action_view(),
-                 name='%s_%s_perform_action' % info),
-            path(f'{prefix}/add/', self.get_add_view(),
-                 name='%s_%s_add' % info),
-            path(f'{prefix}/<path:object_id>/detail/', self.get_detail_view(),
-                 name='%s_%s_detail' % info),
-            path(f'{prefix}/<path:object_id>/delete/', self.get_delete_view(),
-                 name='%s_%s_delete' % info),
+                 name=f'{info}_changelist'),
+            path(f'{prefix}/perform_action/',
+                 self.get_handle_action_view(), name=f'{info}_perform_action'),
+            path(f'{prefix}/add/', self.get_add_view(), name=f'{info}_add'),
+            path(f'{prefix}/<path:object_id>/detail/',
+                 self.get_detail_view(), name=f'{info}_detail'),
+            path(f'{prefix}/<path:object_id>/delete/',
+                 self.get_delete_view(), name=f'{info}_delete'),
             path(f'{prefix}/<path:object_id>/history/',
-                 self.get_history_view(), name='%s_%s_history' % info),
-            path(f'{prefix}/<path:object_id>/change/', self.get_change_view(),
-                 name='%s_%s_change' % info),
+                 self.get_history_view(), name=f'{info}_history'),
+            path(f'{prefix}/<path:object_id>/change/',
+                 self.get_change_view(), name=f'{info}_change'),
         ]
 
         # Add Inline admins urls
         for inline_admin in self.get_inline_instances(None):
-            urlpatterns += inline_admin.urls
+            urlpatterns.append(
+                path(f'{prefix}/inlines/', include(inline_admin.urls)))
         return urlpatterns
 
     @property

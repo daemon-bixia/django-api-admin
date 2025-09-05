@@ -71,7 +71,11 @@ class AuthorAPIAdmin(APIModelAdmin):
         return obj.age > 10
 
 
+site.register(Book)
+
 # register in default admin site
+
+
 class BookInline(admin.TabularInline):
     model = Book
     filter_horizontal = ('credits',)

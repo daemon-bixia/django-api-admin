@@ -62,47 +62,45 @@ class AddView(APIView):
         Handle POST requests to add a new instance of the model.
         """
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
-            # if the user doesn't have added permission respond with permission denied
+            # If the user doesn't have add_permission respond with permission denied
             if not self.model_admin.has_add_permission(request):
                 raise PermissionDenied
 
-            # validate data and send
+            # Validate the new_object data
             serializer = self.serializer_class(
                 data=request.data.get('data', {}))
             if serializer.is_valid():
-                # create the new object
+                # Create the `data` object in the request body used to create the new_object
                 opts = self.model_admin.model._meta
                 new_object = serializer.save()
                 msg = _(
                     f'The {opts.verbose_name} “{str(new_object)}” was added successfully.')
 
-                # setup arguments used to log additions
-                change_object = new_object
-
-                # log addition of the new instance
-                self.model_admin.log_addition(request, change_object, [{'added': {
+                # Log addition of the new instance
+                self.model_admin.log_addition(request, new_object, [{'added': {
                     'name': str(new_object._meta.verbose_name),
                     'object': str(new_object),
                 }}])
 
-                # process bulk additions
+                # Process inline bulk additions
                 created_inlines = []
                 if request.data.get("create_inlines", None):
+                    # Validate the create_inlines data
                     valid_serializers = validate_bulk_edits(
                         request, self.model_admin, new_object)
-                    # save the inline data in a transaction.
+                    # Save the inline data (inside a transaction).
                     for inline_serializer in valid_serializers:
                         inline_serializer.save()
-                    # return the data to the user.
+                    # Return the data to the user.
                     created_inlines = [
                         inline_serializer.data for inline_serializer in valid_serializers]
 
-                # return the appropriate 201 response based on the data
+                # Return the appropriate 201 response based on the data
                 data = {'data': serializer.data, 'detail': msg}
                 if len(created_inlines):
                     data['created_inlines'] = created_inlines
 
                 return Response(data, status=status.HTTP_201_CREATED)
-            else:
-                # return a 400 response indicating failure
-                return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+            # return a 400 response indicating failure
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
