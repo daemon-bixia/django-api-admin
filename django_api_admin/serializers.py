@@ -296,6 +296,14 @@ class FormFieldsSerializer(serializers.Serializer):
     fields = FieldSerializer(many=True)
 
 
+class URLsSerializer(serializers.Serializer):
+    url = serializers.URLField()
+
+
+class APIRootSerializer(serializers.Serializer):
+    urls = URLsSerializer(many=True)
+
+
 class TokensSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     access = serializers.CharField()

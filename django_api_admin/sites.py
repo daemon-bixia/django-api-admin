@@ -200,7 +200,7 @@ class APIAdminSite():
             '|'.join(valid_app_labels) + ')/$'
 
         urlpatterns = [
-            path('index/', self.get_index_view(), name='index'),
+            path('app_list/', self.get_app_list_view(), name='index'),
             re_path(app_index_route, self.get_app_index_view(), name='app_index'),
             path('user_info/', self.get_user_info_view(), name='user_info'),
             path('token/', self.get_token_view(), name='token_obtain_pair'),
@@ -327,7 +327,7 @@ class APIAdminSite():
                     'name': apps.get_app_config(app_label).verbose_name,
                     'app_label': app_label,
                     'app_url': reverse(
-                        f'{self.name}:app_list',
+                        f'{self.name}:app_index',
                         kwargs={'app_label': app_label},
                         current_app=self.name,
                     ),
@@ -385,15 +385,15 @@ class APIAdminSite():
             'user': self.user_serializer(read_only=True),
         })
 
-    def get_index_view(self):
-        from django_api_admin.admin_views.admin_site_views.index import IndexView
+    def get_app_list_view(self):
+        from django_api_admin.admin_views.admin_site_views.app_list import AppListView
 
         defaults = {
             'permission_classes': self.default_permission_classes,
             'authentication_classes': self.authentication_classes,
             'admin_site': self
         }
-        return IndexView.as_view(**defaults)
+        return AppListView.as_view(**defaults)
 
     def get_app_index_view(self):
         from django_api_admin.admin_views.admin_site_views.app_index import AppIndexView

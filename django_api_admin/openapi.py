@@ -179,6 +179,28 @@ class APIResponseExamples:
             status_codes=["200"],
         )
 
+    @staticmethod
+    def root_urls():
+        return OpenApiExample(
+            name=_("Success Response"),
+            summary=_("Example of a response containing the root urls"),
+            description=_("Root point for browsing the REST API"),
+            value={
+                "index": "http://localhost:8000/api_admin/app_list/",
+                "auth_app_index": "http://localhost:8000/api_admin/auth/",
+                "test_django_api_admin_app_index": "http://localhost:8000/api_admin/test_django_api_admin/",
+                "user_info": "http://localhost:8000/api_admin/user_info/",
+                "token_obtain_pair": "http://localhost:8000/api_admin/token/",
+                "token_refresh": "http://localhost:8000/api_admin/token/refresh/",
+                "password_change": "http://localhost:8000/api_admin/password_change/",
+                "autocomplete": "http://localhost:8000/api_admin/autocomplete/",
+                "language_catalog": "http://localhost:8000/api_admin/jsoni18n/",
+                "site_context": "http://localhost:8000/api_admin/site_context/",
+                "admin_log": "http://localhost:8000/api_admin/admin_log/"
+            },
+            status_codes=["200"],
+        )
+
 
 class CommonAPIResponses:
     """Collection of standardized OpenAPI response templates."""
