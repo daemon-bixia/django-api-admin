@@ -6,6 +6,8 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+
 from django_api_admin.utils.quote import unquote
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
@@ -14,9 +16,17 @@ class DetailView(APIView):
     """
     GET one instance of this model using pk and to_fields.
     """
-    permission_classes = []
     serializer_class = None
+    permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     model_admin = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
+
 
     def get(self, request, object_id):
         # validate the reverse to field reference

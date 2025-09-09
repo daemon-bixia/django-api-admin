@@ -1,11 +1,9 @@
-from django.utils.translation import gettext_lazy as _
-
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 
-from rest_framework.views import APIView
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 
 class ListView(APIView):
@@ -15,7 +13,14 @@ class ListView(APIView):
 
     serializer_class = None
     permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     model_admin = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
 
     def get(self, request):
         queryset = self.model_admin.get_queryset()

@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema
 
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+
 from django_api_admin.serializers import AppListSerializer
 from django_api_admin.openapi import CommonAPIResponses
 
@@ -17,7 +19,14 @@ class AppListView(APIView):
     apps that have been registered by the admin site.
     """
     permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     admin_site = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
 
     @extend_schema(
         operation_id="admin_root",

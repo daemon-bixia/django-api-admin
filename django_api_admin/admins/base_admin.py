@@ -13,7 +13,6 @@
 import copy
 
 from django.contrib.auth import get_permission_codename
-from django.utils.translation import gettext as _
 
 from rest_framework.serializers import ModelSerializer
 

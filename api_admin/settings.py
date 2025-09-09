@@ -15,6 +15,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 # Applications definition
 
 INSTALLED_APPS = [
@@ -32,6 +39,12 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'drf_spectacular',
+    # required auth apps
+    'allauth',
+    'allauth.account',
+    'allauth.headless',
+    # optional auth apps
+    'allauth.mfa',
 ]
 
 MIDDLEWARE = [
@@ -44,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = 'api_admin.urls'
@@ -120,7 +134,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ORIGIN_WHITELIST = (
     'http://localhost',  # jest-dom test server
-    'http://localhost:3000',  # react developement server
+    'http://localhost:3000',  # react development server
 )
 
 CORS_ALLOW_CREDENTIALS = True
@@ -139,14 +153,4 @@ SPECTACULAR_SETTINGS = {
         'drf_spectacular.hooks.postprocess_schema_enums',
         'django_api_admin.hooks.modify_schema'
     ]
-}
-
-SIMPLE_JWT = {
-    # Set access token lifetime to 1 day
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    # Set refresh token lifetime to 7 days
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
-    'UPDATE_LAST_LOGIN': False,
 }

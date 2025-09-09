@@ -7,9 +7,10 @@ from rest_framework.views import APIView
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
-from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.label_for_field import label_for_field
@@ -24,9 +25,16 @@ class ChangeListView(APIView):
     Return a JSON object representing the django admin changelist table.
     supports querystring filtering, pagination and search also changes based on list display.
     """
-    permission_classes = []
     serializer_class = ChangelistResponseSerializer
+    permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     model_admin = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
 
     @extend_schema(
         parameters=[ChangeListSerializer],
@@ -111,7 +119,7 @@ class ChangeListView(APIView):
                         pass
 
                     # if the value is null set result_repr to empty_value_display
-                    if value == None:
+                    if value is None:
                         result_repr = empty_value_display
 
                 except ObjectDoesNotExist:

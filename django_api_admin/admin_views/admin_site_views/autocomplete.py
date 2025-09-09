@@ -18,7 +18,8 @@ from rest_framework.exceptions import PermissionDenied, ParseError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import APIView
+
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
@@ -31,7 +32,14 @@ class AutoCompleteView(APIView):
     API view for handling autocomplete functionality in admin fields.
     """
     permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     admin_site = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
 
     @extend_schema(
         parameters=[AutoCompleteSerializer],

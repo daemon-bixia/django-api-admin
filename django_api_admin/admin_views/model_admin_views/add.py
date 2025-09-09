@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
+from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.validate_bulk_edits import validate_bulk_edits
@@ -23,7 +25,14 @@ class AddView(APIView):
     """
     serializer_class = None
     permission_classes = []
+    authentication_classes = [XSessionTokenAuthentication,]
     model_admin = None
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        if not len(initkwargs.get('authentication_classes', [])): 
+            initkwargs['authentication_classes'] = cls.authentication_classes
+        return super().as_view(**initkwargs)
 
     @extend_schema(
         responses={
