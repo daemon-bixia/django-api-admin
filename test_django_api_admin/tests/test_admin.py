@@ -12,7 +12,6 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.admin import site
 
-from django_api_admin.utils.force_login import force_login
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
 

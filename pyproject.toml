@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["django-cors-headers"]
+optimal = ["django-cors-headers"]
 
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
@@ -28,6 +28,16 @@ module-root = ""
 source-include = ["assets/**"]
 source-exclude = ["<root>/api_admin"]
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "api_admin.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+
+
 [build-system]
 requires = ["uv_build>=0.8.13,<0.9.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest-django>=4.11.1",
+]
