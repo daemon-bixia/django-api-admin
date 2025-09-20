@@ -32,7 +32,20 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.user.save()
 
         # authenticate the superuser
-        force_login(self.client, self.user)
+        url = reverse('api_admin:headless:browser:account:current_session')
+        self.client.get(url)
+
+        # extract the cookie from the client and add it to the next request's headers
+        csrf_token = self.client.cookies.get('csrftoken')._value
+
+        # send the login request
+        url = reverse('api_admin:headless:browser:account:login')
+        self.client.post(url,
+                         data={
+                             'username': self.user.username,
+                             'password': 'password'},
+                         headers={'X-CSRFToken': csrf_token},
+                         format="json")
 
         # create some valid authors
         Author.objects.create(name="muhammad", age=60,

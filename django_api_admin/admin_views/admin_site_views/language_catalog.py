@@ -3,6 +3,7 @@ import json
 from django.utils.translation import gettext_lazy as _
 from django.views.i18n import JSONCatalog
 
+from rest_framework import status, authentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,7 +21,10 @@ class LanguageCatalogView(APIView):
       to be used by a client site javascript library
     """
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     admin_site = None
 
     @classmethod

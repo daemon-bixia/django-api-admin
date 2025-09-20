@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, authentication
 from rest_framework.exceptions import ParseError
 from rest_framework.views import APIView
 
@@ -19,7 +19,10 @@ class AppIndexView(APIView):
     """
     serializer_class = AppIndexSerializer
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     admin_site = None
 
     @classmethod

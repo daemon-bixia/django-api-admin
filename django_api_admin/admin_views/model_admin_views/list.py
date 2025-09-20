@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import status, authentication
 from rest_framework.views import APIView
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
@@ -13,7 +13,10 @@ class ListView(APIView):
 
     serializer_class = None
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     model_admin = None
 
     @classmethod

@@ -17,7 +17,7 @@ from django.core.exceptions import FieldDoesNotExist
 from rest_framework.exceptions import PermissionDenied, ParseError
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, authentication
 
 from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
@@ -32,7 +32,10 @@ class AutoCompleteView(APIView):
     API view for handling autocomplete functionality in admin fields.
     """
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     admin_site = None
 
     @classmethod

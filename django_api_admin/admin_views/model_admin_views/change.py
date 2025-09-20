@@ -1,7 +1,7 @@
 from django.db import router, transaction
 from django.utils.translation import gettext_lazy as _
 
-from rest_framework import status
+from rest_framework import status, authentication
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound, ParseError
 from rest_framework.views import APIView
@@ -28,7 +28,10 @@ class ChangeView(APIView):
     """
     serializer_class = None
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     model_admin = None
 
     @classmethod

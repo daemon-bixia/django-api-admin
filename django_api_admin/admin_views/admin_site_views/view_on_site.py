@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import authentication
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
@@ -21,7 +22,10 @@ class ViewOnSiteView(APIView):
     Handles GET requests to retrieve an object's view URL on the site.
     """
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     admin_site = None
 
     @classmethod

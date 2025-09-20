@@ -2,7 +2,7 @@ from django.db.models import Model
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 
-from rest_framework import status
+from rest_framework import status, authentication
 from rest_framework.views import APIView
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
@@ -27,12 +27,15 @@ class ChangeListView(APIView):
     """
     serializer_class = ChangelistResponseSerializer
     permission_classes = []
-    authentication_classes = [XSessionTokenAuthentication,]
+    authentication_classes = [
+        authentication.SessionAuthentication,
+        XSessionTokenAuthentication,
+    ]
     model_admin = None
 
     @classmethod
     def as_view(cls, **initkwargs):
-        if not len(initkwargs.get('authentication_classes', [])): 
+        if not len(initkwargs.get('authentication_classes', [])):
             initkwargs['authentication_classes'] = cls.authentication_classes
         return super().as_view(**initkwargs)
 
