@@ -30,6 +30,7 @@ from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagi
 from django_api_admin.permissions import IsAdminUser
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
+from rest_framework import authentication
 
 all_sites = WeakSet()
 
@@ -70,8 +71,8 @@ class APIAdminSite():
     # URL for the "View site" link at the top of each admin page.
     site_url = "/"
 
-    # The authentication class used by the admin views
-    authentication_classes = []
+    # List of authentication classes used by the admin views that require authentication
+    authentication_classes = None
 
     enable_nav_sidebar = True
 
@@ -242,10 +243,6 @@ class APIAdminSite():
         urlpatterns.append(schema_path)
         self.site_urls.append(schema_path)
 
-        # Add the django-allauth urls
-        allauth_path = path('_allauth/', include('allauth.headless.urls'))
-        urlpatterns.append(allauth_path)
-
         return urlpatterns
 
     @property
@@ -376,12 +373,22 @@ class APIAdminSite():
             'user': self.user_serializer(read_only=True),
         })
 
+    def get_authentication_classes(self):
+        """
+        Returns the authentication classes used by the views
+        """
+        from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+
+        if self.authentication_classes is None:
+            return [XSessionTokenAuthentication, authentication.SessionAuthentication]
+        return self.authentication_classes
+
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
         return AppListView.as_view(**defaults)
@@ -391,7 +398,7 @@ class APIAdminSite():
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
         return AppIndexView.as_view(**defaults)
@@ -402,7 +409,7 @@ class APIAdminSite():
         defaults = {
             'permission_classes': self.default_permission_classes,
             'serializer_class': self.password_change_serializer,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
         return PasswordChangeView.as_view(**defaults)
@@ -412,7 +419,7 @@ class APIAdminSite():
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
         return LanguageCatalogView.as_view(**defaults)
@@ -422,7 +429,7 @@ class APIAdminSite():
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
         return AutoCompleteView.as_view(**defaults)
@@ -432,7 +439,7 @@ class APIAdminSite():
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
         return SiteContextView.as_view(**defaults)
@@ -444,7 +451,7 @@ class APIAdminSite():
             'permission_classes': self.default_permission_classes,
             'pagination_class': self.default_log_pagination_class,
             'serializer_class': self.get_log_entry_serializer(),
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
         return AdminLogView.as_view(**defaults)
@@ -455,7 +462,7 @@ class APIAdminSite():
         defaults = {
             'permission_classes': self.default_permission_classes,
             'serializer_class': self.user_serializer,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
         return UserInformation.as_view(**defaults)
@@ -465,7 +472,7 @@ class APIAdminSite():
 
         defaults = {
             'permission_classes': self.default_permission_classes,
-            'authentication_classes': self.authentication_classes,
+            'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
         return ViewOnSiteView.as_view(**defaults)

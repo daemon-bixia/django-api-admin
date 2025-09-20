@@ -1,12 +1,11 @@
 from django.utils.translation import gettext_lazy as _
 
-from rest_framework import status, authentication
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
-from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
@@ -22,17 +21,7 @@ class HandleActionView(APIView):
     Preform admin actions on objects using json.
     """
     permission_classes = []
-    authentication_classes = [
-        authentication.SessionAuthentication,
-        XSessionTokenAuthentication,
-    ]
     model_admin = None
-
-    @classmethod
-    def as_view(cls, **initkwargs):
-        if not len(initkwargs.get('authentication_classes', [])): 
-            initkwargs['authentication_classes'] = cls.authentication_classes
-        return super().as_view(**initkwargs)
 
     @extend_schema(
         responses={

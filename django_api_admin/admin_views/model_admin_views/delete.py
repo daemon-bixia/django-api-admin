@@ -1,14 +1,13 @@
 from django.db import router, transaction
 from django.utils.translation import gettext_lazy as _
 
-from rest_framework import status, authentication
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
-from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.constants.vars import TO_FIELD_VAR
@@ -22,17 +21,7 @@ class DeleteView(APIView):
     """
     serializer_class = ResponseMessageSerializer
     permission_classes = []
-    authentication_classes = [
-        authentication.SessionAuthentication,
-        XSessionTokenAuthentication,
-    ]
     model_admin = None
-
-    @classmethod
-    def as_view(cls, **initkwargs):
-        if not len(initkwargs.get('authentication_classes', [])): 
-            initkwargs['authentication_classes'] = cls.authentication_classes
-        return super().as_view(**initkwargs)
 
     @extend_schema(
         responses={

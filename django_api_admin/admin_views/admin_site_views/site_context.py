@@ -1,12 +1,11 @@
 # from django.utils.translation import gettext_lazy as _
 
-from rest_framework import status, authentication
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema
 
-from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
 
 from django_api_admin.serializers import SiteContextSerializer
 from django_api_admin.openapi import CommonAPIResponses
@@ -17,17 +16,7 @@ class SiteContextView(APIView):
     Returns the Attributes of AdminSite class (e.g. site_title, site_header)
     """
     permission_classes = []
-    authentication_classes = [
-        authentication.SessionAuthentication,
-        XSessionTokenAuthentication,
-    ]
     admin_site = None
-
-    @classmethod
-    def as_view(cls, **initkwargs):
-        if not len(initkwargs.get('authentication_classes', [])): 
-            initkwargs['authentication_classes'] = cls.authentication_classes
-        return super().as_view(**initkwargs)
 
     @extend_schema(
         responses={

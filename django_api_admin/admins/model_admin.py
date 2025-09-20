@@ -449,7 +449,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
         defaults = {
             'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return ChangeListView.as_view(**defaults)
@@ -459,7 +459,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
         defaults = {
             'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return HandleActionView.as_view(**defaults)
@@ -470,7 +470,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         defaults = {
             'permission_classes': self.admin_site.default_permission_classes,
             'serializer_class': self.admin_site.log_entry_serializer,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return HistoryView.as_view(**defaults)
