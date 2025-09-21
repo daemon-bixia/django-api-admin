@@ -191,7 +191,7 @@ class APIAdminSite():
             '|'.join(valid_app_labels) + ')/$'
 
         urlpatterns = [
-            path('app_list/', self.get_app_list_view(), name='index'),
+            path('index/', self.get_app_list_view(), name='index'),
             re_path(app_index_route, self.get_app_index_view(), name='app_index'),
             path('user_info/', self.get_user_info_view(), name='user_info'),
             path('password_change/', self.get_password_change_view(),

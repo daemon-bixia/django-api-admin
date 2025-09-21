@@ -1,12 +1,11 @@
 from django.contrib.auth import get_user_model
-from django.urls import path, reverse, NoReverseMatch
+from django.urls import include, path, reverse, NoReverseMatch
 
 from rest_framework.test import APITestCase, URLPatternsTestCase
 
 from test_django_api_admin.admin import site
 from test_django_api_admin.models import Person
-
-from django_api_admin.utils.force_login import force_login
+from test_django_api_admin.utils import login
 
 
 site.register(Person)
@@ -16,6 +15,8 @@ UserModel = get_user_model()
 class CustomAPITestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('custom_admin/', site.urls),
+        path('_allauth/', include('allauth.headless.urls')),
+
     ]
 
     def setUp(self) -> None:
@@ -25,7 +26,7 @@ class CustomAPITestCase(APITestCase, URLPatternsTestCase):
         self.user.save()
 
         # authenticate the superuser
-        force_login(self.client, self.user)
+        login(self.client, self.user)
 
     def test_site_name(self):
         self.assertEqual(site.name, 'api_admin')
@@ -38,22 +39,17 @@ class CustomAPITestCase(APITestCase, URLPatternsTestCase):
 
     def test_app_index_view(self):
         # test if the app index view works in a custom admin site
-        url = reverse(f'{site.name}:app_list', kwargs={
+        url = reverse(f'{site.name}:app_index', kwargs={
                       'app_label': Person._meta.app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
     def test_root_view_disabled(self):
         try:
-            url = reverse(f'{site.name}:api-root')
+            reverse(f'{site.name}:api-root')
             assert False
         except NoReverseMatch:
             assert True
-
-    def test_final_catch_all_view(self):
-        url = '/custom_admin/index'
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 301)
 
     def test_custom_url_view(self):
         url = reverse(f'{site.name}:hello')

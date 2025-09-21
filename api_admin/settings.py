@@ -154,3 +154,8 @@ SPECTACULAR_SETTINGS = {
         'django_api_admin.hooks.modify_schema'
     ]
 }
+
+
+HEADLESS_SERVE_SPECIFICATION = True
+
+# HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'

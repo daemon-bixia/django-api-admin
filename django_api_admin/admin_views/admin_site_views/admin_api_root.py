@@ -42,7 +42,8 @@ class AdminAPIRootView(APIView):
                     data[f'{app_label}_{url.name}'] = reverse(
                         f'{namespace}:{url.name}',  kwargs={"app_label": app_label}, request=request)
 
-            # Include the rest of the urls
+            # Include the rest of the urls except the view_on_site
+            # todo: consider including the view_on_site url index every object's detail view response
             elif url.name != "view_on_site":
                 data[url.name] = reverse(
                     f'{namespace}:{url.name}', request=request)

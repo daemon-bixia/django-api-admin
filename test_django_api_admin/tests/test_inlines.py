@@ -2,14 +2,14 @@
 inline admins views.
 """
 from django.contrib.auth import get_user_model
-from django.urls import path, reverse
+from django.urls import include, path, reverse
 
 from rest_framework.test import (APITestCase,
                                  URLPatternsTestCase)
 
 from test_django_api_admin.models import Author, Book, Publisher
 from test_django_api_admin.admin import site
-from django_api_admin.utils.force_login import force_login
+from test_django_api_admin.utils import login
 
 
 UserModel = get_user_model()
@@ -18,6 +18,7 @@ UserModel = get_user_model()
 class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('api_admin/', site.urls),
+        path('_allauth/', include('allauth.headless.urls')),
     ]
 
     def setUp(self) -> None:
@@ -25,7 +26,9 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.user = UserModel.objects.create_superuser(username='admin')
         self.user.set_password('password')
         self.user.save()
-        force_login(self.client, self.user)
+
+        # authenticate the superuser
+        login(self.client, self.user)
 
         # create some valid authors
         self.a1 = Author.objects.create(

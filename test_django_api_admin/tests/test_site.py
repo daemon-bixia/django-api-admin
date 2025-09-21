@@ -6,16 +6,18 @@ import json
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.http import JsonResponse
-from django.urls import path, reverse
+from django.urls import include, path, reverse
 
 from rest_framework.renderers import JSONRenderer
 from rest_framework.test import (APIRequestFactory, APITestCase,
                                  URLPatternsTestCase, force_authenticate)
 
 from test_django_api_admin.models import Author, Book, Publisher
-from django_api_admin.admins.model_admin import APIModelAdmin
 from test_django_api_admin.admin import site
-from django_api_admin.utils.force_login import force_login
+from test_django_api_admin.utils import login
+
+from django_api_admin.admins.model_admin import APIModelAdmin
+
 
 UserModel = get_user_model()
 renderer = JSONRenderer()
@@ -29,7 +31,8 @@ def author_detail_view(request, pk):
 class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('api_admin/', site.urls),
-        path('author/<int:pk>/', author_detail_view, name='author-detail')
+        path('author/<int:pk>/', author_detail_view, name='author-detail'),
+        path('_allauth/', include('allauth.headless.urls')),
     ]
 
     def setUp(self) -> None:
@@ -41,7 +44,7 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         self.user.save()
 
         # authenticate the superuser
-        force_login(self.client, self.user)
+        login(self.client, self.user)
 
     def test_registering_models(self):
         from django.db import models
@@ -94,7 +97,7 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
     def test_app_index_view(self):
         # test if the app_index view works
         app_label = Author._meta.app_label
-        url = reverse('api_admin:app_list', kwargs={'app_label': app_label})
+        url = reverse('api_admin:app_index', kwargs={'app_label': app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -113,11 +116,12 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         user.is_staff = False
         user.save()
 
-        force_login(self.client, user)
+        # logout and login again
+        login(self.client, user)
 
         # test if app_index denies permission
         app_label = Author._meta.app_label
-        url = reverse('api_admin:app_list', kwargs={'app_label': app_label})
+        url = reverse('api_admin:app_index', kwargs={'app_label': app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         # test if index denies permission

@@ -4,13 +4,14 @@ model admin tests.
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
-from django.urls import path, reverse
+from django.urls import include, path, reverse
 
 from rest_framework.test import (APIRequestFactory, APITestCase,
                                  URLPatternsTestCase)
 
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.admin import site
+from test_django_api_admin.utils import login
 
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
@@ -21,6 +22,7 @@ UserModel = get_user_model()
 class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('api_admin/', site.urls),
+        path('_allauth/', include('allauth.headless.urls')),
     ]
 
     def setUp(self) -> None:
@@ -32,20 +34,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.user.save()
 
         # authenticate the superuser
-        url = reverse('api_admin:headless:browser:account:current_session')
-        self.client.get(url)
-
-        # extract the cookie from the client and add it to the next request's headers
-        csrf_token = self.client.cookies.get('csrftoken')._value
-
-        # send the login request
-        url = reverse('api_admin:headless:browser:account:login')
-        self.client.post(url,
-                         data={
-                             'username': self.user.username,
-                             'password': 'password'},
-                         headers={'X-CSRFToken': csrf_token},
-                         format="json")
+        login(self.client, self.user)
 
         # create some valid authors
         Author.objects.create(name="muhammad", age=60,
