@@ -1,4 +1,3 @@
-from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -157,5 +156,6 @@ SPECTACULAR_SETTINGS = {
 
 
 HEADLESS_SERVE_SPECIFICATION = True
-
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'
+ACCOUNT_LOGIN_METHODS = {'email', }
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
