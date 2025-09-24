@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-optimal = ["django-cors-headers"]
+cors = ["django-cors-headers"]
 
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
@@ -39,5 +39,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "aiosmtpd>=1.4.6",
     "pytest-django>=4.11.1",
 ]

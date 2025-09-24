@@ -27,7 +27,6 @@ from django.utils.module_loading import import_string
 from django_api_admin import actions
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagination
-from django_api_admin.permissions import IsAdminUser
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
 from rest_framework import authentication
@@ -48,7 +47,7 @@ class APIAdminSite():
     include_swagger_ui_view = True
 
     # Default permissions
-    default_permission_classes = [IsAdminUser, ]
+    permission_classes = None
 
     # Default serializers
     password_change_serializer = None
@@ -381,13 +380,25 @@ class APIAdminSite():
 
         if self.authentication_classes is None:
             return [XSessionTokenAuthentication, authentication.SessionAuthentication]
+
         return self.authentication_classes
+
+    def get_permission_classes(self):
+        """
+        Returns the permission classes used by the protected views
+        """
+        from django_api_admin import permissions
+
+        if self.permission_classes is None:
+            return [permissions.IsStaffUser, permissions.IsMFAEnabled]
+
+        return self.permission_classes
 
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -397,7 +408,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.app_index import AppIndexView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -407,7 +418,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.password_change import PasswordChangeView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'serializer_class': self.password_change_serializer,
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
@@ -418,7 +429,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.language_catalog import LanguageCatalogView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
@@ -428,7 +439,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.autocomplete import AutoCompleteView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -438,7 +449,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.site_context import SiteContextView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -448,7 +459,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.admin_log import AdminLogView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'pagination_class': self.default_log_pagination_class,
             'serializer_class': self.get_log_entry_serializer(),
             'authentication_classes': self.get_authentication_classes(),
@@ -460,7 +471,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.user_information import UserInformation
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'serializer_class': self.user_serializer,
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
@@ -471,7 +482,7 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.view_on_site import ViewOnSiteView
 
         defaults = {
-            'permission_classes': self.default_permission_classes,
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
