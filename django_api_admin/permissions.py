@@ -8,21 +8,28 @@ from django_api_admin.conf import app_settings
 
 class IsStaffUser(permissions.BasePermission):
 
-    message = _("Staff permissions are required to access this resource")
+    message = {
+        "message": _(
+            "Staff permissions are required to access this resource"),
+        "meta": "staff_only"
+    }
 
-    def has_permission(self, request):
-        if not request.user.is_authenticated:
-            return False
-
+    def has_permission(self, request, _view):
         return request.user.is_staff and request.user.is_active
 
 
 class IsMFAEnabled(permissions.BasePermission):
 
-    message = _("MFA is required to access this resource")
+    message = {
+        "message": _("MFA is required to access this resource."),
+        "meta": "mfa_required"
+    }
 
-    def has_permission(self, request):
+    def has_permission(self, request, _view):
         from allauth.mfa.models import Authenticator
+
+        if not request.user.is_authenticated:
+            return False
 
         joined_ms = int(request.user.date_joined.timestamp() * 1000)
         now_ms = int(timezone.now().timestamp() * 1000)
@@ -30,4 +37,6 @@ class IsMFAEnabled(permissions.BasePermission):
         if now_ms - joined_ms < app_settings.MFA_SAFE_PERIOD:
             return True
 
-        return Authenticator.objects.filter(user=request.user).exists()
+        has_mfa = Authenticator.objects.filter(user=request.user).exists()
+
+        return has_mfa

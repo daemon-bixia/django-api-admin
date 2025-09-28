@@ -390,7 +390,10 @@ class APIAdminSite():
         from django_api_admin import permissions
 
         if self.permission_classes is None:
-            return [permissions.IsStaffUser, permissions.IsMFAEnabled]
+            return [
+                permissions.IsStaffUser,
+                permissions.IsMFAEnabled
+            ]
 
         return self.permission_classes
 
