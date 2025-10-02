@@ -9,9 +9,14 @@ UserModel = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = UserModel
         exclude = ('password',)
+
+    def get_permissions(self, obj):
+        return list(obj.get_all_permissions())
 
 
 class ObtainTokenSerializer(serializers.Serializer):

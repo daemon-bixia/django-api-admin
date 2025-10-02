@@ -192,7 +192,6 @@ class APIAdminSite():
         urlpatterns = [
             path('index/', self.get_app_list_view(), name='index'),
             re_path(app_index_route, self.get_app_index_view(), name='app_index'),
-            path('user_info/', self.get_user_info_view(), name='user_info'),
             path('password_change/', self.get_password_change_view(),
                  name='password_change'),
             path('autocomplete/', self.autocomplete_view(),
@@ -203,6 +202,8 @@ class APIAdminSite():
                  name='site_context'),
             path('admin_log/', self.get_admin_log_view(),
                  name='admin_log'),
+            path('permissions/', self.get_permissions_view(),
+                 name='permissions'),
         ]
 
         # add view on site view
@@ -470,26 +471,24 @@ class APIAdminSite():
         }
         return AdminLogView.as_view(**defaults)
 
-    def get_user_info_view(self):
-        from django_api_admin.admin_views.admin_site_views.user_information import UserInformation
-
-        defaults = {
-            'permission_classes': self.get_permission_classes(),
-            'serializer_class': self.user_serializer,
-            'authentication_classes': self.get_authentication_classes(),
-            'admin_site': self,
-        }
-        return UserInformation.as_view(**defaults)
-
     def get_view_on_site_view(self):
         from django_api_admin.admin_views.admin_site_views.view_on_site import ViewOnSiteView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
+            'permission_classes': [],
             'admin_site': self,
         }
         return ViewOnSiteView.as_view(**defaults)
+
+    def get_permissions_view(self):
+        from django_api_admin.admin_views.admin_site_views.get_permissions import PermissionsView
+
+        defaults = {
+            'authentication_classes': self.get_authentication_classes(),
+            'admin_site': self,
+        }
+        return PermissionsView.as_view(**defaults)
 
     def get_schema_view(self, urlconf):
         from drf_spectacular.views import SpectacularAPIView
