@@ -1,4 +1,10 @@
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+
+# Load environment variables
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,12 +44,13 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'drf_spectacular',
-    # required auth apps
     'allauth',
     'allauth.account',
     'allauth.headless',
-    # optional auth apps
     'allauth.mfa',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.apple',
 ]
 
 MIDDLEWARE = [
@@ -141,7 +148,6 @@ CORS_ALLOW_CREDENTIALS = True
 # to allow cross-domain requests from our frontend
 CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
 
-
 REST_FRAMEWORK = {
     # YOUR SETTINGS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -154,17 +160,23 @@ SPECTACULAR_SETTINGS = {
     ]
 }
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
 
 HEADLESS_SERVE_SPECIFICATION = True
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'
 ACCOUNT_LOGIN_METHODS = {'email', }
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
 
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 1025
-EMAIL_USE_TLS = False
-
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID'),
+            'secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET'),
+        }
+    }
+}
 
 MFA_SAFE_PERIOD = 3 * 24 * 60 * 60 * 1000  # 3 days

@@ -12,13 +12,16 @@ classifiers = [
 ]
 dependencies = [
     "django",
-    "django-allauth[mfa]>=65.11.1",
     "djangorestframework",
     "drf-spectacular",
 ]
 
 [project.optional-dependencies]
-cors = ["django-cors-headers"]
+example = [
+    "django-cors-headers",
+    "django-allauth[mfa,socialaccount]>=65.11.1",
+    "python-dotenv>=1.1.1",
+]
 
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
