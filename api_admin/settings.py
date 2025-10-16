@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'allauth.mfa',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.apple',
+    'allauth.socialaccount.providers.github',
 ]
 
 MIDDLEWARE = [
@@ -176,6 +176,11 @@ SOCIALACCOUNT_PROVIDERS = {
             'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID'),
             'secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET'),
         }
+    },
+    'github': {
+        'APP': {
+            'client_id': os.environ.get('GITHUB_OAUTH_CLIENT_ID'),
+            'secret': os.environ.get('GITHUB_OAUTH_CLIENT_SECRET'), }
     }
 }
 
