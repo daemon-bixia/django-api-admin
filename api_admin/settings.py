@@ -165,6 +165,7 @@ EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
 
+HEADLESS_ADAPTER = "test_django_api_admin.adapters.CustomHeadlessAdapter"
 HEADLESS_SERVE_SPECIFICATION = True
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'
 ACCOUNT_LOGIN_METHODS = {'email', }
