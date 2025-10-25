@@ -168,6 +168,12 @@ EMAIL_USE_TLS = False
 HEADLESS_ADAPTER = "test_django_api_admin.adapters.CustomHeadlessAdapter"
 HEADLESS_SERVE_SPECIFICATION = True
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'
+HEADLESS_FRONTEND_URLS = {
+    # "account_reset_password": "https://app.project.org/account/password/reset",
+    "account_reset_password_from_key": "http://localhost:3000/reset-password/{key}",
+}
+
+
 ACCOUNT_LOGIN_METHODS = {'email', }
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
 
