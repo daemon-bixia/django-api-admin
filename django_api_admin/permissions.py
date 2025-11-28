@@ -6,12 +6,22 @@ from rest_framework import permissions
 from django_api_admin.conf import app_settings
 
 
-class IsStaffUser(permissions.BasePermission):
+class IsAuthenticated(permissions.BasePermission):
+    message = {
+        "message": _("Authentication credentials were not provided."),
+        "reason": "missing_credentials"
+    }
+
+    def has_permission(self, request, _view):
+        return bool(request.user and request.user.is_authenticated)
+
+
+class IsAdminUser(permissions.BasePermission):
 
     message = {
         "message": _(
             "Staff permissions are required to access this resource"),
-        "meta": "staff_only"
+        "reason": "staff_only"
     }
 
     def has_permission(self, request, _view):
@@ -22,7 +32,7 @@ class IsMFAEnabled(permissions.BasePermission):
 
     message = {
         "message": _("MFA is required to access this resource."),
-        "meta": "mfa_required"
+        "reason": "mfa_required"
     }
 
     def has_permission(self, request, _view):

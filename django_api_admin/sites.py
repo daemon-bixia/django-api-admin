@@ -392,7 +392,8 @@ class APIAdminSite():
 
         if self.permission_classes is None:
             return [
-                permissions.IsStaffUser,
+                permissions.IsAuthenticated,
+                permissions.IsAdminUser,
                 permissions.IsMFAEnabled
             ]
 
@@ -485,8 +486,9 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.get_permissions import PermissionsView
 
         defaults = {
+            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
-            'admin_site': self,
+            'admin_site': self
         }
         return PermissionsView.as_view(**defaults)
 
