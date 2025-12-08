@@ -13,13 +13,6 @@ class PermissionsView(APIView):
     admin_site = None
 
     def get(self, request):
-        # Check if the use has staff permissions
-        if not request.user.is_staff:
-            raise PermissionDenied({
-                "message": _("Staff permissions are required to access this resource"),
-                "meta": "staff_only"
-            })
-
         permission_classes = self.admin_site.get_permission_classes()
 
         user_permissions = {}

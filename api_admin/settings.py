@@ -144,6 +144,15 @@ CORS_ORIGIN_WHITELIST = (
 )
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    'x-password-reset-key',
+)
 
 # to allow cross-domain requests from our frontend
 CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']

@@ -135,6 +135,9 @@ dmypy.json
 /.idea/vcs.xml
 /.idea/
 
+
+# Other
+
 thinking.txt
 Todo.txt
 .gitignore
@@ -145,3 +148,4 @@ node_modules
 todo
 todo.md
 .notes
+.DS_Store

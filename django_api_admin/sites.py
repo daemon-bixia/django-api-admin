@@ -388,13 +388,14 @@ class APIAdminSite():
         """
         Returns the permission classes used by the protected views
         """
-        from django_api_admin import permissions
+        from rest_framework.permissions import IsAuthenticated, IsAdminUser
+        from django_api_admin.permissions import IsMFAEnabled
 
         if self.permission_classes is None:
             return [
-                permissions.IsAuthenticated,
-                permissions.IsAdminUser,
-                permissions.IsMFAEnabled
+                IsAuthenticated,
+                IsAdminUser,
+                IsMFAEnabled
             ]
 
         return self.permission_classes
