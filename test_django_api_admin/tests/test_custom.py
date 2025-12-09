@@ -38,7 +38,7 @@ class CustomAPITestCase(APITestCase, URLPatternsTestCase):
 
     def test_app_index_view(self):
         # test if the app index view works in a custom admin site
-        url = reverse(f'{site.name}:app_list', kwargs={
+        url = reverse(f'{site.name}:app_index', kwargs={
                       'app_label': Person._meta.app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

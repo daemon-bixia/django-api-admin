@@ -448,8 +448,8 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
 
         defaults = {
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return ChangeListView.as_view(**defaults)
@@ -458,8 +458,8 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.handle_action import HandleActionView
 
         defaults = {
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return HandleActionView.as_view(**defaults)
@@ -468,9 +468,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.history import HistoryView
 
         defaults = {
-            'permission_classes': self.admin_site.default_permission_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'serializer_class': self.admin_site.log_entry_serializer,
-            'authentication_classes': self.admin_site.authentication_classes,
             'model_admin': self
         }
         return HistoryView.as_view(**defaults)

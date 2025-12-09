@@ -94,7 +94,7 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
     def test_app_index_view(self):
         # test if the app_index view works
         app_label = Author._meta.app_label
-        url = reverse('api_admin:app_list', kwargs={'app_label': app_label})
+        url = reverse('api_admin:app_index', kwargs={'app_label': app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -117,7 +117,7 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
         # test if app_index denies permission
         app_label = Author._meta.app_label
-        url = reverse('api_admin:app_list', kwargs={'app_label': app_label})
+        url = reverse('api_admin:app_index', kwargs={'app_label': app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         # test if index denies permission

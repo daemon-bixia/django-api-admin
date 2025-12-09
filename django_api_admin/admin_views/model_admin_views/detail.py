@@ -14,8 +14,8 @@ class DetailView(APIView):
     """
     GET one instance of this model using pk and to_fields.
     """
-    permission_classes = []
     serializer_class = None
+    permission_classes = []
     model_admin = None
 
     def get(self, request, object_id):

@@ -13,7 +13,6 @@
 import copy
 
 from django.contrib.auth import get_permission_codename
-from django.utils.translation import gettext as _
 
 from rest_framework.serializers import ModelSerializer
 
@@ -241,8 +240,8 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(),
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
         return ListView.as_view(**defaults)
@@ -252,8 +251,8 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(),
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return DetailView.as_view(**defaults)
@@ -263,8 +262,8 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(),
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
         return AddView.as_view(**defaults)
@@ -274,8 +273,8 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(),
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
         return ChangeView.as_view(**defaults)
@@ -284,8 +283,8 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.delete import DeleteView
 
         defaults = {
-            'permission_classes': self.admin_site.default_permission_classes,
-            'authentication_classes': self.admin_site.authentication_classes,
+            'permission_classes': self.admin_site.get_permission_classes(),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
         return DeleteView.as_view(**defaults)

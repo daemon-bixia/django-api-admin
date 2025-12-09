@@ -18,7 +18,6 @@ from rest_framework.exceptions import PermissionDenied, ParseError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 

@@ -120,7 +120,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ORIGIN_WHITELIST = (
     'http://localhost',  # jest-dom test server
-    'http://localhost:3000',  # react developement server
+    'http://localhost:3000',  # react development server
 )
 
 CORS_ALLOW_CREDENTIALS = True
