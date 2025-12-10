@@ -48,8 +48,8 @@ class DetailView(APIView):
         if self.model_admin.view_on_site:
             model_type = ContentType.objects.get_for_model(
                 model=self.model_admin.model)
-        data['view_on_site'] = reverse('%s:view_on_site' % self.model_admin.admin_site.name, kwargs={
-                                       'content_type_id': model_type.pk, 'object_id': obj.pk}, request=request)
+            data['view_on_site'] = reverse('%s:view_on_site' % self.model_admin.admin_site.name, kwargs={
+                'content_type_id': model_type.pk, 'object_id': obj.pk}, request=request)
         data['list_url'] = reverse((pattern + 'list') % info, request=request)
         data['history_url'] = reverse(
             (pattern + 'history') % info, kwargs={'object_id': data['pk']}, request=request)

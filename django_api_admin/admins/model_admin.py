@@ -57,6 +57,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
     actions_on_top = True
     actions_on_bottom = False
     actions_selection_counter = True
+    view_on_site = True
     checks_class = APIModelAdminChecks
 
     # These are the admin options used to customize the change list page interface
