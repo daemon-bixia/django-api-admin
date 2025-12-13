@@ -1,3 +1,15 @@
+# -----------------------------------------------------------------------------
+# Portions of this file are from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+#
+# Additional code copyright (c) 2021 Muhammad Salah
+# Licensed under the MIT License
+#
+# This file includes both Django code and your my own contributions.
+# -----------------------------------------------------------------------------
+
 def action(function=None, *, permissions=None, description=None):
     """
     Conveniently add attributes to an action function::
@@ -17,6 +29,7 @@ def action(function=None, *, permissions=None, description=None):
         make_published.allowed_permissions = ['publish']
         make_published.short_description = 'Mark selected stories as published'
     """
+
     def decorator(func):
         if permissions is not None:
             func.allowed_permissions = permissions
@@ -53,6 +66,7 @@ def display(
         is_published.admin_order_field = '-publish_date'
         is_published.short_description = 'Is Published?'
     """
+
     def decorator(func):
         if boolean is not None and empty_value is not None:
             raise ValueError(

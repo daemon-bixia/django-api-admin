@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# The code in this file is from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+# -----------------------------------------------------------------------------
+
 def model_format_dict(obj, models):
     """
     Return a `dict` with keys 'verbose_name' and 'verbose_name_plural',

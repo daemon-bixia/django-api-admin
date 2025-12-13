@@ -1,3 +1,15 @@
+# -----------------------------------------------------------------------------
+# Portions of this file are from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+#
+# Additional code copyright (c) 2021 Muhammad Salah
+# Licensed under the MIT License
+#
+# This file includes both Django code and your my own contributions.
+# -----------------------------------------------------------------------------
+
 from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
@@ -6,7 +18,6 @@ from rest_framework.exceptions import PermissionDenied, ParseError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 

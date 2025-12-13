@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# The code in this file is from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+# -----------------------------------------------------------------------------
+
 def url_params_from_lookup_dict(lookups):
     """
     Convert the type of lookups specified in a ForeignKey limit_choices_to

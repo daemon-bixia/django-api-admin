@@ -18,8 +18,8 @@ class DeleteView(APIView):
     """
     Delete a single object from this model
     """
-    permission_classes = []
     serializer_class = ResponseMessageSerializer
+    permission_classes = []
     model_admin = None
 
     @extend_schema(

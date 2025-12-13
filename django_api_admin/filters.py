@@ -1,3 +1,10 @@
+# -----------------------------------------------------------------------------
+# The code in this file is from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+# -----------------------------------------------------------------------------
+
 """
 This encapsulates the logic for displaying filters in the Django admin.
 Filters are specified in models with the "list_filter" option.
@@ -5,13 +12,13 @@ Filters are specified in models with the "list_filter" option.
 Each filter subclass knows how to display a filter for a field that passes a
 certain test -- e.g. being a DateField or ForeignKey.
 """
+
 import datetime
 
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-
 
 from django_api_admin.utils.get_model_from_relation import get_model_from_relation
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value

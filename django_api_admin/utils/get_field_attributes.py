@@ -1,5 +1,4 @@
 from django.db.models import Model
-from django.utils.translation import gettext_lazy as _
 
 from rest_framework.utils import humanize_datetime
 

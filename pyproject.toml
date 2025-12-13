@@ -1,44 +1,47 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "django-api-admin"  # Your library's name (lowercase, no hyphens)
-version = "1.2.2"  # Initial version (follow semantic versioning)
+name = "django-api-admin"
+version = "1.2.3"
 description = "A RESTful API implementation of django.contrib.admin, designed for writing custom frontends."
 authors = [{name = "Muhammad Salah", email = "msbizzacc0unt@outlook.com"}]
-license = {file = "LICENSE"}  # Or specify directly
+license-files = ["LICENSE", "LICENSE-*"]
 readme = "README.md"
-classifiers = [  # Important for PyPI search
+classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",  # Or your chosen license
     "Operating System :: OS Independent",
 ]
-dependencies = [  # Dependencies your library needs
+dependencies = [
     "django",
     "djangorestframework",
+    "drf-spectacular",
     "djangorestframework-simplejwt",
-    "drf-spectacular"
 ]
 
 [project.optional-dependencies]
-dev = ["django-cors-headers"]
+example = [
+    "django-cors-headers",
+    "python-dotenv>=1.1.1",
+]
 
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
 
-[tool.setuptools]
-include-package-data = true  # This will include everything matched by MANIFEST.in
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["assets/**"]
+source-exclude = ["api_admin"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = [
-    "README.md",
-    "LICENSE",
-    "django_api_admin*",
-    "assets*",
-]
-exclude = [
-    "__pycache__/*",
-    "**/__pycache__/*"
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "api_admin.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+
+
+[build-system]
+requires = ["uv_build>=0.8.13,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "aiosmtpd>=1.4.6",
+    "pytest-django>=4.11.1",
 ]
