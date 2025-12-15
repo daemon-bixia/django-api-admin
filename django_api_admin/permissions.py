@@ -6,7 +6,7 @@ from rest_framework import permissions
 from django_api_admin.conf import app_settings
 
 
-class IsMFAEnabled(permissions.BasePermission):
+class IsMFAEnabledOrGracePeriod(permissions.BasePermission):
 
     message = _("MFA is required to access this resource.")
 
