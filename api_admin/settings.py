@@ -152,6 +152,7 @@ CORS_ALLOW_HEADERS = (
     "x-csrftoken",
     "x-requested-with",
     'x-password-reset-key',
+    'x-email-verification-key',
 )
 
 # to allow cross-domain requests from our frontend
@@ -178,13 +179,14 @@ HEADLESS_ADAPTER = "test_django_api_admin.adapters.CustomHeadlessAdapter"
 HEADLESS_SERVE_SPECIFICATION = True
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = 'headless/spec/swagger_cdn.html'
 HEADLESS_FRONTEND_URLS = {
-    # "account_reset_password": "https://app.project.org/account/password/reset",
     "account_reset_password_from_key": "http://localhost:3000/reset-password/{key}",
+    "account_confirm_email": "http://localhost:3000/verify-email/{key}",
 }
-
 
 ACCOUNT_LOGIN_METHODS = {'email', }
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -201,3 +203,4 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 MFA_SAFE_PERIOD = 3 * 24 * 60 * 60 * 1000  # 3 days
+MFA_TRUST_ENABLED = True

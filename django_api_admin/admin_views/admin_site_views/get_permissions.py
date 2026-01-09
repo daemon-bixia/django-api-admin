@@ -30,7 +30,7 @@ class PermissionsView(APIView):
             user_permissions[permission_name] = has_permission
 
         serializer = self.get_serializer_class()(instance=user_permissions)
-        return Response(serializer.data)
+        return Response({"status": 200, "data": serializer.data}, status=200)
 
     def get_serializer_class(self):
         """
