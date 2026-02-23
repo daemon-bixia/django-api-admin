@@ -11,12 +11,16 @@
 # -----------------------------------------------------------------------------
 
 import copy
+from functools import partial
 
 from django.contrib.auth import get_permission_codename
 
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 
-from django_api_admin.checks import APIBaseModelAdminChecks
+from django_api_admin.checks import BaseAPIModelAdminChecks
+from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
+from django_api_admin.utils.modelserializer_defines_fields import modelserializer_defines_fields
+from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 
 
 class BaseAPIModelAdmin:
@@ -37,7 +41,6 @@ class BaseAPIModelAdmin:
     fields = None
     exclude = None
     fieldsets = None
-    base_serializer_class = ModelSerializer
     serializer_class = None
     filter_vertical = ()
     filter_horizontal = ()
@@ -49,131 +52,90 @@ class BaseAPIModelAdmin:
     sortable_by = None
     view_on_site = True
     show_full_result_count = True
-    checks_class = APIBaseModelAdminChecks
+    checks_class = BaseAPIModelAdminChecks
 
     def check(self, **kwargs):
         return self.checks_class().check(self, **kwargs)
 
-    def get_serializer_class(self):
+    def get_serializer_class(self, request, obj=None, change=False, **kwargs):
         """
         Return a serializer class to be used in the model admin views
         """
-        # check if a serializer class has already been created
-        if self.serializer_class:
-            return self.serializer_class
+        if "fields" in kwargs:
+            fields = kwargs.pop("fields")
+        else:
+            fields = flatten_fieldsets(self.get_fieldsets(request, obj))
 
-        attrs = dict()
+        # Get excluded fields
+        exclude = list(self.exclude) if self.exclude else []
+        exclude.extend(self.readonly_fields)
 
-        # get all fields in fieldsets
-        fields = self.get_fields()
-        fields.append('pk')
+        # Exclude all fields if it's a request and the user doesn't have
+        # the change permission.
+        if (
+            change
+            and hasattr(request, "user")
+            and not self.has_change_permission(request, obj)
+        ):
+            exclude.extend(fields)
 
-        # get the data needed to create the serializer_class for this model
-        data = self.get_serializer_data()
+        # Take the custom ModelSerializer's Meta.exclude into account only if the
+        # ModelAdmin doesn't define its own.
+        if (
+            self.exclude is None
+            and hasattr(self.serializer_class, "Meta")
+            and hasattr(self.serializer_class.Meta, "exclude")
+        ):
+            exclude.extend(self.serializer_class.Meta.exclude)
 
-        # subtract excluded fields from fieldsets_fields
-        fields = [
-            field for field in fields if field not in data['exclude']]
-
-        # if the parent model serializer defines a meta class we need to inherit from
-        # that meta class
-        Meta = type("Meta", data['bases'], {
-            'model': self.model,
-            'fields': fields,
-            'read_only_fields': self.readonly_fields,
-        })
-
-        attrs["Meta"] = Meta
-
-        # if the serializer method
-        if isinstance(self.base_serializer_class, ModelSerializer):
-            # merge serializerfield_overrides with the ModelSerializer.serializer_field_mapping
-            overrides = copy.deepcopy(ModelSerializer.serializer_field_mapping)
-            for key, value in self.serializerfield_overrides.items():
-                overrides[key] = (value)
-            self.serializerfield_overrides = overrides
-            attrs['serializer_field_mapping'] = self.serializerfield_overrides
-
-        # dynamically construct a model serializer
-        self.serializer_class = type(data['parent_class'])(
-            f'{'Inline' if self.is_inline else ''}{self.model.__name__}AdminSerializer',
-            (data['parent_class'],),
-            attrs
+        # Remove declared serializer fields which are in readonly_fields.
+        new_attrs = dict.fromkeys(
+            f for f in self.readonly_fields if f in self.serializer_class._declared_fields
         )
-        return self.serializer_class
+        serializer_class = type(
+            self.base_serializer_class.__name__, (self.serializer_class,), new_attrs)
 
-    def get_fields(self):
+        # If no fields are defined on the `ModelAdmin`, passed to this method,
+        # or defined in the `serializer_class` set fields to `__all__`
+        if fields is None and not modelserializer_defines_fields(
+            serializer_class
+        ):
+            fields = serializers.ALL_FIELDS
+
+        defaults = {
+            "serializer_class": serializer_class,
+            "fields": fields,
+            "exclude": exclude,
+            "serializerfield_callback": partial(self.serializerfield_for_dbfield, request=request),
+            **kwargs,
+        }
+
+        return modelserializer_factory(self.model, **defaults)
+
+    def get_fields(self, request, obj):
         """
         Hook for specifying fields.
         """
         if self.fields:
             return self.fields
-        data = self.get_serializer_data()
-
-        # if the parent model serializer defines a meta class we need to inherit from
-        # that meta class
-        attrs = {'model': data['model']}
-        if data['fields'] == '__all__':
-            attrs['fields'] = data['fields']
-        else:
-            attrs['exclude'] = data['exclude']
-        # create the meta class
-        Meta = type("Meta", data['bases'], attrs)
-
-        serializer_class = type(data['parent_class'])(
-            data['name'], (data['parent_class'],), {'Meta': Meta})
+        serializer_class = self.get_serializer_class(request, obj, fields=None)
         return [*serializer_class().fields, *self.readonly_fields]
 
-    def get_serializer_data(self):
-        # get excluded fields
-        exclude = list(self.exclude) if self.exclude else []
-        if not exclude and hasattr(self.base_serializer_class, 'Meta') and hasattr(self.base_serializer_class.Meta, 'exclude'):
-            exclude.extend(self.base_serializer_class.Meta.exclude)
-
-        # Remove declared serializer fields which are in readonly_fields.
-        new_attrs = dict.fromkeys(
-            f for f in self.readonly_fields if f in self.base_serializer_class._declared_fields
-        )
-        serializer_class = type(
-            self.base_serializer_class.__name__, (self.base_serializer_class,), new_attrs)
-
-        fields = self.fieldsets or self.fields
-
-        if fields is None and not self.serializer_defines_fields():
-            fields = '__all__'
-
-        # If parent form class already has an inner Meta, the Meta we're
-        # creating needs to inherit from the parent's inner meta.
-        bases = (serializer_class.Meta,) if hasattr(
-            serializer_class, "Meta") else ()
-
-        # dynamically construct a model serializer
-        return {
-            'parent_class': serializer_class,
-            'name': f'{self.model.__name__}Serializer',
-            'model': self.model,
-            'bases': bases,
-            'fields': fields,
-            'exclude': exclude,
-            'read_only_fields': self.readonly_fields,
-        }
+    def get_fieldsets(self, request, obj=None):
+        """
+        Hook for specifying fieldsets.
+        """
+        if self.fieldsets:
+            return self.fieldsets
+        return [(None, {"fields": self.get_fields(request, obj)})]
 
     def serializerfield_for_dbfield(self, db_field, **kwargs):
         """
-        Hook for specifying the form Field instance for a given database Field
+        Hook for specifying the SerializerField instance for a given database Field
         instance.
 
         If kwargs are given, they're passed to the form Field's constructor.
         """
-
-        # If we've got overrides for the serializerfield defined, use 'em. **kwargs
-        # passed to serializerfield_for_dbfield override the defaults.
-        for klass in db_field.__class__.mro():
-            if klass in self.serializerfield_overrides:
-                kwargs = {
-                    **copy.deepcopy(self.serializerfield_overrides[klass]), **kwargs
-                }
-                return db_field.formfield(**kwargs)
 
     def get_permission_map(self, request):
         """
@@ -288,8 +250,3 @@ class BaseAPIModelAdmin:
             'model_admin': self
         }
         return DeleteView.as_view(**defaults)
-
-    def serializer_defines_fields(self):
-        return hasattr(self.base_serializer_class, "_meta") and (
-            self.base_serializer_class._meta.fields is not None or self.base_serializer_class._meta.exclude is not None
-        )

@@ -102,7 +102,7 @@ def check_dependencies(**kwargs):
     return errors
 
 
-class APIBaseModelAdminChecks:
+class BaseAPIModelAdminChecks:
     def check(self, admin_obj, **kwargs):
         return [
             *self._check_autocomplete_fields(admin_obj),
@@ -721,7 +721,7 @@ class APIBaseModelAdminChecks:
                 return []
 
 
-class APIModelAdminChecks(APIBaseModelAdminChecks):
+class APIModelAdminChecks(BaseAPIModelAdminChecks):
     def check(self, admin_obj, **kwargs):
         return [
             *super().check(admin_obj),
@@ -1165,7 +1165,7 @@ class APIModelAdminChecks(APIBaseModelAdminChecks):
         return errors
 
 
-class InlineAPIModelAdminChecks(APIBaseModelAdminChecks):
+class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
     def check(self, inline_obj, **kwargs):
         parent_model = inline_obj.parent_model
         return [
