@@ -69,7 +69,8 @@ class BaseAPIModelAdmin:
             fields = flatten_fieldsets(self.get_fieldsets(request, obj))
 
         # Get excluded fields
-        exclude = list(self.exclude) if self.exclude else []
+        excluded = self.get_exclude(request, obj)
+        exclude = [] if excluded is None else list(excluded)
         readonly_fields = self.get_readonly_fields(request, obj)
         exclude.extend(readonly_fields)
 
@@ -85,7 +86,7 @@ class BaseAPIModelAdmin:
         # Take the custom ModelSerializer's Meta.exclude into account only if the
         # ModelAdmin doesn't define its own.
         if (
-            self.exclude is None
+            excluded is None
             and hasattr(self.serializer_class, "Meta")
             and hasattr(self.serializer_class.Meta, "exclude")
         ):
@@ -131,6 +132,12 @@ class BaseAPIModelAdmin:
         if self.fieldsets:
             return self.fieldsets
         return [(None, {"fields": self.get_fields(request, obj)})]
+
+    def get_exclude(self, request, obj=None):
+        """
+        Hook for specifying exclude.
+        """
+        return self.exclude
 
     def get_readonly_fields(self, request, obj=None):
         """
