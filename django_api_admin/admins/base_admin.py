@@ -70,7 +70,8 @@ class BaseAPIModelAdmin:
 
         # Get excluded fields
         exclude = list(self.exclude) if self.exclude else []
-        exclude.extend(self.readonly_fields)
+        readonly_fields = self.get_readonly_fields(request, obj)
+        exclude.extend(readonly_fields)
 
         # Exclude all fields if it's a request and the user doesn't have
         # the change permission.
@@ -121,7 +122,7 @@ class BaseAPIModelAdmin:
         if self.fields:
             return self.fields
         serializer_class = self.get_serializer_class(request, obj, fields=None)
-        return [*serializer_class().fields, *self.readonly_fields]
+        return [*serializer_class().fields, *self.get_readonly_fields(request, obj)]
 
     def get_fieldsets(self, request, obj=None):
         """
@@ -130,6 +131,12 @@ class BaseAPIModelAdmin:
         if self.fieldsets:
             return self.fieldsets
         return [(None, {"fields": self.get_fields(request, obj)})]
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Hook for specifying custom readonly fields.
+        """
+        return self.readonly_fields
 
     def serializerfield_for_dbfield(self, db_field, request, **kwargs):
         """
