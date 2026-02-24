@@ -1,6 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
-from rest_framework.serializers import ModelSerializer
 from django.utils.functional import cached_property
+from rest_framework.serializers import ModelSerializer
 
 
 def modelserializer_factory(
@@ -62,7 +62,14 @@ def modelserializer_factory(
             db_field = relation_info.model_field
 
         if db_field:
-            return (cls, {**serializerfield_callback(db_field), **kwargs})
+            serializerfield_kwargs = serializerfield_callback(
+                db_field, **kwargs)
+
+            # Remove the field
+            if serializerfield_kwargs is None:
+                return (lambda **kwargs: None, dict())
+
+            return (cls, serializerfield_kwargs)
 
         return (cls, kwargs)
 

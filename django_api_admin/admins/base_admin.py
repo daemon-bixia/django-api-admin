@@ -13,6 +13,7 @@
 import copy
 from functools import partial
 
+from django.db import models
 from django.contrib.auth import get_permission_codename
 
 from rest_framework import serializers
@@ -21,6 +22,7 @@ from django_api_admin.checks import BaseAPIModelAdminChecks
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 from django_api_admin.utils.modelserializer_defines_fields import modelserializer_defines_fields
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
+from django_api_admin.exceptions import NotRegistered
 
 
 class BaseAPIModelAdmin:
@@ -129,13 +131,94 @@ class BaseAPIModelAdmin:
             return self.fieldsets
         return [(None, {"fields": self.get_fields(request, obj)})]
 
-    def serializerfield_for_dbfield(self, db_field, **kwargs):
+    def serializerfield_for_dbfield(self, db_field, request, **kwargs):
         """
-        Hook for specifying the SerializerField instance for a given database Field
-        instance.
+        Hook for specifying the kwargs for the serializer Field's constructor 
+        for a given database Field instance.
 
-        If kwargs are given, they're passed to the form Field's constructor.
+        If kwargs are given, they're passed to the serializer Field's constructor.
         """
+        # Call the hook for the choice field
+        if db_field.choices:
+            return self.serializerfield_for_choice_field(db_field, request, **kwargs)
+
+        # Call the hooks for the relational fields
+        if isinstance(db_field, (models.ForeignKey, models.ManyToManyField)):
+            if db_field.__class__ in self.serializerfield_overrides:
+                kwargs = {
+                    **self.serializerfield_overrides[db_field.__class__], **kwargs}
+
+            if isinstance(db_field, models.ForeignKey):
+                kwargs = self.serializerfield_for_foreignkey(
+                    db_field, request, **kwargs)
+            elif isinstance(db_field, models.ManyToManyField):
+                kwargs = self.serializerfield_for_manytomany(
+                    db_field, request, **kwargs)
+
+            return kwargs
+
+        # If we've got overrides for the serializerfield defined, use 'em. **kwargs
+        # passed to serializerfield_for_dbfield override the defaults.
+        for klass in db_field.__class__.mro():
+            if klass in self.serializerfield_overrides:
+                return {
+                    **copy.deepcopy(self.serializerfield_overrides[klass]), **kwargs}
+
+        return kwargs
+
+    def serializerfield_for_choice_field(self, db_field, request, **kwargs):
+        """
+        Get the kwargs for the serializer Field's constructor for a database 
+        Field that has declared choices.
+        """
+        return kwargs
+
+    def get_field_queryset(self, db, db_field, request):
+        """
+        If the ModelAdmin specifies ordering, the queryset should respect that
+        ordering. Otherwise don't specify the queryset, let the field decide
+        (return None in that case).
+        """
+        try:
+            related_admin = self.admin_site.get_model_admin(
+                db_field.remote_field.model)
+        except NotRegistered:
+            return None
+        else:
+            ordering = related_admin.get_ordering(request)
+            if ordering is not None and ordering != ():
+                return db_field.remote_field.model._default_manager.order_by(
+                    *ordering
+                )
+        return None
+
+    def serializerfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Get the kwargs for the serializer Field's constructor for a ForeignKey.
+        """
+        db = kwargs.get("using")
+
+        if "queryset" not in kwargs:
+            queryset = self.get_field_queryset(db, db_field, request)
+            if queryset is not None:
+                kwargs["queryset"] = queryset
+
+        return kwargs
+
+    def serializerfield_for_manytomany(self, db_field, request, **kwargs):
+        """
+        Get the kwargs for the serializer Field's constrcutor for a ManyToManyField.
+        """
+        if not db_field.remote_field.through._meta.auto_created:
+            return None
+        db = kwargs.get("using")
+
+        if "queryset" not in kwargs:
+            queryset = self.get_field_queryset(db, db_field, request)
+            if queryset is not None:
+                kwargs["queryset"] = queryset
+
+        return kwargs
 
     def get_permission_map(self, request):
         """
