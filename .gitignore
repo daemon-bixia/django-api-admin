@@ -149,3 +149,6 @@ todo
 todo.md
 .notes
 .DS_Store
+
+# Pytest
+pytest.ini

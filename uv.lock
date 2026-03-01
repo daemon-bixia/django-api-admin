@@ -194,9 +194,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-example = [
+dev = [
     { name = "django-allauth", extra = ["mfa", "socialaccount"] },
     { name = "django-cors-headers" },
+    { name = "pytest" },
+    { name = "pytest-django" },
     { name = "python-dotenv" },
 ]
 
@@ -209,13 +211,16 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "django" },
-    { name = "django-allauth", extras = ["mfa", "socialaccount"], marker = "extra == 'example'", specifier = ">=65.11.1" },
-    { name = "django-cors-headers", marker = "extra == 'example'" },
+    { name = "django-allauth", extras = ["mfa", "socialaccount"], marker = "extra == 'dev'", specifier = ">=65.11.1" },
+    { name = "django-cors-headers", marker = "extra == 'dev'" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
-    { name = "python-dotenv", marker = "extra == 'example'", specifier = ">=1.1.1" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-django", marker = "extra == 'dev'" },
+    { name = "python-dotenv", marker = "extra == 'dev'" },
+    { name = "python-dotenv", marker = "extra == 'dev'", specifier = ">=1.1.1" },
 ]
-provides-extras = ["example"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [

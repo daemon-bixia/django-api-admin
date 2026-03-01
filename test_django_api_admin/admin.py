@@ -3,6 +3,7 @@ Test admins are used in tests.py to test django_api_admin.
 not included in the production branch
 """
 from django.contrib import admin
+from django.db import models
 from django.urls import path
 
 from test_django_api_admin import views as custom_api_views
@@ -44,26 +45,35 @@ class PublisherAPIAdmin(APIModelAdmin):
 @register(Author, site=site)
 class AuthorAPIAdmin(APIModelAdmin):
     list_display = ('name', 'age', 'user', 'is_old_enough',
-                    'title', 'gender',)
-    exclude = ('gender',)
+                    'title', 'gender', 'date_joined',)
     list_display_links = ('name',)
     list_filter = ('is_vip', 'age')
     list_editable = ('title',)
     list_per_page = 6
     empty_value_display = '-'
+    search_fields = ('name', 'publisher__name',)
+    ordering = ('-age',)
+
+    # filter_horizontal = ('publisher')
+    raw_id_fields = ('publisher', )
+    autocomplete_fields = ('publisher',)
+    date_hierarchy = 'date_joined'
+
+    serializerfield_overrides = {
+        models.CharField: {'help_text': 'This is a custom help text for all CharFields'},
+    }
 
     actions = (make_old, make_young,)
     actions_selection_counter = True
 
-    date_hierarchy = 'date_joined'
-    search_fields = ('name', 'publisher__name',)
-    ordering = ('-age',)
+    fieldsets = (
+        ('Information', {
+            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough')}),
+    )
+    # a list of field names to exclude from the add/change form.
+    exclude = ('gender',)
+    readonly_fields = ('date_joined', 'is_old_enough')
 
-    raw_id_fields = ('publisher',)
-    # fieldsets = (
-    # ('Personal Information', {
-    #  'fields': (('name', 'age'),  'user', 'is_vip', 'gender', 'publisher')}),
-    # )
     inlines = [APIBookInline, ]
 
     @display(description='is this author old enough')
@@ -86,29 +96,35 @@ class PublisherAdmin(admin.ModelAdmin):
 
 
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'age', 'is_a_vip',
-                    'user', 'is_old_enough', 'title', 'gender', )
+    list_display = ('name', 'age', 'user', 'is_old_enough',
+                    'title', 'gender', 'date_joined')
+    list_display_links = ('name',)
     list_filter = ('is_vip', 'age')
-    list_editable = ('age',)
+    list_editable = ('title',)
     list_per_page = 6
     empty_value_display = '-'
-    search_fields = ('name',)
+    search_fields = ('name', 'publisher__name',)
+    ordering = ('-age',)
 
     # filter_horizontal = ('publisher')
-
-    actions = (make_old, make_young,)
-
     raw_id_fields = ('publisher', )
     autocomplete_fields = ('publisher',)
     date_hierarchy = 'date_joined'
 
-    ordering = ('-age',)
+    formfield_overrides = {
+        models.CharField: {'help_text': 'This is a custom help text for all CharFields'},
+    }
+
+    actions = (make_old, make_young,)
+    actions_selection_counter = True
+
     fieldsets = (
         ('Information', {
-         'fields': (('name', 'age'), 'is_vip', 'user', 'publisher')}),
+         'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough',)}),
     )
     # a list of field names to exclude from the add/change form.
     exclude = ('gender',)
+    readonly_fields = ('date_joined', 'is_old_enough',)
 
     inlines = [BookInline]
 

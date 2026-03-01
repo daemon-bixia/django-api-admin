@@ -17,10 +17,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-example = [
+dev = [
     "django-cors-headers",
     "django-allauth[mfa,socialaccount]>=65.11.1",
     "python-dotenv>=1.1.1",
+    "pytest",
+    "pytest-django",
+    "python-dotenv",
 ]
 
 [project.urls]

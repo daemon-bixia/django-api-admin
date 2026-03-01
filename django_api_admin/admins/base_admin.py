@@ -43,7 +43,7 @@ class BaseAPIModelAdmin:
     fields = None
     exclude = None
     fieldsets = None
-    serializer_class = None
+    serializer_class = serializers.ModelSerializer
     filter_vertical = ()
     filter_horizontal = ()
     radio_fields = {}
@@ -92,24 +92,27 @@ class BaseAPIModelAdmin:
         ):
             exclude.extend(self.serializer_class.Meta.exclude)
 
-        # Remove declared serializer fields which are in readonly_fields.
-        new_attrs = dict.fromkeys(
-            f for f in self.readonly_fields if f in self.serializer_class._declared_fields
-        )
-        serializer_class = type(
-            self.base_serializer_class.__name__, (self.serializer_class,), new_attrs)
+        serializer_class = self.serializer_class
 
-        # If no fields are defined on the `ModelAdmin`, passed to this method,
-        # or defined in the `serializer_class` set fields to `__all__`
-        if fields is None and not modelserializer_defines_fields(
-            serializer_class
-        ):
-            fields = serializers.ALL_FIELDS
+        # If fields are defined within the model_admin or the parent serializer_class then:
+        # 1. Remove serializer fields declared in excluded.
+        # 2. Remove the excluded fields from the `fields` delcared in the model_admin.
+        if fields is not None or modelserializer_defines_fields(self.serializer_class):
+            new_attrs = dict.fromkeys(
+                f for f in exclude if f in self.serializer_class._declared_fields)
+            serializer_class = type(
+                self.serializer_class.__name__, (self.serializer_class,), new_attrs)
+
+            if fields:
+                fields = [f for f in fields if f not in exclude]
+
+            exclude = None
 
         defaults = {
             "serializer_class": serializer_class,
             "fields": fields,
             "exclude": exclude,
+            "read_only_fields": readonly_fields,
             "serializerfield_callback": partial(self.serializerfield_for_dbfield, request=request),
             **kwargs,
         }
@@ -151,6 +154,7 @@ class BaseAPIModelAdmin:
         for a given database Field instance.
 
         If kwargs are given, they're passed to the serializer Field's constructor.
+        This method only runs if the field is not declared in the serializer_class.
         """
         # Call the hook for the choice field
         if db_field.choices:
@@ -264,17 +268,17 @@ class BaseAPIModelAdmin:
         codename = get_permission_codename('add', opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
-    def has_change_permission(self, request):
+    def has_change_permission(self, request, obj=None):
         opts = self.opts
         codename = get_permission_codename('change', opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
-    def has_delete_permission(self, request):
+    def has_delete_permission(self, request, obj=None):
         opts = self.opts
         codename = get_permission_codename('delete', opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
-    def has_view_permission(self, request):
+    def has_view_permission(self, request, obj=None):
         opts = self.opts
         codename_view = get_permission_codename('view', opts)
         codename_change = get_permission_codename('change', opts)
@@ -298,7 +302,7 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.list import ListView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(),
+            'serializer_class': self.get_serializer_class(None),
             'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
@@ -309,7 +313,7 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.detail import DetailView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(),
+            'serializer_class': self.get_serializer_class(None),
             'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
@@ -320,7 +324,7 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.add import AddView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(),
+            'serializer_class': self.get_serializer_class(None),
             'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
@@ -331,7 +335,7 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.change import ChangeView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(),
+            'serializer_class': self.get_serializer_class(None),
             'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,

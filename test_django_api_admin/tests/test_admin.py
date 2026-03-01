@@ -10,7 +10,7 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
                                  URLPatternsTestCase)
 
 from test_django_api_admin.models import Author, Publisher
-from test_django_api_admin.admin import site
+from test_django_api_admin.admin import site, AuthorAPIAdmin
 from test_django_api_admin.utils import login
 
 from django_api_admin.constants.vars import TO_FIELD_VAR
@@ -230,3 +230,15 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['rows'][0]['cells']['name'], 'muhammad')
+
+    def test_get_serializer_class(self):
+        request = self.factory.get('/')
+        request.user = self.user
+        modeladmin = AuthorAPIAdmin(Author, site)
+        serializer_class = modeladmin.get_serializer_class(request)
+        serializer = serializer_class()
+        fields = serializer.get_fields()
+
+        self.assertEqual(list(fields.keys()), [
+                         'name', 'age', 'is_vip', 'user', 'publisher'])
+        self.assertIsNotNone(fields['name'].help_text)

@@ -1,5 +1,4 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.functional import cached_property
 from rest_framework.serializers import ModelSerializer
 
 
@@ -75,7 +74,7 @@ def modelserializer_factory(
 
     # Class attributes for the new form class.
     serializer_class_attrs = {"Meta": Meta,
-                              "build_field": cached_property(build_field)}
+                              "build_field": build_field}
 
     # Give this new serializer class a reasonable name.
     serializer_class_name = class_name or model.__name__ + "Serializer"
