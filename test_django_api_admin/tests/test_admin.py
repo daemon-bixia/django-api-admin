@@ -236,9 +236,13 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         request.user = self.user
         modeladmin = AuthorAPIAdmin(Author, site)
         serializer_class = modeladmin.get_serializer_class(request)
-        serializer = serializer_class()
+        author = Author.objects.first()
+        serializer = serializer_class(author)
         fields = serializer.get_fields()
 
         self.assertEqual(list(fields.keys()), [
-                         'name', 'age', 'is_vip', 'user', 'publisher'])
+                         'name', 'age', 'is_vip', 'user',
+                         'publisher', 'is_old_enough', 'date_joined'])
         self.assertIsNotNone(fields['name'].help_text)
+        self.assertTrue(serializer.data['is_old_enough'])
+        self.assertTrue(isinstance(serializer.data['date_joined'], str))

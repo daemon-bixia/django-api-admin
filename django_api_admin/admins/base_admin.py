@@ -20,9 +20,9 @@ from rest_framework import serializers
 
 from django_api_admin.checks import BaseAPIModelAdminChecks
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
-from django_api_admin.utils.modelserializer_defines_fields import modelserializer_defines_fields
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.exceptions import NotRegistered
+from django_api_admin.fields import MethodField
 
 
 class BaseAPIModelAdmin:
@@ -72,7 +72,6 @@ class BaseAPIModelAdmin:
         excluded = self.get_exclude(request, obj)
         exclude = [] if excluded is None else list(excluded)
         readonly_fields = self.get_readonly_fields(request, obj)
-        exclude.extend(readonly_fields)
 
         # Exclude all fields if it's a request and the user doesn't have
         # the change permission.
@@ -83,7 +82,7 @@ class BaseAPIModelAdmin:
         ):
             exclude.extend(fields)
 
-        # Take the custom ModelSerializer's Meta.exclude into account only if the
+        # Take the serializer_class's Meta.exclude into account only if the
         # ModelAdmin doesn't define its own.
         if (
             excluded is None
@@ -92,20 +91,29 @@ class BaseAPIModelAdmin:
         ):
             exclude.extend(self.serializer_class.Meta.exclude)
 
-        serializer_class = self.serializer_class
+        callables = dict()
+        # Include callables in `fields` as `MethodField`s
+        if fields is not None:
+            for field in fields:
+                method = getattr(self, field, None) or getattr(
+                    self.model, field, None)
+                if field not in self.serializer_class._declared_fields and callable(method):
+                    callables[field] = MethodField(method)
 
-        # If fields are defined within the model_admin or the parent serializer_class then:
-        # 1. Remove serializer fields declared in excluded.
-        # 2. Remove the excluded fields from the `fields` delcared in the model_admin.
-        if fields is not None or modelserializer_defines_fields(self.serializer_class):
-            new_attrs = dict.fromkeys(
-                f for f in exclude if f in self.serializer_class._declared_fields)
-            serializer_class = type(
-                self.serializer_class.__name__, (self.serializer_class,), new_attrs)
+        # Remove serializer fields declared in excluded.
+        new_attrs = {
+            **dict.fromkeys(f for f in exclude if f in self.serializer_class._declared_fields),
+            **callables
+        }
+        serializer_class = type(
+            self.serializer_class.__name__,
+            (self.serializer_class,),
+            new_attrs
+        )
 
-            if fields:
-                fields = [f for f in fields if f not in exclude]
-
+        # Remove the excluded fields from the `fields` delcared in the model_admin.
+        if fields is not None:
+            fields = [f for f in fields if f not in exclude]
             exclude = None
 
         defaults = {
@@ -150,7 +158,7 @@ class BaseAPIModelAdmin:
 
     def serializerfield_for_dbfield(self, db_field, request, **kwargs):
         """
-        Hook for specifying the kwargs for the serializer Field's constructor 
+        Hook for specifying the kwargs for the serializer Field's constructor
         for a given database Field instance.
 
         If kwargs are given, they're passed to the serializer Field's constructor.
@@ -186,7 +194,7 @@ class BaseAPIModelAdmin:
 
     def serializerfield_for_choice_field(self, db_field, request, **kwargs):
         """
-        Get the kwargs for the serializer Field's constructor for a database 
+        Get the kwargs for the serializer Field's constructor for a database
         Field that has declared choices.
         """
         return kwargs

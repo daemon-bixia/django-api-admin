@@ -68,7 +68,7 @@ class AuthorAPIAdmin(APIModelAdmin):
 
     fieldsets = (
         ('Information', {
-            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough')}),
+            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined')}),
     )
     # a list of field names to exclude from the add/change form.
     exclude = ('gender',)
@@ -77,7 +77,7 @@ class AuthorAPIAdmin(APIModelAdmin):
     inlines = [APIBookInline, ]
 
     @display(description='is this author old enough')
-    def is_old_enough(self, obj):
+    def is_old_enough(self, obj, context=None):
         return obj.age > 10
 
 
@@ -120,7 +120,7 @@ class AuthorAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Information', {
-         'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough',)}),
+         'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined',)}),
     )
     # a list of field names to exclude from the add/change form.
     exclude = ('gender',)
