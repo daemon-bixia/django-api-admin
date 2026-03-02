@@ -42,7 +42,6 @@ class APIAdminSite():
     admin_class = APIModelAdmin
 
     # Optional views
-    include_view_on_site_view = True
     include_root_view = True
     include_swagger_ui_view = True
 
@@ -211,15 +210,13 @@ class APIAdminSite():
                  name='admin_log'),
             path('permissions/', self.get_permissions_view(),
                  name='permissions'),
-        ]
-
-        # add view on site view
-        if self.include_view_on_site_view:
-            urlpatterns.append(path(
-                'on_site/<int:content_type_id>/<path:object_id>/',
+            path(
+                'r/<path:content_type_id>/<path:object_id>/',
                 self.get_view_on_site_view(),
                 name='view_on_site',
-            ))
+            ),
+        ]
+
         # Add api_root for browseable api
         if self.include_root_view:
             from django_api_admin.admin_views.admin_site_views.admin_api_root import AdminAPIRootView

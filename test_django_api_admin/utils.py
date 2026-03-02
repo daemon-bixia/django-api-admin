@@ -5,7 +5,6 @@ def login(client, user):
     """
     Logs the client out, and logs in again with the given user 
     """
-
     # Send a current_session GET request to get the csrftoken cookie
     url = reverse('headless:browser:account:current_session')
     client.get(url)
@@ -19,9 +18,9 @@ def login(client, user):
 
     # Send the login request
     url = reverse('headless:browser:account:login')
-    client.post(url,
-                data={
-                    'username': user.username,
-                    'password': 'password'},
-                headers={'X-CSRFToken': csrf_token},
-                format="json")
+    client.post(
+        url,
+        data={'email': user.email, 'password': 'password'},
+        headers={'X-CSRFToken': csrf_token},
+        format="json"
+    )

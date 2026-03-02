@@ -135,25 +135,24 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_view_on_site_view(self):
-        if site.include_view_on_site_view:
-            # create an author
-            Author.objects.create(name='muhammad', age=2, user=self.user)
-            # test if view_on_site view works
-            content_type_id = ContentType.objects.get(
-                app_label=Author._meta.app_label, model=Author._meta.verbose_name).id
-            object_id = Author.objects.first().id
-            url = reverse('api_admin:view_on_site', kwargs={
-                          'content_type_id': content_type_id, 'object_id': object_id})
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.data['url'],
-                             'http://testserver/author/1/')
-            url = response.data['url']
-            # test the detail view
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
-            author = json.loads(response.content)
-            self.assertEqual(author['name'], 'muhammad')
+        # create an author
+        Author.objects.create(name='muhammad', age=2, user=self.user)
+        # test if view_on_site view works
+        content_type_id = ContentType.objects.get(
+            app_label=Author._meta.app_label, model=Author._meta.verbose_name).id
+        object_id = Author.objects.first().id
+        url = reverse('api_admin:view_on_site', kwargs={
+            'content_type_id': content_type_id, 'object_id': object_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['url'],
+                         'http://testserver/author/1/')
+        url = response.data['url']
+        # test the detail view
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        author = json.loads(response.content)
+        self.assertEqual(author['name'], 'muhammad')
 
     def test_api_root_view(self):
         if site.include_root_view:

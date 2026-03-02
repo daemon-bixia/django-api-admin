@@ -17,7 +17,6 @@ from django_api_admin.decorators import register, display
 
 class CustomAPIAdminSite(APIAdminSite):
     include_root_view = False  # remember to turn off
-    include_view_on_site_view = True
 
     def hello_world_view(self, request):
         return custom_api_views.HelloWorldView.as_view()(request)

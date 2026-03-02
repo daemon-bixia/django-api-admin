@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.translation import gettext as _
 
 from rest_framework import status
@@ -10,7 +10,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
-
 
 from django_api_admin.openapi import CommonAPIResponses
 
@@ -53,7 +52,7 @@ class ViewOnSiteView(APIView):
                     % {"ct_id": content_type_id}
                 })
             obj = content_type.get_object_for_this_type(pk=object_id)
-        except (ObjectDoesNotExist, ValueError):
+        except (ObjectDoesNotExist, ValueError, ValidationError):
             raise ParseError({
                 "detail": _("Content type %(ct_id)s object %(obj_id)s doesn’t exist")
                 % {"ct_id": content_type_id, "obj_id": object_id}
@@ -63,7 +62,7 @@ class ViewOnSiteView(APIView):
             get_absolute_url = obj.get_absolute_url
         except AttributeError:
             raise ParseError({
-                "detail": _("%(ct_name)s objects don’t have a get_absolute_url() method")
+                "detail": _("%(ct_name)s objects don`t have a get_absolute_url() method")
                 % {"ct_name": content_type.name}
             })
         absurl = get_absolute_url()

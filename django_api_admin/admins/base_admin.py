@@ -14,6 +14,7 @@ import copy
 from functools import partial
 
 from django.db import models
+from django.urls import reverse
 from django.contrib.auth import get_permission_codename
 
 from rest_framework import serializers
@@ -23,6 +24,14 @@ from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
+
+
+def get_content_type_for_model(obj):
+    # Since this module gets imported in the application's root package,
+    # it cannot import models from other applications at the module level.
+    from django.contrib.contenttypes.models import ContentType
+
+    return ContentType.objects.get_for_model(obj, for_concrete_model=False)
 
 
 class BaseAPIModelAdmin:
@@ -156,6 +165,23 @@ class BaseAPIModelAdmin:
         """
         return self.autocomplete_fields
 
+    def get_view_on_site_url(self, obj=None):
+        if obj is None or not self.view_on_site:
+            return None
+
+        if callable(self.view_on_site):
+            return self.view_on_site(obj)
+        elif hasattr(obj, "get_absolute_url"):
+            # Use the ContentType lookup if view_on_site is True
+            return reverse(
+                f"{self.admin_site.name}:view_on_site",
+                kwargs={
+                    "content_type_id": get_content_type_for_model(obj).pk,
+                    "object_id": obj.pk,
+                },
+                current_app=self.admin_site.name,
+            )
+
     def get_serializer_class(self, request, obj=None, change=False, **kwargs):
         """
         Return a serializer class to be used in the model admin views
@@ -168,7 +194,8 @@ class BaseAPIModelAdmin:
         # Get excluded fields
         excluded = self.get_exclude(request, obj)
         exclude = [] if excluded is None else list(excluded)
-        readonly_fields = self.get_readonly_fields(request, obj)
+        readonly = self.get_readonly_fields(request, obj)
+        readonly_fields = [] if readonly is None else list(readonly)
 
         # Exclude all fields if it's a request and the user doesn't have
         # the change permission.
@@ -212,6 +239,12 @@ class BaseAPIModelAdmin:
         if fields is not None:
             fields = [f for f in fields if f not in exclude]
             exclude = None
+
+            # Always add the primary key to `readonly_fields` and `fields` to identity the object
+            if 'pk' not in fields:
+                fields.append('pk')
+            if 'pk' not in readonly_fields:
+                readonly_fields.append('pk')
 
         defaults = {
             "serializer_class": serializer_class,

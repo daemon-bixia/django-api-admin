@@ -9,14 +9,27 @@ from django.urls import include, path, reverse
 from rest_framework.test import (APIRequestFactory, APITestCase,
                                  URLPatternsTestCase)
 
+from allauth.account.models import EmailAddress
+
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.admin import site, AuthorAPIAdmin
 from test_django_api_admin.utils import login
 
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
+from aiosmtpd.controller import Controller
+
 
 UserModel = get_user_model()
+
+
+class MailHandler:
+    def __init__(self):
+        self.messages = []
+
+    async def handle_DATA(self, server, session, envelope):
+        self.messages.append(envelope)
+        return '250 OK'
 
 
 class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
@@ -28,15 +41,30 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     def setUp(self) -> None:
         self.factory = APIRequestFactory()
 
-        # create a superuser
-        self.user = UserModel.objects.create_superuser(username='admin')
+        # Run the SMTP server
+        self.smtp_handler = MailHandler()
+        self.smtp_controller = Controller(
+            self.smtp_handler, hostname='127.0.0.1', port=1025)
+        self.smtp_controller.start()
+
+        # Create a superuser
+        self.user = UserModel.objects.create_superuser(
+            username='admin', email="admin@email.com")
         self.user.set_password('password')
         self.user.save()
 
-        # authenticate the superuser
+        # Verify the user's email
+        EmailAddress.objects.create(
+            user=self.user,
+            email="admin@email.com",
+            verified=True,
+            primary=True,
+        )
+
+        # Authenticate the superuser
         login(self.client, self.user)
 
-        # create some valid authors
+        # Create some valid authors
         Author.objects.create(name="muhammad", age=60,
                               is_vip=True, user_id=self.user.pk)
         Author.objects.create(name="Ali", age=20,
@@ -45,10 +73,14 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
                               is_vip=True, user_id=self.user.pk)
         self.author_info = (Author._meta.app_label, Author._meta.model_name)
 
-        # create some valid publishers
+        # Create some valid publishers
         Publisher.objects.create(name='rock')
         Publisher.objects.create(name='paper')
         Publisher.objects.create(name='scissor')
+
+    def tearDown(self) -> None:
+        self.smtp_controller.stop()
+        super().tearDown()
 
     def test_list_view(self):
         url = reverse('api_admin:%s_%s_list' % self.author_info)
@@ -61,7 +93,13 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
                       self.author_info, kwargs={'object_id': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['pk'], 1)
         self.assertEqual(response.data['name'], 'muhammad')
+        self.assertTrue(isinstance(response.data['list_url'], str))
+        self.assertTrue(isinstance(response.data['history_url'], str))
+        self.assertTrue(isinstance(response.data['delete_url'], str))
+        self.assertTrue(isinstance(response.data['change_url'], str))
+        self.assertTrue(isinstance(response.data['view_on_site_url'], str))
 
     def test_performing_custom_actions(self):
         action_dict = {

@@ -45,7 +45,7 @@ class ChangeView(APIView):
     )
     def get(self, request, object_id):
         obj = self.get_object(request, object_id)
-        # initiate the serializer based on the request method
+        # Initiate the serializer based on the request method
         serializer = self.get_serializer_instance(request, obj)
         data = dict()
         data['fields'] = get_form_fields(serializer, change=True)
@@ -65,27 +65,27 @@ class ChangeView(APIView):
             opts = self.model_admin.model._meta
             helper = ModelDiffHelper(obj)
 
-            # test user change permission in this model.
+            # Test user change permission in this model.
             if not self.model_admin.has_change_permission(request):
                 raise PermissionDenied
 
-            # initiate the serializer based on the request method
+            # Initiate the serializer based on the request method
             serializer = self.get_serializer_instance(request, obj)
 
-            # update and log the changes to the object
+            # Update and log the changes to the object
             if serializer.is_valid():
                 updated_object = serializer.save()
-                # response message
+                # Response message
                 msg = _(
                     f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')
-                # log the change of  change
+                # Log the change of  change
                 self.model_admin.log_change(request, updated_object, [{'changed': {
                     'name': str(updated_object._meta.verbose_name),
                     'object': str(updated_object),
                     'fields': helper.set_changed_model(updated_object).changed_fields
                 }}])
 
-                # process bulk additions
+                # Process bulk additions
                 created_inlines = []
                 if request.data.get("create_inlines", None):
                     valid_serializers = validate_bulk_edits(
@@ -97,7 +97,7 @@ class ChangeView(APIView):
                     created_inlines = [
                         inline_serializer.data for inline_serializer in valid_serializers]
 
-                # process bulk updates
+                # Process bulk updates
                 updated_inlines = []
                 if request.data.get("update_inlines", None):
                     valid_serializers = validate_bulk_edits(
@@ -109,7 +109,7 @@ class ChangeView(APIView):
                     updated_inlines = [
                         inline_serializer.data for inline_serializer in valid_serializers]
 
-                # process bulk deletes
+                # Process bulk deletes
                 deleted_inlines = []
                 if request.data.get("delete_inlines", None):
                     instances, deleted_inlines = validate_bulk_edits(
@@ -117,7 +117,7 @@ class ChangeView(APIView):
                     # delete all of them
                     instances.delete()
 
-                # return the appropriate response based on the request data
+                # Return the appropriate response based on the request data
                 data = {'data': serializer.data, 'detail': msg}
                 if len(created_inlines):
                     data['created_inlines'] = created_inlines
@@ -193,7 +193,7 @@ class ChangeView(APIView):
         return serializer
 
     def get_object(self, request, object_id):
-        # validate the reverse to field reference
+        # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
         if to_field and not self.model_admin.to_field_allowed(to_field):
             raise ParseError(
@@ -202,7 +202,7 @@ class ChangeView(APIView):
         obj = self.model_admin.get_object(
             request, unquote(object_id), to_field)
 
-        # if the object doesn't exist respond with not found
+        # If the object doesn't exist respond with not found
         if obj is None:
             msg = _("%(name)s with ID “%(key)s” doesn't exist. Perhaps it was deleted?") % {
                 'name': self.model_admin.model._meta.verbose_name,

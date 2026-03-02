@@ -78,7 +78,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         self.model = model
         self.opts = model._meta
         self.admin_site = admin_site
-        self.view_on_site = False if not self.admin_site.include_view_on_site_view else self.view_on_site
 
     def get_model_perms(self, request):
         """
