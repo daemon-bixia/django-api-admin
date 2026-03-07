@@ -31,11 +31,8 @@ from django_api_admin.constants.vars import LOOKUP_SEP
 
 
 class APIModelAdmin(BaseAPIModelAdmin):
-    """
-    Provides a restful version of django.contrib.admin.options.ModelAdmin.
-    everything that is ui specific is handled by the ui
-    filtering is also handled by the ui
-    """
+    """Encapsulate all admin options and functionality for a given model."""
+
     list_display = ("__str__",)
     list_display_links = ()
     list_filter = ()
@@ -50,7 +47,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
     save_as_continue = True
     save_on_top = False
     paginator = Paginator
-    action_serializer = None
     preserve_filters = True
     inlines = ()
     actions = ()
@@ -58,6 +54,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
     actions_on_bottom = False
     actions_selection_counter = True
     checks_class = APIModelAdminChecks
+    action_serializer = None
 
     # These are the admin options used to customize the change list page interface
     # server-side customizations like list_select_related and actions are not included

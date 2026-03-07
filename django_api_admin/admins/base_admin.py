@@ -16,6 +16,7 @@ from functools import partial
 from django.db import models
 from django.urls import reverse
 from django.contrib.auth import get_permission_codename
+from django.utils.safestring import mark_safe
 
 from rest_framework import serializers
 
@@ -257,6 +258,21 @@ class BaseAPIModelAdmin:
 
         return modelserializer_factory(self.model, **defaults)
 
+    def get_empty_value_display(self):
+        """
+        Return the empty_value_display set on APIModelAdmin or APIAdminSite.
+        """
+        try:
+            return mark_safe(self.empty_value_display)
+        except AttributeError:
+            return mark_safe(self.admin_site.empty_value_display)
+
+    def get_exclude(self, request, obj=None):
+        """
+        Hook for specifying exclude.
+        """
+        return self.exclude
+
     def get_fields(self, request, obj):
         """
         Hook for specifying fields.
@@ -274,11 +290,15 @@ class BaseAPIModelAdmin:
             return self.fieldsets
         return [(None, {"fields": self.get_fields(request, obj)})]
 
-    def get_exclude(self, request, obj=None):
+    def get_inlines(self, request, obj):
+        """Hook for specifying custom inlines."""
+        return self.inlines
+
+    def get_ordering(self, request):
         """
-        Hook for specifying exclude.
+        Hook for specifying field ordering.
         """
-        return self.exclude
+        return self.ordering or ()  # otherwise we might try to *None, which is bad ;)
 
     def get_readonly_fields(self, request, obj=None):
         """
@@ -286,21 +306,13 @@ class BaseAPIModelAdmin:
         """
         return self.readonly_fields
 
-    def get_permission_map(self, request):
+    def get_prepopulated_fields(self, request, obj=None):
         """
-        return a dictionary of user permissions in this module.
+        Hook for specifying custom prepopulated fields.
         """
+        return self.prepopulated_fields
 
-        return {
-            'has_add_permission': self.has_add_permission(request),
-            'has_change_permission': self.has_change_permission(request),
-            'has_delete_permission': self.has_delete_permission(request),
-            'has_view_permission': self.has_view_permission(request),
-            'has_view_or_change_permission': self.has_view_or_change_permission(request),
-            'has_module_permission': self.has_module_permission(request),
-        }
-
-    def get_queryset(self, request=None):
+    def get_queryset(self, request):
         """
         Return a QuerySet of all model instances that can be edited by the
         admin site. This is used by get_changelist_view.
@@ -311,40 +323,13 @@ class BaseAPIModelAdmin:
             qs = qs.order_by(*ordering)
         return qs
 
-    def has_add_permission(self, request):
-        opts = self.opts
-        codename = get_permission_codename('add', opts)
-        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
-
-    def has_change_permission(self, request, obj=None):
-        opts = self.opts
-        codename = get_permission_codename('change', opts)
-        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
-
-    def has_delete_permission(self, request, obj=None):
-        opts = self.opts
-        codename = get_permission_codename('delete', opts)
-        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
-
-    def has_view_permission(self, request, obj=None):
-        opts = self.opts
-        codename_view = get_permission_codename('view', opts)
-        codename_change = get_permission_codename('change', opts)
+    def get_sortable_by(self, request):
+        """Hook for specifying which fields can be sorted in the changelist."""
         return (
-            request.user.has_perm('%s.%s' % (opts.app_label, codename_view)) or
-            request.user.has_perm('%s.%s' % (opts.app_label, codename_change))
+            self.sortable_by
+            if self.sortable_by is not None
+            else self.get_list_display(request)
         )
-
-    def has_view_or_change_permission(self, request, obj=None):
-        return self.has_view_permission(request) or self.has_change_permission(request)
-
-    def has_module_permission(self, request):
-        return request.user.has_module_perms(self.opts.app_label)
-
-    @property
-    def is_inline(self):
-        from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
-        return isinstance(self, InlineAPIModelAdmin)
 
     def get_list_view(self):
         from django_api_admin.admin_views.model_admin_views.list import ListView
@@ -399,3 +384,82 @@ class BaseAPIModelAdmin:
             'model_admin': self
         }
         return DeleteView.as_view(**defaults)
+
+    def has_add_permission(self, request):
+        """
+        Return True if the given request has permission to add an object.
+        Can be overridden by the user in subclasses.
+        """
+        opts = self.opts
+        codename = get_permission_codename('add', opts)
+        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
+
+    def has_change_permission(self, request, obj=None):
+        """
+        Return True if the given request has permission to change the given
+        Django model instance, the default implementation doesn't examine the
+        `obj` parameter.
+
+        Can be overridden by the user in subclasses. In such case it should
+        return True if the given request has permission to change the `obj`
+        model instance. If `obj` is None, this should return True if the given
+        request has permission to change *any* object of the given type.
+        """
+        opts = self.opts
+        codename = get_permission_codename('change', opts)
+        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Return True if the given request has permission to delete the given
+        Django model instance, the default implementation doesn't examine the
+        `obj` parameter.
+
+        Can be overridden by the user in subclasses. In such case it should
+        return True if the given request has permission to delete the `obj`
+        model instance. If `obj` is None, this should return True if the given
+        request has permission to delete *any* object of the given type.
+        """
+        opts = self.opts
+        codename = get_permission_codename('delete', opts)
+        return request.user.has_perm("%s.%s" % (opts.app_label, codename))
+
+    def has_view_permission(self, request, obj=None):
+        """
+        Return True if the given request has permission to view the given
+        Django model instance. The default implementation doesn't examine the
+        `obj` parameter.
+
+        If overridden by the user in subclasses, it should return True if the
+        given request has permission to view the `obj` model instance. If `obj`
+        is None, it should return True if the request has permission to view
+        any object of the given type.
+        """
+        opts = self.opts
+        codename_view = get_permission_codename('view', opts)
+        codename_change = get_permission_codename('change', opts)
+        return (
+            request.user.has_perm('%s.%s' % (opts.app_label, codename_view)) or
+            request.user.has_perm('%s.%s' % (opts.app_label, codename_change))
+        )
+
+    def has_view_or_change_permission(self, request, obj=None):
+        return self.has_view_permission(request) or self.has_change_permission(request)
+
+    def has_module_permission(self, request):
+        """
+        Return True if the given request has any permission in the given
+        app label.
+
+        Can be overridden by the user in subclasses. In such case it should
+        return True if the given request has permission to view the module on
+        the admin index page and access the module's index page. Overriding it
+        does not restrict access to the add, change or delete views. Use
+        `ModelAdmin.has_(add|change|delete)_permission` for that.
+        """
+        return request.user.has_module_perms(self.opts.app_label)
+
+    @property
+    def is_inline(self):
+        from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
+        return isinstance(self, InlineAPIModelAdmin)
