@@ -82,12 +82,12 @@ class AutoCompleteView(APIView):
         if not self.has_perm(request):
             raise PermissionDenied
 
-        self.queryset = self.get_queryset()
+        self.queryset = self.get_queryset(request)
         page = self.admin_site.paginate_queryset(
             self.queryset, request, view=self)
 
         # serialize data
-        serializer_class = self.model_admin.get_serializer_class()
+        serializer_class = self.model_admin.get_serializer_class(request)
         serializer = serializer_class(page, many=True)
         data = serializer.data
 
@@ -96,9 +96,9 @@ class AutoCompleteView(APIView):
             status=status.HTTP_200_OK
         )
 
-    def get_queryset(self):
+    def get_queryset(self, request):
         """Return queryset based on model_admin.get_search_results()."""
-        qs = self.model_admin.get_queryset()
+        qs = self.model_admin.get_queryset(request)
         qs = qs.complex_filter(self.source_field.get_limit_choices_to())
         qs, search_use_distinct = self.model_admin.get_search_results(
             qs, self.term)

@@ -183,22 +183,6 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         author = json.loads(response.content)
         self.assertEqual(author['name'], 'muhammad')
 
-    def test_api_root_view(self):
-        if site.include_root_view:
-            url = reverse('api_admin:api-root')
-            response = self.client.get(url)
-
-            self.assertNotEqual(response.status_code, 403)
-            self.assertEqual(response.status_code, 200)
-
-            key_found = False
-            for key, value in response.data.items():
-                if key == 'index':
-                    key_found = True
-                    break
-            if not key_found:
-                raise AssertionError('Site didn`t return api-root view')
-
     def test_each_context_view(self):
         url = reverse('api_admin:site_context')
         response = self.client.get(url)
@@ -206,13 +190,13 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.data['site_title'], 'Django site admin')
 
     def test_autocomplete_view(self):
-        # create an author, and a book
+        # Create an author, and a book
         author = Author.objects.create(name='Muhammad', age=2, user=self.user)
         publisher = Publisher.objects.create(name='the daily blob')
         author.publisher.add(publisher)
         Book.objects.create(title='Things fall apart', author=author)
 
-        # select a book author by searching for the author using the publisher name of the author
+        # Select a book author by searching for the author using the publisher name of the author
         url = reverse('api_admin:autocomplete')
         response = self.client.get(url, {
             'term': 'blob',

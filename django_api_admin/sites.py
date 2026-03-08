@@ -224,7 +224,7 @@ class APIAdminSite():
                 return Response({"detail": _("You do not have permission to perform this action.")},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            return view(request, *args, **kwargs)
+            return view(request._request, *args, **kwargs)
 
         if not cacheable:
             inner = never_cache(inner)
