@@ -1,6 +1,3 @@
-"""
-admin site tests
-"""
 import json
 
 from django.contrib.auth import get_user_model
@@ -64,6 +61,10 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
         # Authenticate the superuser
         login(self.client, self.user)
+
+    def tearDown(self):
+        self.smtp_controller.stop()
+        super().tearDown()
 
     def test_registering_models(self):
         from django.db import models
@@ -130,24 +131,33 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
     def test_permission_denied(self):
         # create a non-staff user
-        user = UserModel.objects.create(username='test')
+        user = UserModel.objects.create(
+            email="test@email.com", username="test")
         user.set_password('password')
         user.is_staff = False
         user.save()
 
-        # logout and login again
+        # Verify the user's email
+        EmailAddress.objects.create(
+            user=user,
+            email="test@email.com",
+            verified=True,
+            primary=True,
+        )
+
+        # Logout and login again
         login(self.client, user)
 
-        # test if app_index denies permission
+        # Test if app_index denies permission
         app_label = Author._meta.app_label
         url = reverse('api_admin:app_index', kwargs={'app_label': app_label})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        # test if index denies permission
+        # Test if index denies permission
         url = reverse('api_admin:index')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        # test if password change denies permission
+        # Test if password change denies permission
         url = reverse('api_admin:password_change')
         response = self.client.post(url, {'old_password': 'new_password', 'new_password1': 'new_password',
                                           'new_password2': 'new_password'})

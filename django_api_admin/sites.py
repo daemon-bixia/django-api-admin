@@ -22,7 +22,7 @@ from django.urls import NoReverseMatch, path, re_path, include, reverse
 from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import capfirst
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext_lazy, gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 
@@ -31,7 +31,9 @@ from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagination
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.decorators import api_view
 
 all_sites = WeakSet()
 
@@ -219,16 +221,23 @@ class APIAdminSite():
 
         def inner(request, *args, **kwargs):
             if not self.has_permission(request):
-                raise PermissionDenied()
+                return Response({"detail": _("You do not have permission to perform this action.")},
+                                status=status.HTTP_403_FORBIDDEN)
 
             return view(request, *args, **kwargs)
 
         if not cacheable:
             inner = never_cache(inner)
+
+        # Wrap inner with api_view so you can return `Response`
+        # from within the admin_view
+        inner = api_view([m.upper() for m in view.view_class.http_method_names if hasattr(
+            view.view_class, m)])(inner)
         # We add csrf_protect here so this function can be used as a utility
         # function for any view, without having to repeat 'csrf_protect'.
         if not getattr(view, "csrf_exempt", False):
             inner = csrf_protect(inner)
+
         return update_wrapper(inner, view)
 
     def get_urls(self):

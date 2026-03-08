@@ -69,7 +69,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         Publisher.objects.create(name='paper')
         Publisher.objects.create(name='scissor')
 
-    def tearDown(self) -> None:
+    def tearDown(self):
         self.smtp_controller.stop()
         super().tearDown()
 
