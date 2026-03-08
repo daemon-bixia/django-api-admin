@@ -2,17 +2,21 @@
 Test admins are used in tests.py to test django_api_admin.
 not included in the production branch
 """
-from django.contrib import admin
-from django.db import models
+
 from django.urls import path
+from django.db import models
+from django.contrib import admin
+from django.utils import timezone
 
 from test_django_api_admin import views as custom_api_views
 from test_django_api_admin.models import Author, Publisher, Book, GuestEntry
 from test_django_api_admin.actions import make_old, make_young
+
 from django_api_admin.sites import APIAdminSite
 from django_api_admin.admins.inline_admin import TabularInlineAPI
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.decorators import register, display
+from django_api_admin.conf import app_settings
 
 
 class CustomAPIAdminSite(APIAdminSite):
@@ -24,6 +28,28 @@ class CustomAPIAdminSite(APIAdminSite):
         urlpatterns.append(
             path('hello_world/', self.hello_world_view, name='hello'))
         return urlpatterns
+
+    def get_authentication_classes(self):
+        from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+        from rest_framework import authentication
+
+        return [XSessionTokenAuthentication, authentication.SessionAuthentication]
+
+    def has_permission(self, request):
+        from allauth.mfa.models import Authenticator
+
+        if not request.user.is_authenticated:
+            return False
+
+        joined_ms = int(request.user.date_joined.timestamp() * 1000)
+        now_ms = int(timezone.now().timestamp() * 1000)
+
+        if now_ms - joined_ms < app_settings.MFA_SAFE_PERIOD:
+            has_mfa = True
+        else:
+            has_mfa = Authenticator.objects.filter(user=request.user).exists()
+
+        return request.user.is_active and request.user.is_staff and has_mfa
 
 
 site = CustomAPIAdminSite(name='api_admin', include_auth=True)

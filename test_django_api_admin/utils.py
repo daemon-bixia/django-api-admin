@@ -1,6 +1,15 @@
 from django.urls import reverse
 
 
+class MailHandler:
+    def __init__(self):
+        self.messages = []
+
+    async def handle_DATA(self, server, session, envelope):
+        self.messages.append(envelope)
+        return '250 OK'
+
+
 def login(client, user):
     """
     Logs the client out, and logs in again with the given user 

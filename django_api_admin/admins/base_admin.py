@@ -337,7 +337,6 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(None),
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
@@ -348,7 +347,6 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(None),
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
@@ -359,7 +357,6 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(None),
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
@@ -370,7 +367,6 @@ class BaseAPIModelAdmin:
 
         defaults = {
             'serializer_class': self.get_serializer_class(None),
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self,
         }
@@ -380,7 +376,6 @@ class BaseAPIModelAdmin:
         from django_api_admin.admin_views.model_admin_views.delete import DeleteView
 
         defaults = {
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }

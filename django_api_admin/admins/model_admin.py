@@ -11,7 +11,6 @@
 # -----------------------------------------------------------------------------
 
 import enum
-
 from functools import update_wrapper
 
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -110,23 +109,32 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return inline_instances
 
     def get_urls(self):
+
+        def wrap(view):
+            def wrapper(*args, **kwargs):
+                return self.admin_site.admin_view(view)(*args, **kwargs)
+
+            wrapper.model_admin = self
+            return update_wrapper(wrapper, view)
+
         info = f'{self.model._meta.app_label}_{self.model._meta.model_name}'
         prefix = f'{self.model._meta.app_label}/{self.model._meta.model_name}'
         urlpatterns = [
-            path(f'{prefix}/list/', self.get_list_view(), name=f'{info}_list'),
-            path(f'{prefix}/changelist/', self.get_changelist_view(),
-                 name=f'{info}_changelist'),
+            path(f'{prefix}/list/', wrap(self.get_list_view()),
+                 name=f'{info}_list'),
+            path(f'{prefix}/changelist/',
+                 wrap(self.get_changelist_view()), name=f'{info}_changelist'),
             path(f'{prefix}/perform_action/',
-                 self.get_handle_action_view(), name=f'{info}_perform_action'),
-            path(f'{prefix}/add/', self.get_add_view(), name=f'{info}_add'),
+                 wrap(self.get_handle_action_view()), name=f'{info}_perform_action'),
+            path(f'{prefix}/add/', wrap(self.get_add_view()), name=f'{info}_add'),
             path(f'{prefix}/<path:object_id>/detail/',
-                 self.get_detail_view(), name=f'{info}_detail'),
+                 wrap(self.get_detail_view()), name=f'{info}_detail'),
             path(f'{prefix}/<path:object_id>/delete/',
-                 self.get_delete_view(), name=f'{info}_delete'),
+                 wrap(self.get_delete_view()), name=f'{info}_delete'),
             path(f'{prefix}/<path:object_id>/history/',
-                 self.get_history_view(), name=f'{info}_history'),
+                 wrap(self.get_history_view()), name=f'{info}_history'),
             path(f'{prefix}/<path:object_id>/change/',
-                 self.get_change_view(), name=f'{info}_change'),
+                 wrap(self.get_change_view()), name=f'{info}_change'),
         ]
 
         # Add Inline admins urls
@@ -461,7 +469,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
 
         defaults = {
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
@@ -471,7 +478,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.handle_action import HandleActionView
 
         defaults = {
-            'permission_classes': self.admin_site.get_permission_classes(),
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self
         }
@@ -481,7 +487,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.history import HistoryView
 
         defaults = {
-            'permission_classes': self.admin_site.get_permission_classes(),
             'serializer_class': self.admin_site.log_entry_serializer,
             'authentication_classes': self.admin_site.get_authentication_classes(),
             'model_admin': self

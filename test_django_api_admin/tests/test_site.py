@@ -12,9 +12,13 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.test import (APIRequestFactory, APITestCase,
                                  URLPatternsTestCase, force_authenticate)
 
+from allauth.account.models import EmailAddress
+
+from aiosmtpd.controller import Controller
+
 from test_django_api_admin.models import Author, Book, Publisher
 from test_django_api_admin.admin import site
-from test_django_api_admin.utils import login
+from test_django_api_admin.utils import login, MailHandler
 
 from django_api_admin.admins.model_admin import APIModelAdmin
 
@@ -38,12 +42,27 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
     def setUp(self) -> None:
         self.factory = APIRequestFactory()
 
-        # create a superuser
-        self.user = UserModel.objects.create_superuser(username='admin')
+        # Run the SMTP server
+        self.smtp_handler = MailHandler()
+        self.smtp_controller = Controller(
+            self.smtp_handler, hostname='127.0.0.1', port=1025)
+        self.smtp_controller.start()
+
+        # Create a superuser
+        self.user = UserModel.objects.create_superuser(
+            username='admin', email="admin@email.com")
         self.user.set_password('password')
         self.user.save()
 
-        # authenticate the superuser
+        # Verify the user's email
+        EmailAddress.objects.create(
+            user=self.user,
+            email="admin@email.com",
+            verified=True,
+            primary=True,
+        )
+
+        # Authenticate the superuser
         login(self.client, self.user)
 
     def test_registering_models(self):

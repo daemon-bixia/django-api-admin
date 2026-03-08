@@ -18,7 +18,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.base import ModelBase
-from django.urls import NoReverseMatch, URLPattern,  path, re_path, include, reverse, reverse_lazy
+from django.urls import NoReverseMatch, path, re_path, include, reverse
 from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import capfirst
@@ -31,7 +31,6 @@ from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagination
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
-from rest_framework import authentication
 from rest_framework.exceptions import PermissionDenied
 
 all_sites = WeakSet()
@@ -46,9 +45,6 @@ class APIAdminSite():
 
     # Optional views
     include_swagger_ui_view = True
-
-    # Default permissions
-    permission_classes = None
 
     # Default serializers
     password_change_serializer = None
@@ -223,9 +219,6 @@ class APIAdminSite():
 
         def inner(request, *args, **kwargs):
             if not self.has_permission(request):
-                if request.path == reverse("admin:logout", current_app=self.name):
-                    return view(request, *args, **kwargs)
-
                 raise PermissionDenied()
 
             return view(request, *args, **kwargs)
@@ -247,16 +240,8 @@ class APIAdminSite():
             wrapper.admin_site = self
             return update_wrapper(wrapper, view)
 
-        # Create the app index view route
-        valid_app_labels = set(model._meta.app_label for model,
-                               _ in self._registry.items())
-        app_index_route = r'^(?P<app_label>' + \
-            '|'.join(valid_app_labels) + ')/$'
-
         urlpatterns = [
             path('', wrap(self.get_app_list_view()), name='index'),
-            re_path(app_index_route, wrap(
-                self.get_app_index_view()), name='app_index'),
             path('password_change/', wrap(self.get_password_change_view()),
                  name='password_change'),
             path('autocomplete/', wrap(self.autocomplete_view()),
@@ -265,15 +250,12 @@ class APIAdminSite():
                  name='language_catalog'),
             path('site_context/', wrap(self.get_site_context_view()),
                  name='site_context'),
-            path('admin_log/', self.get_admin_log_view(),
+            path('admin_log/', wrap(self.get_admin_log_view()),
                  name='admin_log'),
-            path('permissions/', self.get_permissions_view(),
+            path('permissions/', wrap(self.get_permissions_view()),
                  name='permissions'),
-            path(
-                'r/<path:content_type_id>/<path:object_id>/',
-                self.get_view_on_site_view(),
-                name='view_on_site',
-            ),
+            path('r/<path:content_type_id>/<path:object_id>/',
+                 wrap(self.get_view_on_site_view()), name='view_on_site',),
         ]
 
         # Add the swagger-ui view
@@ -285,15 +267,28 @@ class APIAdminSite():
         # Save these urls under site_urls for schema tagging
         self.site_urls = copy(urlpatterns)
 
-        # Add the model_admin urls
+        # Add in each model's views, and create a list of valid URLS for the
+        # app_index
+        valid_app_labels = []
         for model, model_admin in self._registry.items():
             self.admin_urls[model] = model_admin.urls
-        urlpatterns += [url for urls in self.admin_urls.values()
-                        for url in urls]
+            for url in model_admin.urls:
+                urlpatterns += [url]
+            if model._meta.app_label not in valid_app_labels:
+                valid_app_labels.append(model._meta.app_label)
+
+        # If there were ModelAdmins registered, we should have a list of app
+        # labels for which we need to allow access to the app_index view,
+        if valid_app_labels:
+            regex = r"^(?P<app_label>" + "|".join(valid_app_labels) + ")/$"
+            app_index_path = re_path(regex, wrap(
+                self.get_app_index_view()), name="app_index")
+            urlpatterns += [app_index_path]
+            self.site_urls += [app_index_path]
 
         # Add the OpenAPI schema url and update the site_urls
-        schema_path = path(
-            'schema/', self.get_schema_view([path(f"{self.url_prefix}/", include(urlpatterns))]), name='schema')
+        schema_path = path('schema/', self.get_schema_view(
+            [path(f"{self.url_prefix}/", include(urlpatterns))]), name='schema')
         urlpatterns.append(schema_path)
         self.site_urls.append(schema_path)
 
@@ -431,34 +426,12 @@ class APIAdminSite():
         """
         Returns the authentication classes used by the views
         """
-        from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
-
-        if self.authentication_classes is None:
-            return [XSessionTokenAuthentication, authentication.SessionAuthentication]
-
         return self.authentication_classes
-
-    def get_permission_classes(self):
-        """
-        Returns the permission classes used by the protected views
-        """
-        from rest_framework.permissions import IsAuthenticated, IsAdminUser
-        from django_api_admin.permissions import IsMFAEnabledOrGracePeriod
-
-        if self.permission_classes is None:
-            return [
-                IsAuthenticated,
-                IsAdminUser,
-                IsMFAEnabledOrGracePeriod
-            ]
-
-        return self.permission_classes
 
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -468,7 +441,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.app_index import AppIndexView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -478,7 +450,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.password_change import PasswordChangeView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'serializer_class': self.password_change_serializer,
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
@@ -489,7 +460,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.language_catalog import LanguageCatalogView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self,
         }
@@ -499,7 +469,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.autocomplete import AutoCompleteView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -509,7 +478,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.site_context import SiteContextView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }
@@ -519,7 +487,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.admin_log import AdminLogView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'pagination_class': self.default_log_pagination_class,
             'serializer_class': self.get_log_entry_serializer(),
             'authentication_classes': self.get_authentication_classes(),
@@ -532,7 +499,6 @@ class APIAdminSite():
 
         defaults = {
             'authentication_classes': self.get_authentication_classes(),
-            'permission_classes': [],
             'admin_site': self,
         }
         return ViewOnSiteView.as_view(**defaults)
@@ -541,7 +507,6 @@ class APIAdminSite():
         from django_api_admin.admin_views.admin_site_views.get_permissions import PermissionsView
 
         defaults = {
-            'permission_classes': self.get_permission_classes(),
             'authentication_classes': self.get_authentication_classes(),
             'admin_site': self
         }

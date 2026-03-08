@@ -7,7 +7,6 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-
 from django_api_admin.serializers import AppIndexSerializer, AppSerializer
 from django_api_admin.openapi import CommonAPIResponses
 

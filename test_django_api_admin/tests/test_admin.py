@@ -11,25 +11,16 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
 
 from allauth.account.models import EmailAddress
 
+from aiosmtpd.controller import Controller
+
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.admin import site, AuthorAPIAdmin
-from test_django_api_admin.utils import login
+from test_django_api_admin.utils import login, MailHandler
 
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
-from aiosmtpd.controller import Controller
-
 
 UserModel = get_user_model()
-
-
-class MailHandler:
-    def __init__(self):
-        self.messages = []
-
-    async def handle_DATA(self, server, session, envelope):
-        self.messages.append(envelope)
-        return '250 OK'
 
 
 class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
