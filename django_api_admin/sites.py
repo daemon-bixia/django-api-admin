@@ -12,17 +12,19 @@
 
 from copy import copy
 from weakref import WeakSet
+from functools import update_wrapper
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.base import ModelBase
-from django.urls import (NoReverseMatch, URLPattern,  path, re_path, include,
-                         reverse)
-from django.utils.text import capfirst
-from django.utils.translation import gettext_lazy
+from django.urls import NoReverseMatch, URLPattern,  path, re_path, include, reverse, reverse_lazy
 from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
+from django.utils.text import capfirst
+from django.utils.translation import gettext_lazy
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
 
 from django_api_admin import actions
 from django_api_admin.admins.model_admin import APIModelAdmin
@@ -30,6 +32,7 @@ from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagi
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
 from rest_framework import authentication
+from rest_framework.exceptions import PermissionDenied
 
 all_sites = WeakSet()
 
@@ -42,7 +45,6 @@ class APIAdminSite():
     admin_class = APIModelAdmin
 
     # Optional views
-    include_root_view = True
     include_swagger_ui_view = True
 
     # Default permissions
@@ -188,7 +190,63 @@ class APIAdminSite():
             raise NotRegistered(
                 f"The model {model.__name__} is not registered.")
 
+    def has_permission(self, request):
+        """
+        Return True if the given HttpRequest has permission to view
+        *at least one* page in the admin site.
+        """
+        return request.user.is_active and request.user.is_staff
+
+    def admin_view(self, view, cacheable=False):
+        """
+        Decorator to create an admin view attached to this ``AdminSite``. This
+        wraps the view and provides permission checking by calling
+        ``self.has_permission``.
+
+        You'll want to use this from within ``AdminSite.get_urls()``:
+
+            class MyAdminSite(AdminSite):
+
+                def get_urls(self):
+                    from django.urls import path
+
+                    urls = super().get_urls()
+                    urls += [
+                        path('my_view/', self.admin_view(some_view))
+                    ]
+                    return urls
+
+        By default, admin_views are marked non-cacheable using the
+        ``never_cache`` decorator. If the view can be safely cached, set
+        cacheable=True.
+        """
+
+        def inner(request, *args, **kwargs):
+            if not self.has_permission(request):
+                if request.path == reverse("admin:logout", current_app=self.name):
+                    return view(request, *args, **kwargs)
+
+                raise PermissionDenied()
+
+            return view(request, *args, **kwargs)
+
+        if not cacheable:
+            inner = never_cache(inner)
+        # We add csrf_protect here so this function can be used as a utility
+        # function for any view, without having to repeat 'csrf_protect'.
+        if not getattr(view, "csrf_exempt", False):
+            inner = csrf_protect(inner)
+        return update_wrapper(inner, view)
+
     def get_urls(self):
+
+        def wrap(view, cacheable=False):
+            def wrapper(*args, **kwargs):
+                return self.admin_view(view, cacheable)(*args, **kwargs)
+
+            wrapper.admin_site = self
+            return update_wrapper(wrapper, view)
+
         # Create the app index view route
         valid_app_labels = set(model._meta.app_label for model,
                                _ in self._registry.items())
@@ -196,15 +254,16 @@ class APIAdminSite():
             '|'.join(valid_app_labels) + ')/$'
 
         urlpatterns = [
-            path('index/', self.get_app_list_view(), name='index'),
-            re_path(app_index_route, self.get_app_index_view(), name='app_index'),
-            path('password_change/', self.get_password_change_view(),
+            path('', wrap(self.get_app_list_view()), name='index'),
+            re_path(app_index_route, wrap(
+                self.get_app_index_view()), name='app_index'),
+            path('password_change/', wrap(self.get_password_change_view()),
                  name='password_change'),
-            path('autocomplete/', self.autocomplete_view(),
+            path('autocomplete/', wrap(self.autocomplete_view()),
                  name='autocomplete'),
-            path('jsoni18n/', self.get_i18n_javascript_view(),
+            path('jsoni18n/', wrap(self.get_i18n_javascript_view()),
                  name='language_catalog'),
-            path('site_context/', self.get_site_context_view(),
+            path('site_context/', wrap(self.get_site_context_view()),
                  name='site_context'),
             path('admin_log/', self.get_admin_log_view(),
                  name='admin_log'),
@@ -217,16 +276,7 @@ class APIAdminSite():
             ),
         ]
 
-        # Add api_root for browseable api
-        if self.include_root_view:
-            from django_api_admin.admin_views.admin_site_views.admin_api_root import AdminAPIRootView
-
-            root_urls = [url for url in urlpatterns if
-                         isinstance(url, URLPattern) and url.name]
-            root_view = AdminAPIRootView.as_view(
-                root_urls=root_urls, admin_site=self)
-            urlpatterns.append(path('', root_view, name='api-root'))
-        # Add the swagger-ui url
+        # Add the swagger-ui view
         if self.include_swagger_ui_view:
             urlpatterns.append(path('schema/swagger-ui/',
                                     self.get_docs_view(),

@@ -14,7 +14,7 @@ class ListView(APIView):
     model_admin = None
 
     def get(self, request):
-        queryset = self.model_admin.get_queryset()
+        queryset = self.model_admin.get_queryset(request)
         page = self.model_admin.admin_site.paginate_queryset(
             queryset, request, view=self)
         serializer = self.serializer_class(page, many=True)

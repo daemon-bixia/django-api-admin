@@ -10,6 +10,10 @@
 # This file includes both Django code and your my own contributions.
 # -----------------------------------------------------------------------------
 
+import enum
+
+from functools import update_wrapper
+
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import models
@@ -30,6 +34,12 @@ from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.constants.vars import LOOKUP_SEP
 
 
+class ShowFacets(enum.Enum):
+    NEVER = "NEVER"
+    ALLOW = "ALLOW"
+    ALWAYS = "ALWAYS"
+
+
 class APIModelAdmin(BaseAPIModelAdmin):
     """Encapsulate all admin options and functionality for a given model."""
 
@@ -48,33 +58,87 @@ class APIModelAdmin(BaseAPIModelAdmin):
     save_on_top = False
     paginator = Paginator
     preserve_filters = True
+    show_facets = ShowFacets.ALLOW
     inlines = ()
+
+    # Actions
     actions = ()
+    action_serializer = None
     actions_on_top = True
     actions_on_bottom = False
     actions_selection_counter = True
     checks_class = APIModelAdminChecks
-    action_serializer = None
 
-    # These are the admin options used to customize the change list page interface
-    # server-side customizations like list_select_related and actions are not included
+    # These are the admin options used to customize the change list page UI
+    # server-side customizations like `list_select_related` and `actions` are not included
     changelist_options = [
-        # actions options
         'actions_on_top', 'actions_on_bottom', 'actions_selection_counter',
-        # display options
-        'empty_value_display', 'list_display', 'list_display_links', 'list_editable',
-        'exclude',
-        # pagination
+        'empty_value_display', 'list_display', 'list_display_links', 'list_editable', 'exclude',
         'show_full_result_count', 'list_per_page', 'list_max_show_all',
-        # filtering, sorting and searching
-        'date_hierarchy', 'search_help_text', 'sortable_by', 'search_fields',
-        'preserve_filters',
+        'date_hierarchy', 'search_help_text', 'sortable_by', 'search_fields', 'preserve_filters',
     ]
 
     def __init__(self, model, admin_site):
         self.model = model
         self.opts = model._meta
         self.admin_site = admin_site
+
+    def __str__(self):
+        return "%s.%s" % (self.opts.app_label, self.__class__.__name__)
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__qualname__}: model={self.model.__qualname__} "
+            f"site={self.admin_site!r}>"
+        )
+
+    def get_inline_instances(self, request, obj=None):
+        inline_instances = []
+        for inline_class in self.inlines:
+            inline = inline_class(self.model, self.admin_site)
+            if request:
+                if not (
+                    inline.has_view_or_change_permission(request)
+                    or inline.has_add_permission(request)
+                    or inline.has_delete_permission(request)
+                ):
+                    continue
+                if not inline.has_add_permission(request):
+                    inline.max_num = 0
+            inline_instances.append(inline)
+
+        return inline_instances
+
+    def get_urls(self):
+        info = f'{self.model._meta.app_label}_{self.model._meta.model_name}'
+        prefix = f'{self.model._meta.app_label}/{self.model._meta.model_name}'
+        urlpatterns = [
+            path(f'{prefix}/list/', self.get_list_view(), name=f'{info}_list'),
+            path(f'{prefix}/changelist/', self.get_changelist_view(),
+                 name=f'{info}_changelist'),
+            path(f'{prefix}/perform_action/',
+                 self.get_handle_action_view(), name=f'{info}_perform_action'),
+            path(f'{prefix}/add/', self.get_add_view(), name=f'{info}_add'),
+            path(f'{prefix}/<path:object_id>/detail/',
+                 self.get_detail_view(), name=f'{info}_detail'),
+            path(f'{prefix}/<path:object_id>/delete/',
+                 self.get_delete_view(), name=f'{info}_delete'),
+            path(f'{prefix}/<path:object_id>/history/',
+                 self.get_history_view(), name=f'{info}_history'),
+            path(f'{prefix}/<path:object_id>/change/',
+                 self.get_change_view(), name=f'{info}_change'),
+        ]
+
+        # Add Inline admins urls
+        for inline_admin in self.get_inline_instances(None):
+            urlpatterns.append(
+                path(f'{prefix}/inlines/', include(inline_admin.urls)))
+
+        return urlpatterns
+
+    @property
+    def urls(self):
+        return self.get_urls()
 
     def get_model_perms(self, request):
         """
@@ -110,23 +174,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         for item in queryset:
             choices.append((f'{item.pk}', f'{str(item)}'))
         return choices
-
-    def get_inline_instances(self, request):
-        inline_instances = []
-        for inline_class in self.inlines:
-            inline = inline_class(self.model, self.admin_site)
-            if request:
-                if not (
-                    inline.has_view_or_change_permission(request)
-                    or inline.has_add_permission(request)
-                    or inline.has_delete_permission(request)
-                ):
-                    continue
-                if not inline.has_add_permission(request):
-                    inline.max_num = 0
-            inline_instances.append(inline)
-
-        return inline_instances
 
     def get_changelist_instance(self, request):
         """
@@ -304,36 +351,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         # Add actions from this ModelAdmin.
         actions.extend(base_actions)
         return actions
-
-    def get_urls(self):
-        info = f'{self.model._meta.app_label}_{self.model._meta.model_name}'
-        prefix = f'{self.model._meta.app_label}/{self.model._meta.model_name}'
-        urlpatterns = [
-            path(f'{prefix}/list/', self.get_list_view(), name=f'{info}_list'),
-            path(f'{prefix}/changelist/', self.get_changelist_view(),
-                 name=f'{info}_changelist'),
-            path(f'{prefix}/perform_action/',
-                 self.get_handle_action_view(), name=f'{info}_perform_action'),
-            path(f'{prefix}/add/', self.get_add_view(), name=f'{info}_add'),
-            path(f'{prefix}/<path:object_id>/detail/',
-                 self.get_detail_view(), name=f'{info}_detail'),
-            path(f'{prefix}/<path:object_id>/delete/',
-                 self.get_delete_view(), name=f'{info}_delete'),
-            path(f'{prefix}/<path:object_id>/history/',
-                 self.get_history_view(), name=f'{info}_history'),
-            path(f'{prefix}/<path:object_id>/change/',
-                 self.get_change_view(), name=f'{info}_change'),
-        ]
-
-        # Add Inline admins urls
-        for inline_admin in self.get_inline_instances(None):
-            urlpatterns.append(
-                path(f'{prefix}/inlines/', include(inline_admin.urls)))
-        return urlpatterns
-
-    @property
-    def urls(self):
-        return self.get_urls()
 
     def to_field_allowed(self, to_field):
         """

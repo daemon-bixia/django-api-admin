@@ -39,15 +39,6 @@ class BaseAPIModelAdmin:
     """
     Shared behavior between APIModelAdmin, APIInlineModelAdmin.
     """
-    # these are the options used in the change/add forms
-    # of the model_admin
-    form_options = [
-        'fieldsets', 'fields',
-        'save_on_top', 'save_as', 'save_as_continue',
-        'view_on_site', 'radio_fields', 'prepopulated_fields',
-        'filter_horizontal', 'filter_vertical', 'raw_id_fields',
-        'autocomplete_fields'
-    ]
     autocomplete_fields = ()
     raw_id_fields = ()
     fields = None
@@ -65,6 +56,16 @@ class BaseAPIModelAdmin:
     view_on_site = True
     show_full_result_count = True
     checks_class = BaseAPIModelAdminChecks
+
+    # These are the options used to customize the change/add page UI
+    # server-side customizations like `exclude`, and `ordering` are not included
+    form_options = [
+        'fieldsets', 'fields',
+        'save_on_top', 'save_as', 'save_as_continue',
+        'view_on_site', 'radio_fields', 'prepopulated_fields',
+        'filter_horizontal', 'filter_vertical', 'raw_id_fields',
+        'autocomplete_fields'
+    ]
 
     def check(self, **kwargs):
         return self.checks_class().check(self, **kwargs)
