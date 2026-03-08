@@ -161,27 +161,8 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "view": self.has_view_permission(request),
         }
 
-    def get_action_serializer(self, request):
-        from django_api_admin.serializers import ActionSerializer
-
-        if self.action_serializer:
-            return self.action_serializer
-
-        self.action_serializer = type(f'{self.model.__name__}ActionSerializer', (ActionSerializer,), {
-            'action': serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
-            'selected_ids': serializers.MultipleChoiceField(choices=[*self.get_selected_ids()])
-        })
-        return self.action_serializer
-
     def get_paginator(self, queryset, per_page, orphans=0, allow_empty_first_page=True):
         return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
-
-    def get_selected_ids(self):
-        queryset = self.get_queryset()
-        choices = []
-        for item in queryset:
-            choices.append((f'{item.pk}', f'{str(item)}'))
-        return choices
 
     def get_changelist_instance(self, request):
         """
@@ -248,16 +229,47 @@ class APIModelAdmin(BaseAPIModelAdmin):
             else self.list_display
         )
 
-    def get_action_choices(self, request, default_choices=models.BLANK_CHOICE_DASH):
-        """
-        Return a list of choices for use in a form object.  Each choice is a
-        tuple (name, description).
-        """
-        choices = [] + default_choices
-        for func, name, description in self.get_actions(request).values():
-            choice = (name, description % model_format_dict(self.opts, models))
-            choices.append(choice)
-        return choices
+    @staticmethod
+    def _get_action_description(func, name):
+        try:
+            return func.short_description
+        except AttributeError:
+            return capfirst(name.replace("_", " "))
+
+    def _get_base_actions(self):
+        """Return the list of actions, prior to any request-based filtering."""
+        actions = []
+        base_actions = (self.get_action(action)
+                        for action in self.actions or [])
+        # get_action might have returned None, so filter any of those out.
+        base_actions = [action for action in base_actions if action]
+        base_action_names = {name for _, name, _ in base_actions}
+
+        # Gather actions from the admin site first
+        for name, func in self.admin_site.actions:
+            if name in base_action_names:
+                continue
+            description = self._get_action_description(func, name)
+            actions.append((func, name, description))
+        # Add actions from this ModelAdmin.
+        actions.extend(base_actions)
+        return actions
+
+    def _filter_actions_by_permissions(self, request, actions):
+        """Filter out any actions that the user doesn't have access to."""
+        filtered_actions = []
+        for action in actions:
+            callable = action[0]
+            if not hasattr(callable, "allowed_permissions"):
+                filtered_actions.append(action)
+                continue
+            permission_checks = (
+                getattr(self, "has_%s_permission" % permission)
+                for permission in callable.allowed_permissions
+            )
+            if any(has_permission(request) for has_permission in permission_checks):
+                filtered_actions.append(action)
+        return filtered_actions
 
     def get_actions(self, request):
         """
@@ -271,6 +283,17 @@ class APIModelAdmin(BaseAPIModelAdmin):
         actions = self._filter_actions_by_permissions(
             request, self._get_base_actions())
         return {name: (func, name, desc) for func, name, desc in actions}
+
+    def get_action_choices(self, request, default_choices=models.BLANK_CHOICE_DASH):
+        """
+        Return a list of choices for use in a form object.  Each choice is a
+        tuple (name, description).
+        """
+        choices = [*default_choices]
+        for func, name, description in self.get_actions(request).values():
+            choice = (name, description % model_format_dict(self.opts, models))
+            choices.append(choice)
+        return choices
 
     def get_action(self, action):
         """
@@ -296,9 +319,26 @@ class APIModelAdmin(BaseAPIModelAdmin):
             except KeyError:
                 return None
 
-        description = getattr(func, "short_description",
-                              capfirst(action.replace("_", " ")))
+        description = self._get_action_description(func, action)
         return func, action, description
+
+    def get_action_serializer(self, request):
+        from django_api_admin.serializers import ActionSerializer
+
+        action_serializer = self.action_serializer or ActionSerializer
+
+        # Set the instances returned by `self.get_queryset` by of this model as choices
+        choices = []
+        queryset = self.get_queryset(request)
+        for item in queryset:
+            choices.append((f'{item.pk}', f'{str(item)}'))
+
+        # Dynamicall create an instace of the self.action_serializer with the `action` choices
+        # being the actions defined in the model_admin and the `selected_ids` being the `choices`
+        return type(f'{self.model.__name__}ActionSerializer', (action_serializer,), {
+            'action': serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
+            'selected_ids': serializers.MultipleChoiceField(choices=[*choices])
+        })
 
     def get_list_display(self):
         """
@@ -322,43 +362,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         else:
             # Use only the first item in list_display as link
             return list(list_display)[:1]
-
-    def _filter_actions_by_permissions(self, request, actions):
-        """Filter out any actions that the user doesn't have access to."""
-        filtered_actions = []
-        for action in actions:
-            callable = action[0]
-            if not hasattr(callable, "allowed_permissions"):
-                filtered_actions.append(action)
-                continue
-            permission_checks = (
-                getattr(self, "has_%s_permission" % permission)
-                for permission in callable.allowed_permissions
-            )
-            if any(has_permission(request) for has_permission in permission_checks):
-                filtered_actions.append(action)
-        return filtered_actions
-
-    def _get_base_actions(self):
-        """Return the list of actions, prior to any request-based filtering."""
-        actions = []
-        base_actions = (self.get_action(action)
-                        for action in self.actions or [])
-        # get_action might have returned None, so filter any of those out.
-        base_actions = [action for action in base_actions if action]
-        base_action_names = {name for _, name, _ in base_actions}
-
-        # Gather actions from the admin site first
-        for name, func in self.admin_site.actions:
-            if name in base_action_names:
-                continue
-            description = getattr(func, "short_description",
-                                  capfirst(name.replace("_", " ")))
-            actions.append((func, name, description))
-
-        # Add actions from this ModelAdmin.
-        actions.extend(base_actions)
-        return actions
 
     def to_field_allowed(self, to_field):
         """

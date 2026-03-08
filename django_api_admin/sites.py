@@ -188,6 +188,27 @@ class APIAdminSite():
             raise NotRegistered(
                 f"The model {model.__name__} is not registered.")
 
+    def add_action(self, action, name=None):
+        """
+        Register an action to be available globally.
+        """
+        name = name or action.__name__
+        self._actions[name] = action
+        self._global_actions[name] = action
+
+    def disable_action(self, name):
+        """
+        Disable a globally-registered action. Raise KeyError for invalid names.
+        """
+        del self._actions[name]
+
+    def get_action(self, name):
+        """
+        Explicitly get a registered global action whether it's enabled or
+        not. Raise KeyError for invalid names.
+        """
+        return self._global_actions[name]
+
     def has_permission(self, request):
         """
         Return True if the given HttpRequest has permission to view
