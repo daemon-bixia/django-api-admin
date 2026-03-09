@@ -272,3 +272,14 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertIsNotNone(fields['name'].help_text)
         self.assertTrue(serializer.data['is_old_enough'])
         self.assertTrue(isinstance(serializer.data['date_joined'], str))
+
+    def test_get_changelist_serializer_class(self):
+        request = self.factory.get('/')
+        request.user = self.user
+        modeladmin = AuthorAPIAdmin(Author, site)
+        serializer_class = modeladmin.get_changelist_serializer_class(request)
+        author = Author.objects.all()
+        serializer = serializer_class(author, many=True)
+        fields = serializer.child.get_fields()
+        self.assertEqual(list(fields.keys()), ['name'])
+        self.assertIsNotNone(fields['name'].help_text)

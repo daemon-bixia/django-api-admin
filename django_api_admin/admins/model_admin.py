@@ -11,14 +11,13 @@
 # -----------------------------------------------------------------------------
 
 import enum
-from functools import update_wrapper
+from functools import update_wrapper, partial
 
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.paginator import Paginator
 from django.db import models
 from django.urls import path, include
 from django.utils.http import urlencode
-from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, smart_split, unescape_string_literal
 
 from rest_framework import serializers
@@ -29,6 +28,7 @@ from django_api_admin.utils.get_content_type_for_model import get_content_type_f
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.model_format_dict import model_format_dict
 from django_api_admin.utils.url_params_from_lookup_dict import url_params_from_lookup_dict
+from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.constants.vars import LOOKUP_SEP
 
@@ -161,31 +161,35 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "view": self.has_view_permission(request),
         }
 
-    def get_paginator(self, queryset, per_page, orphans=0, allow_empty_first_page=True):
-        return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
+    def get_changelist(self, request, **kwargs):
+        """
+        Return the ChangeList class for use on the changelist page.
+        """
+        from django_api_admin.changelist import ChangeList
+
+        return ChangeList
 
     def get_changelist_instance(self, request):
         """
         Return a `ChangeList` instance based on `request`. May raise
         `IncorrectLookupParameters`.
         """
-        from django_api_admin.changelist import ChangeList
-
         list_display = self.list_display
-        list_display_links = self.get_list_display_links(list_display)
+        list_display_links = self.get_list_display_links(request, list_display)
         # Add the action checkboxes if any actions are available.
         if self.get_actions(request):
             list_display = ["action_checkbox", *list_display]
-        sortable_by = self.get_sortable_by()
+        sortable_by = self.get_sortable_by(request)
+        ChangeList = self.get_changelist(request)
         return ChangeList(
             request,
             self.model,
             list_display,
             list_display_links,
-            self.list_filter,
+            self.get_list_filter(request),
             self.date_hierarchy,
-            self.search_fields,
-            self.list_select_related,
+            self.get_search_fields(request),
+            self.get_list_select_related(request),
             self.list_per_page,
             self.list_max_show_all,
             self.list_editable,
@@ -212,22 +216,24 @@ class APIModelAdmin(BaseAPIModelAdmin):
         except (model.DoesNotExist, ValidationError, ValueError):
             return None
 
-    def get_empty_value_display(self):
+    def get_changelist_serializer_class(self, request, **kwargs):
         """
-        Return the empty_value_display set on ModelAdmin or AdminSite.
+        Return a Serializer class for use on the changelist page if list_editable
+        is used.
         """
-        try:
-            return mark_safe(self.empty_value_display)
-        except AttributeError:
-            return mark_safe(self.admin_site.empty_value_display)
-
-    def get_sortable_by(self):
-        """Hook for specifying which fields can be sorted in the changelist."""
-        return (
-            self.sortable_by
-            if self.sortable_by is not None
-            else self.list_display
+        defaults = {
+            "serializerfield_callback": partial(self.serializerfield_for_dbfield, request=request),
+            **kwargs,
+        }
+        return modelserializer_factory(
+            self.model,
+            self.serializer_class,
+            fields=self.list_editable,
+            **defaults,
         )
+
+    def get_paginator(self, queryset, per_page, orphans=0, allow_empty_first_page=True):
+        return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
 
     @staticmethod
     def _get_action_description(func, name):
@@ -340,14 +346,14 @@ class APIModelAdmin(BaseAPIModelAdmin):
             'selected_ids': serializers.MultipleChoiceField(choices=[*choices])
         })
 
-    def get_list_display(self):
+    def get_list_display(self, request):
         """
         Return a sequence containing the fields to be displayed on the
         changelist.
         """
         return self.list_display
 
-    def get_list_display_links(self, list_display):
+    def get_list_display_links(self, request, list_display):
         """
         Return a sequence containing the fields to be displayed as links
         on the changelist. The list_display parameter is the list of fields
@@ -362,6 +368,27 @@ class APIModelAdmin(BaseAPIModelAdmin):
         else:
             # Use only the first item in list_display as link
             return list(list_display)[:1]
+
+    def get_list_filter(self, request):
+        """
+        Return a sequence containing the fields to be displayed as filters in
+        the right sidebar of the changelist page.
+        """
+        return self.list_filter
+
+    def get_list_select_related(self, request):
+        """
+        Return a list of fields to add to the select_related() part of the
+        changelist items query.
+        """
+        return self.list_select_related
+
+    def get_search_fields(self, request):
+        """
+        Return a sequence containing the fields to be searched whenever
+        somebody submits a search query.
+        """
+        return self.search_fields
 
     def to_field_allowed(self, to_field):
         """

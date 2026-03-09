@@ -71,7 +71,7 @@ class AuthorAPIAdmin(APIModelAdmin):
                     'title', 'gender', 'date_joined',)
     list_display_links = ('name',)
     list_filter = ('is_vip', 'age')
-    list_editable = ('title',)
+    list_editable = ('name',)
     list_per_page = 6
     empty_value_display = '-'
     search_fields = ('name', 'publisher__name',)

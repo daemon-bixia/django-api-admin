@@ -155,16 +155,10 @@ class ChangeListView(APIView):
         config['list_display_fields'] = list_display_fields
 
         # a dict of serializer fields attributes for every field in list editable
-        editing_fields = {}
-        serializer_class = cl.model_admin.get_serializer_class()
+        serializer_class = cl.model_admin.get_changelist_serializer_class(
+            request)
         serializer = serializer_class()
-        form_fields = get_form_fields(serializer)
-
-        for field in form_fields:
-            if field['name'] in cl.list_editable:
-                editing_fields[field['name']] = field
-
-        config['editing_fields'] = editing_fields
+        config['editing_fields'] = get_form_fields(serializer)
 
         return config
 

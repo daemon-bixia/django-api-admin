@@ -69,8 +69,8 @@ ChangeList = {
             }
         ],
         'list_display_fields': ['name', 'age', 'user', 'title'],
-        'editing_fields': {
-            'title': {
+        'editing_fields': [
+            {
                 'type': 'CharField',
                 'name': 'title',
                 'attrs': {
@@ -89,7 +89,7 @@ ChangeList = {
                     'trim_whitespace': True
                 }
             }
-        }
+        ],
     },
     'columns': [
         {'field': 'name', 'headerName': 'name'},

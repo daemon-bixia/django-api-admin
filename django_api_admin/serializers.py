@@ -319,7 +319,7 @@ class ConfigSerializer(serializers.Serializer):
     action_choices = ActionChoiceSerializer(many=True)
     filters = FilterSerializer(many=True)
     list_display_fields = serializers.ListField(child=serializers.CharField())
-    editing_fields = serializers.DictField(child=EditingFieldSerializer())
+    editing_fields = serializers.ListField(child=EditingFieldSerializer())
 
 
 class ColumnSerializer(serializers.Serializer):
