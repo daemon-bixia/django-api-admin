@@ -8,7 +8,6 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
-
 from django_api_admin.utils.quote import unquote
 from django_api_admin.constants.vars import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses
@@ -69,7 +68,7 @@ class DeleteView(APIView):
                 raise PermissionDenied
 
             # log deletion
-            self.model_admin.log_deletion(request, obj, str(obj))
+            self.model_admin.log_deletion(request, [obj])
 
             # delete the object
             obj.delete()

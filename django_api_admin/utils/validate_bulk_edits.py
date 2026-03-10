@@ -1,7 +1,7 @@
 from django.forms.models import _get_foreign_key
 
 from django_api_admin.utils.validate_inline_field_names import validate_inline_field_names
-from django_api_admin.utils.get_inline_by_field_name import get_inline_by_field_name
+from django_api_admin.utils.get_inline_by_field_name import get_inline_by_name
 from django_api_admin.utils.get_related_name import get_related_name
 
 from rest_framework import serializers
@@ -23,7 +23,7 @@ def validate_bulk_edits(request, model_admin, obj, operation="create_inlines"):
     serializer_errors = []
     for inline_name, inline_data in request.data.get(operation).items():
         # Extract the InlineModelAdmin from the ModelAdmin using the inline_name
-        inline_admin = get_inline_by_field_name(
+        inline_admin = get_inline_by_name(
             request, model_admin, inline_name)
         # Get the fk used to create the inline relationship
         fk = _get_foreign_key(inline_admin.parent_model,
@@ -75,7 +75,7 @@ def validate_bulk_edits(request, model_admin, obj, operation="create_inlines"):
                 raise serializers.ValidationError(
                     {"error": "you can't update an inline that is not related to this model"})
 
-        # Loop all data in the inline_data, and validate it using inline_serializer_class
+        # Loop all data in the inline_data, and validate it using serializer_class
         for idx, data in enumerate(inline_data):
             # Add the object pk to the fk field to create the relationship
             # Hint: this requires the object to be created

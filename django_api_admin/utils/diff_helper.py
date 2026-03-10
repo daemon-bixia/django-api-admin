@@ -5,12 +5,11 @@
 # -----------------------------------------------------------------------------
 
 from django.forms import model_to_dict
-from django.utils.translation import gettext_lazy as _
 
 
 class ModelDiffHelper(object):
     """
-    detects the changes after every operation used to log admin changes.
+    Detects the changes after every operation used to log admin changes.
     """
 
     def __init__(self, initial):

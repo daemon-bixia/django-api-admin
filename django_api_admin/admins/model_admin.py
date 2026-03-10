@@ -22,12 +22,10 @@ from django.utils.text import capfirst, smart_split, unescape_string_literal
 
 from rest_framework import serializers
 
-from django_api_admin.filters import SimpleListFilter
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
 from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.model_format_dict import model_format_dict
-from django_api_admin.utils.url_params_from_lookup_dict import url_params_from_lookup_dict
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.constants.vars import LOOKUP_SEP
@@ -232,8 +230,63 @@ class APIModelAdmin(BaseAPIModelAdmin):
             **defaults,
         )
 
-    def get_paginator(self, queryset, per_page, orphans=0, allow_empty_first_page=True):
+    def get_serializer_classes_with_inlines(self, request, obj=None):
+        """
+        Yield formsets and the corresponding inlines.
+        """
+        for inline in self.get_inline_instances(request, obj):
+            yield inline.get_serializer_class(request, obj), inline
+
+    def get_paginator(
+        self, request, queryset, per_page, orphans=0, allow_empty_first_page=True
+    ):
         return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
+
+    def log_addition(self, request, obj, message):
+        """
+        Log that an object has been successfully added.
+        The default implementation creates an admin LogEntry object.
+        """
+        from django_api_admin.models import ADDITION, LogEntry
+
+        return LogEntry.objects.log_actions(
+            user_id=request.user.pk,
+            queryset=[obj],
+            action_flag=ADDITION,
+            change_message=message,
+            single_object=True
+        )
+
+    def log_change(self, request, obj, message):
+        """
+        Log that an object has been successfully changed.
+
+        The default implementation creates an admin LogEntry object.
+        """
+        from django_api_admin.models import CHANGE, LogEntry
+
+        return LogEntry.objects.log_action(
+            user_id=request.user.pk,
+            queryset=[obj],
+            action_flag=CHANGE,
+            change_message=message,
+            single_object=True,
+        )
+
+    def log_deletion(self, request, queryset):
+        """
+        Log that an object will be deleted. Note that this method must be
+        called before the deletion.
+
+        The default implementation creates an admin LogEntry object.
+        """
+        from django_api_admin.models import DELETION, LogEntry
+
+        return LogEntry.objects.log_action(
+            user_id=request.user.pk,
+            queryset=queryset,
+            action_flag=DELETION,
+        )
 
     @staticmethod
     def _get_action_description(func, name):
@@ -390,110 +443,116 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         return self.search_fields
 
-    def to_field_allowed(self, to_field):
+    def get_search_results(self, request, queryset, search_term):
         """
-        Return True if the model associated with this admin should be
-        allowed to be referenced by the specified field.
+        Return a tuple containing a queryset to implement the search
+        and a boolean indicating if the results may contain duplicates.
         """
-        try:
-            field = self.opts.get_field(to_field)
-        except FieldDoesNotExist:
-            return False
 
-        # Always allow referencing the primary key since it's already possible
-        # to get this information from the change view URL.
-        if field.primary_key:
-            return True
+        # Apply keyword searches.
+        def construct_search(field_name):
+            """
+            Return a tuple of (lookup, field_to_validate).
 
-        # Allow reverse relationships to models defining m2m fields if they
-        # target the specified field.
-        for many_to_many in self.opts.many_to_many:
-            if many_to_many.m2m_target_field_name() == to_field:
-                return True
+            field_to_validate is set for non-text exact lookups so that
+            invalid search terms can be skipped (preserving index usage).
+            """
+            if field_name.startswith("^"):
+                return "%s__istartswith" % field_name.removeprefix("^"), None
+            elif field_name.startswith("="):
+                return "%s__iexact" % field_name.removeprefix("="), None
+            elif field_name.startswith("@"):
+                return "%s__search" % field_name.removeprefix("@"), None
+            # Use field_name if it includes a lookup.
+            opts = queryset.model._meta
+            lookup_fields = field_name.split(LOOKUP_SEP)
+            # Go through the fields, following all relations.
+            prev_field = None
+            for path_part in lookup_fields:
+                if path_part == "pk":
+                    path_part = opts.pk.name
+                try:
+                    field = opts.get_field(path_part)
+                except FieldDoesNotExist:
+                    # Use valid query lookups.
+                    if prev_field and prev_field.get_lookup(path_part):
+                        if path_part == "exact" and not isinstance(
+                            prev_field, (models.CharField, models.TextField)
+                        ):
+                            # Use prev_field to validate the search term.
+                            return field_name, prev_field
+                        return field_name, None
+                else:
+                    prev_field = field
+                    if hasattr(field, "path_infos"):
+                        # Update opts to follow the relation.
+                        opts = field.path_infos[-1].to_opts
+            # Otherwise, use the field with icontains.
+            return "%s__icontains" % field_name, None
 
-        # Make sure at least one of the models registered for this site
-        # references this field through a FK or a M2M relationship.
-        registered_models = set()
-        for model, admin in self.admin_site._registry.items():
-            registered_models.add(model)
-            for inline in admin.inlines:
-                registered_models.add(inline.model)
+        may_have_duplicates = False
+        search_fields = self.get_search_fields(request)
+        if search_fields and search_term:
+            orm_lookups = []
+            for field in search_fields:
+                orm_lookups.append(construct_search(str(field)))
 
-        related_objects = (
-            f
-            for f in self.opts.get_fields(include_hidden=True)
-            if (f.auto_created and not f.concrete)
-        )
-        for related_object in related_objects:
-            related_model = related_object.related_model
-            remote_field = related_object.field.remote_field
-            if (
-                any(issubclass(model, related_model)
-                    for model in registered_models)
-                and hasattr(remote_field, "get_related_field")
-                and remote_field.get_related_field() == field
-            ):
-                return True
+            term_queries = []
+            for bit in smart_split(search_term):
+                if bit.startswith(('"', "'")) and bit[0] == bit[-1]:
+                    bit = unescape_string_literal(bit)
+                # Build term lookups, skipping values invalid for their field.
+                bit_lookups = []
+                for orm_lookup, validate_field in orm_lookups:
+                    if validate_field is not None:
+                        formfield = validate_field.formfield()
+                        try:
+                            if formfield is not None:
+                                value = formfield.to_python(bit)
+                            else:
+                                # Fields like AutoField lack a form field.
+                                value = validate_field.to_python(bit)
+                        except ValidationError:
+                            # Skip this lookup for invalid values.
+                            continue
+                    else:
+                        value = bit
+                    bit_lookups.append((orm_lookup, value))
+                if bit_lookups:
+                    or_queries = models.Q.create(
+                        bit_lookups, connector=models.Q.OR)
+                    term_queries.append(or_queries)
+                else:
+                    # No valid lookups: add a filter that returns nothing.
+                    term_queries.append(models.Q(pk__in=[]))
+            if term_queries:
+                queryset = queryset.filter(models.Q.create(term_queries))
+            may_have_duplicates |= any(
+                lookup_spawns_duplicates(self.opts, search_spec)
+                for search_spec, _ in orm_lookups
+            )
+        return queryset, may_have_duplicates
 
-        return False
-
-    def lookup_allowed(self, lookup, value):
-        model = self.model
-        # Check FKey lookups that are allowed, so that popups produced by
-        # ForeignKeyRawIdWidget, on the basis of ForeignKey.limit_choices_to,
-        # are allowed to work.
-        for fk_lookup in model._meta.related_fkey_lookups:
-            # As ``limit_choices_to`` can be a callable, invoke it here.
-            if callable(fk_lookup):
-                fk_lookup = fk_lookup()
-            if (lookup, value) in url_params_from_lookup_dict(
-                fk_lookup
-            ).items():
-                return True
-
-        relation_parts = []
-        prev_field = None
-        for part in lookup.split(LOOKUP_SEP):
-            try:
-                field = model._meta.get_field(part)
-            except FieldDoesNotExist:
-                # Lookups on nonexistent fields are ok, since they're ignored
-                # later.
-                break
-            # It is allowed to filter on values that would be found from local
-            # model anyways. For example, if you filter on employee__department__id,
-            # then the id value would be found already from employee__department_id.
-            if not prev_field or (
-                prev_field.is_relation
-                and field not in prev_field.path_infos[-1].target_fields
-            ):
-                relation_parts.append(part)
-            if not getattr(field, "path_infos", None):
-                # This is not a relational field, so further parts
-                # must be transforms.
-                break
-            prev_field = field
-            model = field.path_infos[-1].to_opts.model
-
-        if len(relation_parts) <= 1:
-            # Either a local field filter, or no fields at all.
-            return True
-        valid_lookups = {self.date_hierarchy}
-        for filter_item in self.list_filter:
-            if isinstance(filter_item, type) and issubclass(
-                filter_item, SimpleListFilter
-            ):
-                valid_lookups.add(filter_item.parameter_name)
-            elif isinstance(filter_item, (list, tuple)):
-                valid_lookups.add(filter_item[0])
+    def get_preserved_filters(self, request):
+        """
+        Return the preserved filters querystring.
+        """
+        match = request.resolver_match
+        if self.preserve_filters and match:
+            current_url = "%s:%s" % (match.app_name, match.url_name)
+            changelist_url = "%s:%s_%s_changelist" % (
+                self.admin_site.name,
+                self.opts.app_label,
+                self.opts.model_name,
+            )
+            if current_url == changelist_url:
+                preserved_filters = request.GET.urlencode()
             else:
-                valid_lookups.add(filter_item)
+                preserved_filters = request.GET.get("_changelist_filters")
 
-        # Is it a valid relational lookup?
-        return not {
-            LOOKUP_SEP.join(relation_parts),
-            LOOKUP_SEP.join(relation_parts + [part]),
-        }.isdisjoint(valid_lookups)
+            if preserved_filters:
+                return urlencode({"_changelist_filters": preserved_filters})
+        return ""
 
     def get_changelist_view(self):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
@@ -522,130 +581,3 @@ class APIModelAdmin(BaseAPIModelAdmin):
             'model_admin': self
         }
         return HistoryView.as_view(**defaults)
-
-    def get_search_results(self, queryset, search_term):
-        """
-        Return a tuple containing a queryset to implement the search
-        and a boolean indicating if the results may contain duplicates.
-        """
-        # Apply keyword searches.
-        def construct_search(field_name):
-            if field_name.startswith("^"):
-                return "%s__istartswith" % field_name[1:]
-            elif field_name.startswith("="):
-                return "%s__iexact" % field_name[1:]
-            elif field_name.startswith("@"):
-                return "%s__search" % field_name[1:]
-            # Use field_name if it includes a lookup.
-            opts = queryset.model._meta
-            lookup_fields = field_name.split(LOOKUP_SEP)
-            # Go through the fields, following all relations.
-            prev_field = None
-            for path_part in lookup_fields:
-                if path_part == "pk":
-                    path_part = opts.pk.name
-                try:
-                    field = opts.get_field(path_part)
-                except FieldDoesNotExist:
-                    # Use valid query lookups.
-                    if prev_field and prev_field.get_lookup(path_part):
-                        return field_name
-                else:
-                    prev_field = field
-                    if hasattr(field, "path_infos"):
-                        # Update opts to follow the relation.
-                        opts = field.path_infos[-1].to_opts
-            # Otherwise, use the field with icontains.
-            return "%s__icontains" % field_name
-
-        may_have_duplicates = False
-        search_fields = self.search_fields
-        if search_fields and search_term:
-            orm_lookups = [
-                construct_search(str(search_field)) for search_field in search_fields
-            ]
-            term_queries = []
-            for bit in smart_split(search_term):
-                if bit.startswith(('"', "'")) and bit[0] == bit[-1]:
-                    bit = unescape_string_literal(bit)
-                or_queries = models.Q.create(
-                    [(orm_lookup, bit) for orm_lookup in orm_lookups],
-                    connector=models.Q.OR,
-                )
-                term_queries.append(or_queries)
-            queryset = queryset.filter(models.Q.create(term_queries))
-            may_have_duplicates |= any(
-                lookup_spawns_duplicates(self.opts, search_spec)
-                for search_spec in orm_lookups
-            )
-        return queryset, may_have_duplicates
-
-    def get_preserved_filters(self, request):
-        """
-        Return the preserved filters querystring.
-        """
-        match = request.resolver_match
-        if self.preserve_filters and match:
-            current_url = "%s:%s" % (match.app_name, match.url_name)
-            changelist_url = "api_admin:%s_%s_changelist" % (
-                self.opts.app_label,
-                self.opts.model_name,
-            )
-            if current_url == changelist_url:
-                preserved_filters = request.GET.urlencode()
-            else:
-                preserved_filters = request.GET.get("_changelist_filters")
-
-            if preserved_filters:
-                return urlencode({"_changelist_filters": preserved_filters})
-        return ""
-
-    def log_addition(self, request, obj, message):
-        """
-        Log that an object has been successfully added.
-        The default implementation creates an admin LogEntry object.
-        """
-        from django_api_admin.models import ADDITION, LogEntry
-
-        return LogEntry.objects.log_action(
-            user_id=request.user.pk,
-            content_type_id=get_content_type_for_model(obj).pk,
-            object_id=obj.pk,
-            object_repr=str(obj),
-            action_flag=ADDITION,
-            change_message=message,
-        )
-
-    def log_change(self, request, obj, message):
-        """
-        Log that an object has been successfully changed.
-
-        The default implementation creates an admin LogEntry object.
-        """
-        from django_api_admin.models import CHANGE, LogEntry
-
-        return LogEntry.objects.log_action(
-            user_id=request.user.pk,
-            content_type_id=get_content_type_for_model(obj).pk,
-            object_id=obj.pk,
-            object_repr=str(obj),
-            action_flag=CHANGE,
-            change_message=message,
-        )
-
-    def log_deletion(self, request, obj, object_repr):
-        """
-        Log that an object will be deleted. Note that this method must be
-        called before the deletion.
-
-        The default implementation creates an admin LogEntry object.
-        """
-        from django_api_admin.models import DELETION, LogEntry
-
-        return LogEntry.objects.log_action(
-            user_id=request.user.pk,
-            content_type_id=get_content_type_for_model(obj).pk,
-            object_id=obj.pk,
-            object_repr=object_repr,
-            action_flag=DELETION,
-        )

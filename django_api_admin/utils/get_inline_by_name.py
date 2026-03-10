@@ -1,4 +1,4 @@
-def get_inline_by_field_name(request, model_admin, inline_name):
+def get_inline_by_name(request, model_admin, inline_name):
     """
     Extract the InlineModelAdmin from the ModelAdmin using the inline_name value
     """

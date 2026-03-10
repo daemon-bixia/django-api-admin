@@ -30,8 +30,7 @@ def delete_selected(modeladmin, request, queryset):
     # log the deletion of all the objects inside the queryset
     n = queryset.count()
     if n:
-        for obj in queryset:
-            modeladmin.log_deletion(request, obj, str(obj))
+        modeladmin.log_deletion(request, queryset)
 
     # delete the queryset
     queryset.delete()

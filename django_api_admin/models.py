@@ -37,25 +37,34 @@ ACTION_FLAG_CHOICES = [
 class LogEntryManager(models.Manager):
     use_in_migrations = True
 
-    def log_action(
-        self,
-        user_id,
-        content_type_id,
-        object_id,
-        object_repr,
-        action_flag,
-        change_message="",
+    def log_actions(
+        self, user_id, queryset, action_flag, change_message="", *, single_object=False
     ):
         if isinstance(change_message, list):
             change_message = json.dumps(change_message)
-        return self.model.objects.create(
-            user_id=user_id,
-            content_type_id=content_type_id,
-            object_id=str(object_id),
-            object_repr=object_repr[:200],
-            action_flag=action_flag,
-            change_message=change_message,
-        )
+
+        log_entry_list = [
+            self.model(
+                user_id=user_id,
+                content_type_id=ContentType.objects.get_for_model(
+                    obj, for_concrete_model=False
+                ).id,
+                object_id=obj.pk,
+                object_repr=str(obj)[:200],
+                action_flag=action_flag,
+                change_message=change_message,
+            )
+            for obj in queryset
+        ]
+
+        if len(log_entry_list) == 1:
+            instance = log_entry_list[0]
+            instance.save()
+            if single_object:
+                return instance
+            return [instance]
+
+        return self.model.objects.bulk_create(log_entry_list)
 
 
 class LogEntry(models.Model):

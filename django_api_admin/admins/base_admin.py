@@ -17,14 +17,18 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth import get_permission_codename
 from django.utils.safestring import mark_safe
+from django.core.exceptions import FieldDoesNotExist
 
 from rest_framework import serializers
 
+from django_api_admin.filters import SimpleListFilter
+from django_api_admin.utils.url_params_from_lookup_dict import url_params_from_lookup_dict
 from django_api_admin.checks import BaseAPIModelAdminChecks
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
+from django_api_admin.constants.vars import LOOKUP_SEP
 
 
 def get_content_type_for_model(obj):
@@ -332,54 +336,110 @@ class BaseAPIModelAdmin:
             else self.get_list_display(request)
         )
 
-    def get_list_view(self):
-        from django_api_admin.admin_views.model_admin_views.list import ListView
+    def to_field_allowed(self, to_field):
+        """
+        Return True if the model associated with this admin should be
+        allowed to be referenced by the specified field.
+        """
+        try:
+            field = self.opts.get_field(to_field)
+        except FieldDoesNotExist:
+            return False
 
-        defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
-        }
-        return ListView.as_view(**defaults)
+        # Always allow referencing the primary key since it's already possible
+        # to get this information from the change view URL.
+        if field.primary_key:
+            return True
 
-    def get_detail_view(self):
-        from django_api_admin.admin_views.model_admin_views.detail import DetailView
+        # Allow reverse relationships to models defining m2m fields if they
+        # target the specified field.
+        for many_to_many in self.opts.many_to_many:
+            if many_to_many.m2m_target_field_name() == to_field:
+                return True
 
-        defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
-        }
-        return DetailView.as_view(**defaults)
+        # Make sure at least one of the models registered for this site
+        # references this field through a FK or a M2M relationship.
+        registered_models = set()
+        for model, admin in self.admin_site._registry.items():
+            registered_models.add(model)
+            for inline in admin.inlines:
+                registered_models.add(inline.model)
 
-    def get_add_view(self):
-        from django_api_admin.admin_views.model_admin_views.add import AddView
+        related_objects = (
+            f
+            for f in self.opts.get_fields(include_hidden=True)
+            if (f.auto_created and not f.concrete)
+        )
+        for related_object in related_objects:
+            related_model = related_object.related_model
+            remote_field = related_object.field.remote_field
+            if (
+                any(issubclass(model, related_model)
+                    for model in registered_models)
+                and hasattr(remote_field, "get_related_field")
+                and remote_field.get_related_field() == field
+            ):
+                return True
 
-        defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
-        }
-        return AddView.as_view(**defaults)
+        return False
 
-    def get_change_view(self):
-        from django_api_admin.admin_views.model_admin_views.change import ChangeView
+    def lookup_allowed(self, lookup, value):
+        model = self.model
+        # Check FKey lookups that are allowed, so that popups produced by
+        # ForeignKeyRawIdWidget, on the basis of ForeignKey.limit_choices_to,
+        # are allowed to work.
+        for fk_lookup in model._meta.related_fkey_lookups:
+            # As ``limit_choices_to`` can be a callable, invoke it here.
+            if callable(fk_lookup):
+                fk_lookup = fk_lookup()
+            if (lookup, value) in url_params_from_lookup_dict(
+                fk_lookup
+            ).items():
+                return True
 
-        defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
-        }
-        return ChangeView.as_view(**defaults)
+        relation_parts = []
+        prev_field = None
+        for part in lookup.split(LOOKUP_SEP):
+            try:
+                field = model._meta.get_field(part)
+            except FieldDoesNotExist:
+                # Lookups on nonexistent fields are ok, since they're ignored
+                # later.
+                break
+            # It is allowed to filter on values that would be found from local
+            # model anyways. For example, if you filter on employee__department__id,
+            # then the id value would be found already from employee__department_id.
+            if not prev_field or (
+                prev_field.is_relation
+                and field not in prev_field.path_infos[-1].target_fields
+            ):
+                relation_parts.append(part)
+            if not getattr(field, "path_infos", None):
+                # This is not a relational field, so further parts
+                # must be transforms.
+                break
+            prev_field = field
+            model = field.path_infos[-1].to_opts.model
 
-    def get_delete_view(self):
-        from django_api_admin.admin_views.model_admin_views.delete import DeleteView
+        if len(relation_parts) <= 1:
+            # Either a local field filter, or no fields at all.
+            return True
+        valid_lookups = {self.date_hierarchy}
+        for filter_item in self.list_filter:
+            if isinstance(filter_item, type) and issubclass(
+                filter_item, SimpleListFilter
+            ):
+                valid_lookups.add(filter_item.parameter_name)
+            elif isinstance(filter_item, (list, tuple)):
+                valid_lookups.add(filter_item[0])
+            else:
+                valid_lookups.add(filter_item)
 
-        defaults = {
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
-        }
-        return DeleteView.as_view(**defaults)
+        # Is it a valid relational lookup?
+        return not {
+            LOOKUP_SEP.join(relation_parts),
+            LOOKUP_SEP.join(relation_parts + [part]),
+        }.isdisjoint(valid_lookups)
 
     def has_add_permission(self, request):
         """
@@ -454,6 +514,55 @@ class BaseAPIModelAdmin:
         `ModelAdmin.has_(add|change|delete)_permission` for that.
         """
         return request.user.has_module_perms(self.opts.app_label)
+
+    def get_list_view(self):
+        from django_api_admin.admin_views.model_admin_views.list import ListView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return ListView.as_view(**defaults)
+
+    def get_detail_view(self):
+        from django_api_admin.admin_views.model_admin_views.detail import DetailView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self
+        }
+        return DetailView.as_view(**defaults)
+
+    def get_add_view(self):
+        from django_api_admin.admin_views.model_admin_views.add import AddView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return AddView.as_view(**defaults)
+
+    def get_change_view(self):
+        from django_api_admin.admin_views.model_admin_views.change import ChangeView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return ChangeView.as_view(**defaults)
+
+    def get_delete_view(self):
+        from django_api_admin.admin_views.model_admin_views.delete import DeleteView
+
+        defaults = {
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self
+        }
+        return DeleteView.as_view(**defaults)
 
     @property
     def is_inline(self):

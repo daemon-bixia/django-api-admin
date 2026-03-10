@@ -8,7 +8,6 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
-
 from django_api_admin.utils.quote import unquote
 from django_api_admin.utils.diff_helper import ModelDiffHelper
 from django_api_admin.utils.get_form_fields import get_form_fields
@@ -22,8 +21,8 @@ from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesRespon
 
 class ChangeView(APIView):
     """
-    Change an existing instance of this model. if the models has inline models associated with it you 
-    create, update and delete instances of the models associated with it.
+    Change an existing instance of this model. If the models has inline models associated with it, then
+    create, update, and delete instances of the inline models as well.
     """
     serializer_class = None
     permission_classes = []
