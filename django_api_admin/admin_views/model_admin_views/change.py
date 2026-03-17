@@ -12,11 +12,11 @@ from django_api_admin.utils.quote import unquote
 from django_api_admin.utils.diff_helper import ModelDiffHelper
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
-from django_api_admin.utils.validate_bulk_edits import validate_bulk_edits
 from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.constants.vars import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, BulkUpdates
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
+from django_api_admin.bulk import BulkOperations
 
 
 class ChangeView(APIView):
@@ -74,9 +74,11 @@ class ChangeView(APIView):
             # Update and log the changes to the object
             if serializer.is_valid():
                 updated_object = serializer.save()
-                # Response message
+
                 msg = _(
                     f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')
+                data = {'data': serializer.data, 'detail': msg}
+
                 # Log the change of  change
                 self.model_admin.log_change(request, updated_object, [{'changed': {
                     'name': str(updated_object._meta.verbose_name),
@@ -84,50 +86,25 @@ class ChangeView(APIView):
                     'fields': helper.set_changed_model(updated_object).changed_fields
                 }}])
 
-                # Process bulk additions
-                created_inlines = []
-                if request.data.get("create_inlines", None):
-                    valid_serializers = validate_bulk_edits(
-                        request, self.model_admin, obj, operation="create_inlines")
-                    # save the inline data in a transaction.
-                    for inline_serializer in valid_serializers:
-                        inline_serializer.save()
-                    # return the data to the user.
-                    created_inlines = [
-                        inline_serializer.data for inline_serializer in valid_serializers]
+                # Process bulk operations
+                if request.data.get("inlines"):
+                    operation = BulkOperations(
+                        request, self.model_admin, obj, request.data.get("inlines"))
 
-                # Process bulk updates
-                updated_inlines = []
-                if request.data.get("update_inlines", None):
-                    valid_serializers = validate_bulk_edits(
-                        request, self.model_admin, obj, operation="update_inlines")
-                    # save the inline data in a transaction.
-                    for inline_serializer in valid_serializers:
-                        inline_serializer.save()
-                    # return the data to the user.
-                    updated_inlines = [
-                        inline_serializer.data for inline_serializer in valid_serializers]
+                    if operation.is_valid():
+                        operation.save()
 
-                # Process bulk deletes
-                deleted_inlines = []
-                if request.data.get("delete_inlines", None):
-                    instances, deleted_inlines = validate_bulk_edits(
-                        request, self.model_admin, obj, operation="delete_inlines")
-                    # delete all of them
-                    instances.delete()
-
-                # Return the appropriate response based on the request data
-                data = {'data': serializer.data, 'detail': msg}
-                if len(created_inlines):
-                    data['created_inlines'] = created_inlines
-                if len(updated_inlines):
-                    data['updated_inlines'] = updated_inlines
-                if len(deleted_inlines):
-                    data['deleted_inlines'] = deleted_inlines
+                        data["inlines"] = {}
+                        if operation.added:
+                            data["inlines"]["added"] = operation.added
+                        if operation.changed:
+                            data["inlines"]["changed"] = operation.changed
+                        if operation.deleted:
+                            data["inlines"]["deleted"] = operation.deleted
 
                 return Response(data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         responses={

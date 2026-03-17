@@ -16,7 +16,6 @@ from django_api_admin.sites import APIAdminSite
 from django_api_admin.admins.inline_admin import TabularInlineAPI
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.decorators import register, display
-from django_api_admin.conf import app_settings
 
 
 class CustomAPIAdminSite(APIAdminSite):
@@ -44,7 +43,7 @@ class CustomAPIAdminSite(APIAdminSite):
         joined_ms = int(request.user.date_joined.timestamp() * 1000)
         now_ms = int(timezone.now().timestamp() * 1000)
 
-        if now_ms - joined_ms < app_settings.MFA_SAFE_PERIOD:
+        if now_ms - joined_ms < 3 * 24 * 60 * 60 * 1000:
             has_mfa = True
         else:
             has_mfa = Authenticator.objects.filter(user=request.user).exists()

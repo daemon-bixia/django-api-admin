@@ -10,10 +10,10 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
-from django_api_admin.utils.validate_bulk_edits import validate_bulk_edits
 from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
+from django_api_admin.bulk import BulkOperations
 
 
 class AddView(APIView):
@@ -75,6 +75,7 @@ class AddView(APIView):
                 new_object = serializer.save()
                 msg = _(
                     f'The {opts.verbose_name} “{str(new_object)}” was added successfully.')
+                data = {'data': serializer.data, 'detail': msg}
 
                 # Log addition of the new instance
                 self.model_admin.log_addition(request, new_object, [{'added': {
@@ -82,23 +83,17 @@ class AddView(APIView):
                     'object': str(new_object),
                 }}])
 
-                # Process inline bulk additions
-                created_inlines = []
-                if request.data.get("create_inlines", None):
-                    # Validate the create_inlines data
-                    valid_serializers = validate_bulk_edits(
-                        request, self.model_admin, new_object)
-                    # Save the inline data (inside a transaction).
-                    for inline_serializer in valid_serializers:
-                        inline_serializer.save()
-                    # Return the data to the user.
-                    created_inlines = [
-                        inline_serializer.data for inline_serializer in valid_serializers]
+                # Process bulk operations
+                if request.data.get("inlines"):
+                    operation = BulkOperations(
+                        request, self.model_admin, new_object, request.data.get("inlines"))
 
-                # Return the appropriate 201 response based on the data
-                data = {'data': serializer.data, 'detail': msg}
-                if len(created_inlines):
-                    data['created_inlines'] = created_inlines
+                    if operation.is_valid():
+                        operation.save()
+
+                        data["inlines"] = {}
+                        if operation.added:
+                            data["inlines"]["added"] = operation.added
 
                 return Response(data, status=status.HTTP_201_CREATED)
 
