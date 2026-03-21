@@ -8,11 +8,9 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
 
 from allauth.account.models import EmailAddress
 
-from aiosmtpd.controller import Controller
-
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.admin import site, AuthorAPIAdmin
-from test_django_api_admin.utils import login, MailHandler
+from test_django_api_admin.utils import login
 
 from django_api_admin.constants.vars import TO_FIELD_VAR
 
@@ -28,12 +26,6 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
     def setUp(self) -> None:
         self.factory = APIRequestFactory()
-
-        # Run the SMTP server
-        self.smtp_handler = MailHandler()
-        self.smtp_controller = Controller(
-            self.smtp_handler, hostname='127.0.0.1', port=1025)
-        self.smtp_controller.start()
 
         # Create a superuser
         self.user = UserModel.objects.create_superuser(
@@ -65,10 +57,6 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         Publisher.objects.create(name='rock')
         Publisher.objects.create(name='paper')
         Publisher.objects.create(name='scissor')
-
-    def tearDown(self):
-        self.smtp_controller.stop()
-        super().tearDown()
 
     def test_list_view(self):
         url = reverse('api_admin:%s_%s_list' % self.author_info)

@@ -265,7 +265,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         from django_api_admin.models import CHANGE, LogEntry
 
-        return LogEntry.objects.log_action(
+        return LogEntry.objects.log_actions(
             user_id=request.user.pk,
             queryset=[obj],
             action_flag=CHANGE,

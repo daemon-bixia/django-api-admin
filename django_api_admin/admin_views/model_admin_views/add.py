@@ -97,5 +97,4 @@ class AddView(APIView):
 
                 return Response(data, status=status.HTTP_201_CREATED)
 
-            # return a 400 response indicating failure
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

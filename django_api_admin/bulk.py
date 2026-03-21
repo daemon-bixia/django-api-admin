@@ -1,6 +1,9 @@
 from django.utils.translation import gettext_lazy as _
 from django.forms.models import _get_foreign_key
+
 from rest_framework.exceptions import NotFound
+
+from django_api_admin.utils.get_related_name import get_related_name
 
 
 class BulkOperations:
@@ -66,36 +69,37 @@ class BulkOperations:
                 raise NotFound({"detail": _("Inline '%s' is not registered in '%s'" % (
                     key, self.model_admin.__class__.__name__))})
 
-            serializer_class = inline.get_serializer_class()
+            serializer_class = inline.get_serializer_class(self.request)
             # Get the fk used to create the inline relationship
             fk = _get_foreign_key(inline.parent_model,
                                   inline.model, fk_name=inline.fk_name)
 
             self.valid_serializers[key] = {
                 "add": [], "change": [], "delete": []}
+            add_errors = {}
+            change_errors = {}
+            delete_errors = {}
 
-            if hasattr(value, "add"):
-                add_errors = {}
-
-                for row_id, data in getattr(value, "add", {}).items():
+            if "add" in value:
+                for row_id, data in value["add"].items():
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
                     serializer = serializer_class(data=data)
 
                     if serializer.is_valid():
-                        self.valid_serializers["add"].append(serializer)
+                        self.valid_serializers[key]["add"].append(serializer)
                     else:
                         add_errors[row_id] = ({
                             [row_id]: serializer.errors,
                         })
 
-            if hasattr(value, "change"):
-                change_errors = {}
-                fk_field = self.get_related_name(fk)
-                primary_keys = [data['pk'] for data in value["change"]]
+            if "change" in value:
+                fk_field = getattr(self.obj, get_related_name(fk), None)
+                primary_keys = [data["pk"]
+                                for data in value["change"].values()]
                 instances = fk_field.filter(pk__in=primary_keys)
 
-                for row_id, data in getattr(value, "change", {}).items():
+                for row_id, data in value["change"].items():
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
 
@@ -114,19 +118,19 @@ class BulkOperations:
                         instance, data=data, partial=True)
 
                     if serializer.is_valid():
-                        self.valid_serializers["change"].append(serializer)
+                        self.valid_serializers[key]["change"].append(
+                            serializer)
                     else:
                         change_errors[row_id] = serializer.errors
 
-            if hasattr(value, "delete"):
-                delete_errors = {}
-                primary_keys = [pk for pk in value["delete"]]
+            if "delete" in value:
+                primary_keys = [pk for pk in value["delete"].values()]
                 instances = inline.model.objects.filter(pk__in=primary_keys)
 
                 # Validate that all primary_keys are valid instances
-                for row_id, pk in getattr(value, "delete", {}):
-                    instance, idx = next(
-                        (i, idx) for i, idx in enumerate(instances) if i.pk == pk)
+                for row_id, pk in value["delete"].items():
+                    idx, instance = next(
+                        (idx, i) for idx, i in enumerate(instances) if i.pk == pk)
                     if not instance:
                         delete_errors[row_id] = [
                             {"param": pk, "message": _(
@@ -136,7 +140,7 @@ class BulkOperations:
 
                 for instance in instances:
                     serializer = serializer_class(instance)
-                    self.valid_serializers["delete"].append(serializer)
+                    self.valid_serializers[key]["delete"].append(serializer)
 
             # If there are errors include them under the `model_id`
             if add_errors or change_errors or delete_errors:
@@ -160,19 +164,11 @@ class BulkOperations:
                                       inline.model._meta.model_name):
                 return inline
 
-    def get_related_name(self, fk):
-        """
-        Returns the name used to link the foreign key relationship.
-        """
-        if fk._related_name:
-            return fk._related_name
-        return fk.model._meta.model_name + "_set"
-
     def save(self):
         """
         Save the valid serializers, and delete the instances.
         """
-        for model_operations in self.valid_serializers:
+        for model_operations in self.valid_serializers.values():
             for operation, serializers in model_operations.items():
                 for serializer in serializers:
                     if operation == "add":
