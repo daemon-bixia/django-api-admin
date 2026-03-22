@@ -89,13 +89,11 @@ class BulkOperations:
                     if serializer.is_valid():
                         self.valid_serializers[key]["add"].append(serializer)
                     else:
-                        add_errors[row_id] = ({
-                            [row_id]: serializer.errors,
-                        })
+                        add_errors[row_id] = serializer.errors
 
             if "change" in value:
                 fk_field = getattr(self.obj, get_related_name(fk), None)
-                primary_keys = [data["pk"]
+                primary_keys = [data.get("pk")
                                 for data in value["change"].values()]
                 instances = fk_field.filter(pk__in=primary_keys)
 
@@ -104,13 +102,15 @@ class BulkOperations:
                     data[fk.name] = self.obj.pk
 
                     # Find the item to be updated in the queryset
-                    instance = next(i for i in instances if i.pk == data['pk'])
+                    instance = next(
+                        (i for i in instances if i.pk == data.get("pk")), None)
                     if not instance:
                         change_errors[row_id] = {
-                            [row_id]: [{
-                                "param": data["pk"],
-                                "message": _("Item with pk %s is not found" % data["pk"])
-                            }]
+                            "pk": [_(
+                                "Couldn't find %s associated with the data at row %s \
+                                 is not found, check that the 'pk' value represents a  \
+                                 valid %s in the database" % (self.model_admin.model._meta.verbose_name,
+                                                              row_id, self.model_admin.model._meta.verbose_name))]
                         }
                         continue
 
@@ -125,17 +125,21 @@ class BulkOperations:
 
             if "delete" in value:
                 primary_keys = [pk for pk in value["delete"].values()]
-                instances = inline.model.objects.filter(pk__in=primary_keys)
+                instances = list(
+                    inline.model.objects.filter(pk__in=primary_keys))
 
                 # Validate that all primary_keys are valid instances
                 for row_id, pk in value["delete"].items():
                     idx, instance = next(
-                        (idx, i) for idx, i in enumerate(instances) if i.pk == pk)
+                        ((idx, i) for idx, i in enumerate(instances) if i.pk == pk), None)
                     if not instance:
-                        delete_errors[row_id] = [
-                            {"param": pk, "message": _(
-                                "Item with pk %s is not found" % data["pk"])}
-                        ]
+                        delete_errors[row_id] = {
+                            "pk": [_(
+                                "Couldn't find %s associated with the data at row %s \
+                                 is not found, check that the 'pk' value represents a  \
+                                 valid %s in the database" % (self.model_admin.model.verbose_name,
+                                                              row_id, self.model_admin.model.verbose_name))]
+                        }
                         instances.pop(idx)
 
                 for instance in instances:

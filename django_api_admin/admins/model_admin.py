@@ -23,7 +23,6 @@ from django.utils.text import capfirst, smart_split, unescape_string_literal
 from rest_framework import serializers
 
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
-from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.model_format_dict import model_format_dict
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory

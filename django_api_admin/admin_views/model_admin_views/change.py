@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied, NotFound, ParseError
+from rest_framework.exceptions import PermissionDenied, NotFound, ParseError, ValidationError
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
@@ -101,6 +101,8 @@ class ChangeView(APIView):
                             data["inlines"]["changed"] = operation.changed
                         if operation.deleted:
                             data["inlines"]["deleted"] = operation.deleted
+                    else:
+                        raise ValidationError({"errors": operation.errors})
 
                 return Response(data, status=status.HTTP_200_OK)
 

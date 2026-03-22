@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -90,10 +90,11 @@ class AddView(APIView):
 
                     if operation.is_valid():
                         operation.save()
-
                         data["inlines"] = {}
                         if operation.added:
                             data["inlines"]["added"] = operation.added
+                    else:
+                        raise ValidationError({"errors": operation.errors})
 
                 return Response(data, status=status.HTTP_201_CREATED)
 

@@ -10,7 +10,6 @@ from test_django_api_admin.models import Author, Book, Publisher
 from test_django_api_admin.admin import site
 from test_django_api_admin.utils import login
 
-
 UserModel = get_user_model()
 
 
@@ -35,10 +34,10 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             primary=True,
         )
 
-        # authenticate the superuser
+        # Authenticate the superuser
         login(self.client, self.user)
 
-        # create some valid authors
+        # Create some valid authors
         self.a1 = Author.objects.create(
             name="Baumgartner", age=20, is_vip=True, user_id=self.user.pk)
         self.a2 = Author.objects.create(
@@ -47,10 +46,10 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             name="Allen carr", age=60, is_vip=True, user_id=self.user.pk)
         self.author_info = (Author._meta.app_label, Author._meta.model_name)
 
-        # create a valid publisher
+        # Create a valid publisher
         Publisher.objects.create(name='rock')
 
-        # create some valid Books
+        # Create some valid Books
         self.a1_b1 = Book.objects.create(
             title='High performance django', author=self.a1)
         self.a1_b2 = Book.objects.create(
@@ -142,40 +141,88 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                          ["deleted"][0]['title'], "Pro git")
 
     def test_updating_unrelated_inlines(self):
+        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        data = {
+            "data": {
+                "name": "Nine Serenities Sovereign",
+                "age": 60,
+                "user": self.user.pk,
+                "is_vip": True,
+                'publisher': [1]
+            },
+            "inlines": {
+                "test_django_api_admin/technique": {
+                    "add": {
+                        "2cad3": {"name": "heavenly demon transformation art"}
+                    }
+                }
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNotNone(response.data.get("errors"))
+        self.assertTrue(isinstance(
+            response.data["errors"]["test_django_api_admin/technique"]["non_field_errors"], list))
+
+    def test_invalid_inline_data(self):
+        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        data = {
+            "data": {
+                "name": "Nine Serenities Sovereign",
+                "age": 60,
+                "user": self.user.pk,
+                "is_vip": True,
+                'publisher': [1],
+            },
+            "inlines": {
+                "test_django_api_admin/book": {
+                    "add": {
+                        "40fjq": {
+                            # missing title
+                            "credits": [self.a2.pk]
+                        }
+                    },
+                    "change": {
+                        "52dax": {
+                            # missing pk
+                            "title": "the book of nine secrets",
+                            "credits": [self.a2.pk]
+                        }
+                    }
+                },
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(isinstance(
+            response.data["errors"]["test_django_api_admin/book"]["40fjq"]["title"], list))
+        self.assertEqual(len(Author.objects.filter(
+            name="Nine Serenities Sovereign")), 0)
+
+    def test_changing_unrelated_instance(self):
         url = reverse('api_admin:%s_%s_change' %
                       self.author_info, kwargs={'object_id': self.a1.pk})
         data = {
             "data": {
-                "name": "René Descartes",
+                "name": "Nine Serenities Sovereign",
                 "age": 60,
                 "user": self.user.pk,
-                "is_vip": True
+                "is_vip": True,
+                'publisher': [1]
             },
-            "update_inlines": {
-                "books": [
-                    {
-                        "pk": self.a1_b1.pk,
-                        "title": "The book of nine secrets",
-                        "credits": [self.a2.pk]
+            "inlines": {
+                "test_django_api_admin/book": {
+                    "change": {
+                        "abcsd": {
+                            "pk": self.a2_b1.pk,
+                            "title": "The book of nine secrets",
+                            "credits": [self.a1.pk]
+                        },
                     },
-
-                    {
-                        "pk": self.a3_b1.pk,
-                        "title": "The book of nine secrets",
-                        "credits": [self.a2.pk]
-                    }
-                ],
+                },
             },
-            "delete_inlines":  {
-                "books": [
-                    {
-                        "pk": self.a3_b1.pk
-                    }
-                ]
-            }
         }
         response = self.client.put(url, data=data, format="json")
         self.assertEqual(response.status_code, 400)
-
-    def test_inline_errors(self):
-        pass
+        self.assertTrue(isinstance(
+            response.data["errors"]["test_django_api_admin/book"]["abcsd"]["pk"], list))
