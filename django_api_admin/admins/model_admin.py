@@ -22,12 +22,13 @@ from django.utils.text import capfirst, smart_split, unescape_string_literal
 
 from rest_framework import serializers
 
+from django_api_admin.constants.vars import LOOKUP_SEP
+from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
-from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.model_format_dict import model_format_dict
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
-from django_api_admin.checks import APIModelAdminChecks
-from django_api_admin.constants.vars import LOOKUP_SEP
+from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
+from django_api_admin.utils.construct_change_message import construct_change_message
 
 
 class ShowFacets(enum.Enum):
@@ -552,6 +553,12 @@ class APIModelAdmin(BaseAPIModelAdmin):
             if preserved_filters:
                 return urlencode({"_changelist_filters": preserved_filters})
         return ""
+
+    def construct_change_message(self, request, serializer, serializers, add=False):
+        """
+        Construct a JSON structure describing changes from a changed object.
+        """
+        return construct_change_message(request, serializer, serializers, add)
 
     def get_changelist_view(self):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView

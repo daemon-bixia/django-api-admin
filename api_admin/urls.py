@@ -10,6 +10,8 @@ urlpatterns = [
     path('api_admin/', site.urls),
     path('api/author/<int:pk>/',
          views.AuthorDetailView.as_view(), name="author-detail"),
+    path('api/publisher/<int:pk>/',
+         views.PublisherDetailView.as_view(), name="publisher-detail"),
     # the admin panel uses the same authentication backend as the application
     path('_allauth/', include('allauth.headless.urls')),
     path('accounts/', include('allauth.urls')),

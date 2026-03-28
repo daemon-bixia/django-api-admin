@@ -13,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django_api_admin.utils.get_form_fields import get_form_fields
-from test_django_api_admin.models import Author
-from test_django_api_admin.serializers import TestAuthorSerializer
+from test_django_api_admin.models import Author, Publisher
+from test_django_api_admin.serializers import AuthorSerializer, PublisherSerializer
 
 
 class HelloWorldView(APIView):
@@ -25,11 +25,20 @@ class HelloWorldView(APIView):
 
 
 class AuthorDetailView(APIView):
-    serializer_class = TestAuthorSerializer
+    serializer_class = AuthorSerializer
 
     def get(self, request, pk):
         author = Author.objects.get(id=pk)
-        serializer = TestAuthorSerializer(author, context={"request": request})
+        serializer = AuthorSerializer(author, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PublisherDetailView(APIView):
+    serializer_class = PublisherSerializer
+
+    def get(self, request, pk):
+        publisher = Publisher.objects.get(id=pk)
+        serializer = PublisherSerializer(publisher)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

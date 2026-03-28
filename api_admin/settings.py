@@ -1,7 +1,7 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
-
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +19,10 @@ SECRET_KEY = 'django-insecure-!ybdr3yqp+728%jd1=iv!l-jr@ro@ve2*)tg5@*zcvve=^0vhe
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Add 'testserver' only during tests or in development
+if 'test' in sys.argv or DEBUG:
+    ALLOWED_HOSTS.append('testserver')
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`

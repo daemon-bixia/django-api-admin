@@ -77,24 +77,27 @@ class AddView(APIView):
                     f'The {opts.verbose_name} “{str(new_object)}” was added successfully.')
                 data = {'data': serializer.data, 'detail': msg}
 
-                # Log addition of the new instance
-                self.model_admin.log_addition(request, new_object, [{'added': {
-                    'name': str(new_object._meta.verbose_name),
-                    'object': str(new_object),
-                }}])
-
                 # Process bulk operations
+                valid_serializers = None
                 if request.data.get("inlines"):
                     operation = BulkOperations(
                         request, self.model_admin, new_object, request.data.get("inlines"))
 
                     if operation.is_valid():
                         operation.save()
+                        valid_serializers = operation.valid_serializers
+
                         data["inlines"] = {}
                         if operation.added:
                             data["inlines"]["added"] = operation.added
                     else:
                         raise ValidationError({"errors": operation.errors})
+
+                # Construct the change message, and log the changes
+                change_message = self.model_admin.construct_change_message(
+                    request, serializer, valid_serializers, False)
+                self.model_admin.log_change(
+                    request, new_object, change_message)
 
                 return Response(data, status=status.HTTP_201_CREATED)
 

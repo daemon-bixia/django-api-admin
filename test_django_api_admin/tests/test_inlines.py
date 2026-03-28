@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.urls import include, path, reverse
 
@@ -6,9 +8,12 @@ from rest_framework.test import (APITestCase,
 
 from allauth.account.models import EmailAddress
 
+from django_api_admin.models import LogEntry
+
 from test_django_api_admin.models import Author, Book, Publisher
 from test_django_api_admin.admin import site
 from test_django_api_admin.utils import login
+from test_django_api_admin import views
 
 UserModel = get_user_model()
 
@@ -17,6 +22,8 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('api_admin/', site.urls),
         path('_allauth/', include('allauth.headless.urls')),
+        path('api/publisher/<int:pk>/',
+             views.PublisherDetailView.as_view(), name="publisher-detail"),
     ]
 
     def setUp(self) -> None:
@@ -226,3 +233,43 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertTrue(isinstance(
             response.data["errors"]["test_django_api_admin/book"]["abcsd"]["pk"], list))
+
+    def test_constructing_change_messages(self):
+        url = reverse('api_admin:%s_%s_change' %
+                      self.author_info, kwargs={'object_id': self.a1.pk})
+        data = {
+            "data": {
+                "name": "René Descartes",
+                "age": 60,
+                "user": self.user.pk,
+                "is_vip": True,
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})],
+                "location": {"lat": 40.6892, "lng": 40.6892},
+            },
+            "inlines": {
+                "test_django_api_admin/book": {
+                    "change": {
+                        "ca4tq": {
+                            "pk": self.a1_b1.pk,
+                            "title": "The book of nine secrets",
+                            "credits": [self.a2.pk]
+                        },
+                        "$fqf?": {
+                            "pk": self.a1_b2.pk,
+                            "title": "purple thunder lightning technique",
+                            "credits": [self.a2.pk]
+                        }
+                    },
+                    "delete": {
+                        "$e&xg":  self.a1_b3.pk
+                    }
+                },
+            },
+        }
+        self.client.put(url, data=data, format="json")
+
+        log_entry = LogEntry.objects.get(object_repr="Sergei Brin")
+        change_message = json.loads(log_entry.change_message)
+        self.assertEqual(len(change_message, 3))
+        for change in change_message:
+            self.assertTrue("added" in change)

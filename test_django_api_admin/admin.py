@@ -11,6 +11,7 @@ from django.utils import timezone
 from test_django_api_admin import views as custom_api_views
 from test_django_api_admin.models import Author, Publisher, Book, GuestEntry
 from test_django_api_admin.actions import make_old, make_young
+from test_django_api_admin.serializers import AuthorSerializer
 
 from django_api_admin.sites import APIAdminSite
 from django_api_admin.admins.inline_admin import TabularInlineAPI
@@ -66,11 +67,13 @@ class PublisherAPIAdmin(APIModelAdmin):
 # register in api_admin_site
 @register(Author, site=site)
 class AuthorAPIAdmin(APIModelAdmin):
+    serializer_class = AuthorSerializer
+
     list_display = ('name', 'age', 'user', 'is_old_enough',
                     'title', 'gender', 'date_joined',)
     list_display_links = ('name',)
     list_filter = ('is_vip', 'age')
-    list_editable = ('name',)
+    list_editable = ('age',)
     list_per_page = 6
     empty_value_display = '-'
     search_fields = ('name', 'publisher__name',)
@@ -90,7 +93,7 @@ class AuthorAPIAdmin(APIModelAdmin):
 
     fieldsets = (
         ('Information', {
-            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined')}),
+            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined', 'location')}),
     )
     # a list of field names to exclude from the add/change form.
     exclude = ('gender',)

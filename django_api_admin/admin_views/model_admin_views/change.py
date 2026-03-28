@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.utils.quote import unquote
-from django_api_admin.utils.diff_helper import ModelDiffHelper
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.get_inlines import get_inlines
@@ -62,7 +61,6 @@ class ChangeView(APIView):
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
             obj = self.get_object(request, object_id)
             opts = self.model_admin.model._meta
-            helper = ModelDiffHelper(obj)
 
             # Test user change permission in this model.
             if not self.model_admin.has_change_permission(request):
@@ -79,20 +77,15 @@ class ChangeView(APIView):
                     f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')
                 data = {'data': serializer.data, 'detail': msg}
 
-                # Log the change of  change
-                self.model_admin.log_change(request, updated_object, [{'changed': {
-                    'name': str(updated_object._meta.verbose_name),
-                    'object': str(updated_object),
-                    'fields': helper.set_changed_model(updated_object).changed_fields
-                }}])
-
                 # Process bulk operations
+                valid_serializers = None
                 if request.data.get("inlines"):
                     operation = BulkOperations(
                         request, self.model_admin, obj, request.data.get("inlines"))
 
                     if operation.is_valid():
                         operation.save()
+                        valid_serializers = operation.valid_serializers
 
                         data["inlines"] = {}
                         if operation.added:
@@ -103,6 +96,12 @@ class ChangeView(APIView):
                             data["inlines"]["deleted"] = operation.deleted
                     else:
                         raise ValidationError({"errors": operation.errors})
+
+                # Construct the change message, and log the changes
+                change_message = self.model_admin.construct_change_message(
+                    request, serializer, valid_serializers, False)
+                self.model_admin.log_change(
+                    request, updated_object, change_message)
 
                 return Response(data, status=status.HTTP_200_OK)
 
@@ -159,14 +158,15 @@ class ChangeView(APIView):
 
         if request.method == 'PATCH':
             serializer = self.serializer_class(
-                instance=obj, data=request.data.get('data', {}), partial=True)
+                instance=obj, data=request.data.get('data', {}), partial=True, context={"request": request})
 
         elif request.method == 'PUT':
             serializer = self.serializer_class(
-                instance=obj, data=request.data.get('data', {}))
+                instance=obj, data=request.data.get('data', {}), context={"request": request})
 
         elif request.method == 'GET':
-            serializer = self.serializer_class(instance=obj)
+            serializer = self.serializer_class(
+                instance=obj, context={"request": request})
 
         return serializer
 
