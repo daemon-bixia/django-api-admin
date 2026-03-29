@@ -16,6 +16,7 @@ from django_api_admin.constants.vars import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, BulkUpdates
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
 from django_api_admin.bulk import BulkOperations
+from django_api_admin.utils.get_changed_data import get_changed_data
 
 
 class ChangeView(APIView):
@@ -71,6 +72,7 @@ class ChangeView(APIView):
 
             # Update and log the changes to the object
             if serializer.is_valid():
+                changed_data = get_changed_data(serializer)
                 updated_object = serializer.save()
 
                 msg = _(
@@ -78,28 +80,21 @@ class ChangeView(APIView):
                 data = {'data': serializer.data, 'detail': msg}
 
                 # Process bulk operations
-                valid_serializers = None
+                inline_results = None
                 if request.data.get("inlines"):
                     operation = BulkOperations(
                         request, self.model_admin, obj, request.data.get("inlines"))
 
                     if operation.is_valid():
                         operation.save()
-                        valid_serializers = operation.valid_serializers
-
-                        data["inlines"] = {}
-                        if operation.added:
-                            data["inlines"]["added"] = operation.added
-                        if operation.changed:
-                            data["inlines"]["changed"] = operation.changed
-                        if operation.deleted:
-                            data["inlines"]["deleted"] = operation.deleted
+                        inline_results = operation.result
+                        data["inlines"] = operation.validated_data
                     else:
                         raise ValidationError({"errors": operation.errors})
 
                 # Construct the change message, and log the changes
                 change_message = self.model_admin.construct_change_message(
-                    request, serializer, valid_serializers, False)
+                    request, (serializer, changed_data), inline_results, False)
                 self.model_admin.log_change(
                     request, updated_object, change_message)
 

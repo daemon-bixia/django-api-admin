@@ -4,17 +4,12 @@ from django.forms.models import _get_foreign_key
 from rest_framework.exceptions import NotFound
 
 from django_api_admin.utils.get_related_name import get_related_name
+from django_api_admin.utils.get_changed_data import get_changed_data
 
 
 class BulkOperations:
-    valid_serializers = {}
     errors = {}
-
-    added = []
-    changed = []
-    deleted = []
-
-    change_message = None
+    result = {}
 
     def __init__(self, request, model_admin, obj, data):
         self.request = request
@@ -74,7 +69,7 @@ class BulkOperations:
             fk = _get_foreign_key(inline.parent_model,
                                   inline.model, fk_name=inline.fk_name)
 
-            self.valid_serializers[key] = {
+            self.result[key] = {
                 "add": [], "change": [], "delete": []}
             add_errors = {}
             change_errors = {}
@@ -87,7 +82,8 @@ class BulkOperations:
                     serializer = serializer_class(data=data)
 
                     if serializer.is_valid():
-                        self.valid_serializers[key]["add"].append(serializer)
+                        self.result[key]["add"].append(
+                            serializer)
                     else:
                         add_errors[row_id] = serializer.errors
 
@@ -118,8 +114,9 @@ class BulkOperations:
                         instance, data=data, partial=True)
 
                     if serializer.is_valid():
-                        self.valid_serializers[key]["change"].append(
-                            serializer)
+                        changed_data = get_changed_data(serializer)
+                        self.result[key]["change"].append(
+                            (serializer, changed_data))
                     else:
                         change_errors[row_id] = serializer.errors
 
@@ -144,7 +141,8 @@ class BulkOperations:
 
                 for instance in instances:
                     serializer = serializer_class(instance)
-                    self.valid_serializers[key]["delete"].append(serializer)
+                    self.result[key]["delete"].append(
+                        serializer)
 
             # If there are errors include them under the `model_id`
             if add_errors or change_errors or delete_errors:
@@ -168,19 +166,32 @@ class BulkOperations:
                                       inline.model._meta.model_name):
                 return inline
 
+    @property
+    def validated_data(self):
+        data = dict()
+
+        for inline_name, operations in self.result.items():
+            data[inline_name] = {}
+            for operation_name, serializers in operations.items():
+                data[inline_name][operation_name] = []
+                for serializer in serializers:
+                    if operation_name == "change":
+                        serializer = serializer[0]
+                    data[inline_name][operation_name].append(
+                        serializer.data)
+
+        return data
+
     def save(self):
         """
         Save the valid serializers, and delete the instances.
         """
-        for model_operations in self.valid_serializers.values():
+        for model_operations in self.result.values():
             for operation, serializers in model_operations.items():
                 for serializer in serializers:
                     if operation == "add":
                         serializer.save()
-                        self.added.append(serializer.data)
                     elif operation == "change":
-                        serializer.save()
-                        self.changed.append(serializer.data)
+                        serializer[0].save()
                     elif operation == "delete":
                         serializer.instance.delete()
-                        self.deleted.append(serializer.data)

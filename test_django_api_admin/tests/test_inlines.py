@@ -248,6 +248,12 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             },
             "inlines": {
                 "test_django_api_admin/book": {
+                    "add": {
+                        "j18ca": {
+                            "title": "The freedom model",
+                            "credits": [self.a1.pk]
+                        },
+                    },
                     "change": {
                         "ca4tq": {
                             "pk": self.a1_b1.pk,
@@ -268,8 +274,26 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         }
         self.client.put(url, data=data, format="json")
 
-        log_entry = LogEntry.objects.get(object_repr="Sergei Brin")
+        log_entry = LogEntry.objects.get(object_repr="René Descartes")
         change_message = json.loads(log_entry.change_message)
-        self.assertEqual(len(change_message, 3))
-        for change in change_message:
-            self.assertTrue("added" in change)
+        self.assertEqual(len(change_message), 5)
+
+        self.assertTrue("changed" in change_message[0])
+        self.assertEqual(change_message[0]["changed"]["fields"], [
+                         "Name", "Age", "Publisher", "Location"])
+
+        self.assertTrue("added" in change_message[1])
+        self.assertEqual(change_message[1]["added"]
+                         ["object"], "The freedom model")
+
+        self.assertTrue("changed" in change_message[2])
+        self.assertEqual(
+            change_message[2]["changed"]["object"], "The book of nine secrets")
+
+        self.assertTrue("changed" in change_message[3])
+        self.assertEqual(
+            change_message[3]["changed"]["object"], "purple thunder lightning technique")
+
+        self.assertTrue("deleted" in change_message[4])
+        self.assertEqual(
+            change_message[4]["deleted"]["object"], "Pro git")

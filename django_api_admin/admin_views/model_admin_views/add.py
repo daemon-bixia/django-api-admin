@@ -85,7 +85,7 @@ class AddView(APIView):
 
                     if operation.is_valid():
                         operation.save()
-                        valid_serializers = operation.valid_serializers
+                        valid_serializers = operation.result
 
                         data["inlines"] = {}
                         if operation.added:
