@@ -70,7 +70,7 @@ class ChangeView(APIView):
             # Initiate the serializer based on the request method
             serializer = self.get_serializer_instance(request, obj)
 
-            # Update and log the changes to the object
+            # Validate the update data
             if serializer.is_valid():
                 changed_data = get_changed_data(serializer)
                 updated_object = serializer.save()
@@ -83,7 +83,7 @@ class ChangeView(APIView):
                 inline_results = None
                 if request.data.get("inlines"):
                     operation = BulkOperations(
-                        request, self.model_admin, obj, request.data.get("inlines"))
+                        request, self.model_admin, updated_object, request.data.get("inlines"))
 
                     if operation.is_valid():
                         operation.save()

@@ -66,36 +66,35 @@ class AddView(APIView):
             if not self.model_admin.has_add_permission(request):
                 raise PermissionDenied
 
+            # Initiate the serializer
+            serializer = self.serializer_class(data=request.data.get('data', {}),
+                                               context={"request": request})
+
             # Validate the new_object data
-            serializer = self.serializer_class(
-                data=request.data.get('data', {}))
             if serializer.is_valid():
-                # Create the `data` object in the request body used to create the new_object
-                opts = self.model_admin.model._meta
                 new_object = serializer.save()
+                opts = self.model_admin.model._meta
+
                 msg = _(
                     f'The {opts.verbose_name} “{str(new_object)}” was added successfully.')
                 data = {'data': serializer.data, 'detail': msg}
 
                 # Process bulk operations
-                valid_serializers = None
+                inline_results = None
                 if request.data.get("inlines"):
                     operation = BulkOperations(
                         request, self.model_admin, new_object, request.data.get("inlines"))
 
                     if operation.is_valid():
                         operation.save()
-                        valid_serializers = operation.result
-
-                        data["inlines"] = {}
-                        if operation.added:
-                            data["inlines"]["added"] = operation.added
+                        inline_results = operation.result
+                        data["inlines"] = operation.validated_data
                     else:
                         raise ValidationError({"errors": operation.errors})
 
                 # Construct the change message, and log the changes
                 change_message = self.model_admin.construct_change_message(
-                    request, serializer, valid_serializers, False)
+                    request, (serializer, []), inline_results, False)
                 self.model_admin.log_change(
                     request, new_object, change_message)
 
