@@ -7,7 +7,7 @@ from django_api_admin.utils.get_related_name import get_related_name
 from django_api_admin.utils.get_changed_data import get_changed_data
 
 
-class BulkOperations:
+class BulkOperation:
     errors = {}
     result = {}
 

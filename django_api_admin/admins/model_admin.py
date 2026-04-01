@@ -11,6 +11,7 @@
 # -----------------------------------------------------------------------------
 
 import enum
+import traceback
 from functools import update_wrapper, partial
 
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -21,6 +22,7 @@ from django.utils.http import urlencode
 from django.utils.text import capfirst, smart_split, unescape_string_literal
 
 from rest_framework import serializers
+from rest_framework.utils import model_meta
 
 from django_api_admin.constants.vars import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
@@ -587,3 +589,77 @@ class APIModelAdmin(BaseAPIModelAdmin):
             'model_admin': self
         }
         return HistoryView.as_view(**defaults)
+
+    def save_serializer(self, request, serializer, change):
+        """
+        Given a ModelSerializer return an unsaved instance. ``change`` is True if
+        the object is being changed, and False if it's being added.
+        """
+        validated_data = {**serializer.validated_data}
+        serializers.raise_errors_on_nested_writes(
+            'create', serializer, validated_data)
+
+        ModelClass = self.model
+
+        # Remove many-to-many relationships from validated_data.
+        # They are not valid arguments to the default `.create()` method,
+        # as they require that the instance has already been saved.
+        info = model_meta.get_field_info(ModelClass)
+        many_to_many = {}
+        for field_name, relation_info in info.relations.items():
+            if relation_info.to_many and (field_name in validated_data):
+                many_to_many[field_name] = validated_data.pop(
+                    field_name)
+
+        try:
+            instance = ModelClass(**validated_data)
+        except TypeError:
+            tb = traceback.format_exc()
+            msg = (
+                'Got a `TypeError` when calling `%s.%s.create()`. '
+                'This may be because you have a writable field on the '
+                'serializer class that is not a valid argument to '
+                '`%s.%s.create()`. You may need to make the field '
+                'read-only, or override the %s.create() method to handle '
+                'this correctly.\nOriginal exception was:\n %s' %
+                (
+                    ModelClass.__name__,
+                    ModelClass._default_manager.name,
+                    ModelClass.__name__,
+                    ModelClass._default_manager.name,
+                    serializer.__class__.__name__,
+                    tb
+                )
+            )
+            raise TypeError(msg)
+
+        # Save many-to-many relationships after the instance is created.
+        def save_m2m():
+            if many_to_many:
+                for field_name, value in many_to_many.items():
+                    field = getattr(instance, field_name)
+                    field.set(value)
+
+        # Add a method to the serializer to allow deferred
+        # saving of m2m data.
+        serializer.save_m2m = save_m2m
+
+        return instance
+
+    def save_model(self, request, obj, serializer, change):
+        """
+        Given a model instance save it to the database.
+        """
+        obj.save()
+        serializer.instance = obj
+
+    def save_related(self, request, obj, serializer, bulk_operation, change):
+        """
+        Given the ``HttpRequest``, the parent ``ModelSerializer`` instance, the
+        list of inline serializers and a boolean value based on whether the
+        parent is being added or changed, save the related objects to the
+        database. Note that at this point save_serializer() and save_model() have
+        already been called.
+        """
+        serializer.save_m2m()
+        bulk_operation.save()

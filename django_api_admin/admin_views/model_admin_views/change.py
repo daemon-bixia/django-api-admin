@@ -15,7 +15,7 @@ from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.constants.vars import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, BulkUpdates
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
-from django_api_admin.bulk import BulkOperations
+from django_api_admin.bulk import BulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data
 
 
@@ -73,7 +73,9 @@ class ChangeView(APIView):
             # Validate the update data
             if serializer.is_valid():
                 changed_data = get_changed_data(serializer)
-                updated_object = serializer.save()
+                updated_object = self.model_admin.save_serializer(
+                    request, serializer, True)
+                self.model_admin.save_model(request, obj, serializer, True)
 
                 msg = _(
                     f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')
@@ -82,15 +84,19 @@ class ChangeView(APIView):
                 # Process bulk operations
                 inline_results = None
                 if request.data.get("inlines"):
-                    operation = BulkOperations(
+                    bulk_operation = BulkOperation(
                         request, self.model_admin, updated_object, request.data.get("inlines"))
 
-                    if operation.is_valid():
-                        operation.save()
-                        inline_results = operation.result
-                        data["inlines"] = operation.validated_data
+                    if bulk_operation.is_valid():
+                        self.model_admin.save_related(
+                            request, updated_object, serializer, bulk_operation, True)
+                        inline_results = bulk_operation.result
+                        data["inlines"] = bulk_operation.validated_data
                     else:
-                        raise ValidationError({"errors": operation.errors})
+                        raise ValidationError(
+                            {"errors": bulk_operation.errors})
+                else:
+                    serializer.save_m2m()
 
                 # Construct the change message, and log the changes
                 change_message = self.model_admin.construct_change_message(

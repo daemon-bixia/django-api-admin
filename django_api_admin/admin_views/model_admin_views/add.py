@@ -13,7 +13,7 @@ from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
-from django_api_admin.bulk import BulkOperations
+from django_api_admin.bulk import BulkOperation
 
 
 class AddView(APIView):
@@ -72,7 +72,10 @@ class AddView(APIView):
 
             # Validate the new_object data
             if serializer.is_valid():
-                new_object = serializer.save()
+                new_object = self.model_admin.save_serializer(
+                    request, serializer, False)
+                self.model_admin.save_model(
+                    request, new_object, serializer, False)
                 opts = self.model_admin.model._meta
 
                 msg = _(
@@ -82,15 +85,19 @@ class AddView(APIView):
                 # Process bulk operations
                 inline_results = None
                 if request.data.get("inlines"):
-                    operation = BulkOperations(
+                    bulk_operation = BulkOperation(
                         request, self.model_admin, new_object, request.data.get("inlines"))
 
-                    if operation.is_valid():
-                        operation.save()
-                        inline_results = operation.result
-                        data["inlines"] = operation.validated_data
+                    if bulk_operation.is_valid():
+                        self.model_admin.save_related(
+                            request, new_object, serializer, bulk_operation, False)
+                        inline_results = bulk_operation.result
+                        data["inlines"] = bulk_operation.validated_data
                     else:
-                        raise ValidationError({"errors": operation.errors})
+                        raise ValidationError(
+                            {"errors": bulk_operation.errors})
+                else:
+                    serializer.save_m2m()
 
                 # Construct the change message, and log the changes
                 change_message = self.model_admin.construct_change_message(
