@@ -71,7 +71,7 @@ class DeleteView(APIView):
             self.model_admin.log_deletion(request, [obj])
 
             # delete the object
-            obj.delete()
+            self.model_admin.delete_model(request, obj)
 
             return Response({'detail': _('The %(name)s “%(obj)s” was deleted successfully.') % {
                 'name': opts.verbose_name,

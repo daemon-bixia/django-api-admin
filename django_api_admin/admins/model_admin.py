@@ -684,6 +684,16 @@ class APIModelAdmin(BaseAPIModelAdmin):
         obj.save()
         serializer.instance = obj
 
+    def delete_model(self, request, obj):
+        """
+        Given a model instance delete it from the database.
+        """
+        obj.delete()
+
+    def delete_queryset(self, request, queryset):
+        """Given a queryset, delete it from the database."""
+        queryset.delete()
+
     def save_related(self, request, obj, serializer, bulk_operation, change):
         """
         Given the ``HttpRequest``, the parent ``ModelSerializer`` instance, the

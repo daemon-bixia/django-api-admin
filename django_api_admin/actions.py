@@ -32,8 +32,8 @@ def delete_selected(modeladmin, request, queryset):
     if n:
         modeladmin.log_deletion(request, queryset)
 
-    # delete the queryset
-    queryset.delete()
+    # Delete the queryset
+    modeladmin.delete_queryset(request, queryset)
     msg = _("Successfully deleted %s %s.") % (
         n, model_ngettext(modeladmin.opts, n))
     return Response({'detail': msg}, status=status.HTTP_200_OK)
