@@ -103,10 +103,10 @@ class BulkOperation:
                     if not instance:
                         change_errors[row_id] = {
                             "pk": [_(
-                                "Couldn't find %s associated with the data at row %s \
-                                 is not found, check that the 'pk' value represents a  \
-                                 valid %s in the database" % (self.model_admin.model._meta.verbose_name,
-                                                              row_id, self.model_admin.model._meta.verbose_name))]
+                                "Couldn't find %s associated with the data at row "
+                                "%s is not found, check that the 'pk' value "
+                                "represents a valid %s in the database" % (self.model_admin.model._meta.verbose_name,
+                                                                           row_id, inline.model._meta.verbose_name))]
                         }
                         continue
 

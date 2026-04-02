@@ -75,7 +75,8 @@ class ChangeView(APIView):
                 changed_data = get_changed_data(serializer)
                 updated_object = self.model_admin.save_serializer(
                     request, serializer, True)
-                self.model_admin.save_model(request, obj, serializer, True)
+                self.model_admin.save_model(
+                    request, updated_object, serializer, True)
 
                 msg = _(
                     f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')

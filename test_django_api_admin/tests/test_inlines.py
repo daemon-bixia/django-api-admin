@@ -143,8 +143,8 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertIsNotNone(response.data.get('inlines'))
         self.assertEqual(
             len(response.data["inlines"]["test_django_api_admin/book"]["change"]), 2)
-        self.assertEqual(
-            response.data["inlines"]["test_django_api_admin/book"]["change"][0]['title'], "The book of nine secrets")
+        self.assertEqual(response.data["inlines"]["test_django_api_admin/book"]
+                         ["change"][0]['title'], "The book of nine secrets")
         self.assertEqual(
             len(response.data["inlines"]["test_django_api_admin/book"]["delete"]), 1)
         self.assertEqual(
