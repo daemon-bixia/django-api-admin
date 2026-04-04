@@ -701,8 +701,21 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 request, serializer, inline_operation, change)
 
     def response_add(self, request, obj, serializer, bulk_operation):
+        """
+        Determine the HttpResponse for the add_view stage.
+        """
         return Response({
             "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was added successfully.'),
+            "data": serializer.data,
+            "inlines": bulk_operation.validated_data,
+        }, status=status.HTTP_201_CREATED)
+
+    def response_change(self, request, obj, serializer, bulk_operation):
+        """
+        Determine the HttpResponse for the change_view stage.
+        """
+        return Response({
+            "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully.'),
             "data": serializer.data,
             "inlines": bulk_operation.validated_data,
         }, status=status.HTTP_201_CREATED)

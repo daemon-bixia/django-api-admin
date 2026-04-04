@@ -61,7 +61,6 @@ class ChangeView(APIView):
     def update(self, request, object_id):
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
             obj = self.get_object(request, object_id)
-            opts = self.model_admin.model._meta
 
             # Test user change permission in this model.
             if not self.model_admin.has_change_permission(request):
@@ -78,12 +77,9 @@ class ChangeView(APIView):
                 self.model_admin.save_model(
                     request, updated_object, serializer, True)
 
-                msg = _(
-                    f'The {opts.verbose_name} “{str(updated_object)}” was changed successfully.')
-                data = {'data': serializer.data, 'detail': msg}
-
                 # Process bulk operations
                 inline_results = None
+                bulk_operation = None
                 if request.data.get("inlines"):
                     bulk_operation = BulkOperation(
                         request, self.model_admin, updated_object, request.data.get("inlines"))
@@ -92,7 +88,6 @@ class ChangeView(APIView):
                         self.model_admin.save_related(
                             request, updated_object, serializer, bulk_operation, True)
                         inline_results = bulk_operation.result
-                        data["inlines"] = bulk_operation.validated_data
                     else:
                         raise ValidationError(
                             {"errors": bulk_operation.errors})
@@ -105,7 +100,7 @@ class ChangeView(APIView):
                 self.model_admin.log_change(
                     request, updated_object, change_message)
 
-                return Response(data, status=status.HTTP_200_OK)
+                return self.model_admin.response_change(request, updated_object, serializer, bulk_operation)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
