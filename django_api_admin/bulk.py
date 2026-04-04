@@ -181,17 +181,3 @@ class BulkOperation:
                         serializer.data)
 
         return data
-
-    def save(self):
-        """
-        Save the valid serializers, and delete the instances.
-        """
-        for model_operations in self.result.values():
-            for operation, serializers in model_operations.items():
-                for serializer in serializers:
-                    if operation == "add":
-                        serializer.save()
-                    elif operation == "change":
-                        serializer[0].save()
-                    elif operation == "delete":
-                        serializer.instance.delete()

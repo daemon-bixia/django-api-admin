@@ -694,6 +694,19 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """Given a queryset, delete it from the database."""
         queryset.delete()
 
+    def save_inline_operation(self, request, serializer, inline_operation, change):
+        """
+        Given an inline serializer save it to the database.
+        """
+        for operation, inline_serializers in inline_operation.items():
+            for inline_serializer in inline_serializers:
+                if operation == "add":
+                    inline_serializer.save()
+                elif operation == "change":
+                    inline_serializer[0].save()
+                elif operation == "delete":
+                    inline_serializer.instance.delete()
+
     def save_related(self, request, obj, serializer, bulk_operation, change):
         """
         Given the ``HttpRequest``, the parent ``ModelSerializer`` instance, the
@@ -703,4 +716,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         already been called.
         """
         serializer.save_m2m()
-        bulk_operation.save()
+        for inline_operation in bulk_operation.result.values():
+            self.save_inline_operation(
+                request, serializer, inline_operation, change)
