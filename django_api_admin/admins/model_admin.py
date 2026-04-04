@@ -56,7 +56,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
     save_as_continue = True
     save_on_top = False
     paginator = Paginator
-    preserve_filters = True
     show_facets = ShowFacets.ALLOW
     inlines = ()
 
@@ -534,27 +533,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 for search_spec, _ in orm_lookups
             )
         return queryset, may_have_duplicates
-
-    def get_preserved_filters(self, request):
-        """
-        Return the preserved filters querystring.
-        """
-        match = request.resolver_match
-        if self.preserve_filters and match:
-            current_url = "%s:%s" % (match.app_name, match.url_name)
-            changelist_url = "%s:%s_%s_changelist" % (
-                self.admin_site.name,
-                self.opts.app_label,
-                self.opts.model_name,
-            )
-            if current_url == changelist_url:
-                preserved_filters = request.GET.urlencode()
-            else:
-                preserved_filters = request.GET.get("_changelist_filters")
-
-            if preserved_filters:
-                return urlencode({"_changelist_filters": preserved_filters})
-        return ""
 
     def construct_change_message(self, request, serializer, serializers, add=False):
         """
