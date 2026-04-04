@@ -65,7 +65,6 @@ class ChangeList:
         self.list_per_page = list_per_page
         self.list_max_show_all = list_max_show_all
         self.model_admin = model_admin
-        self.preserved_filters = model_admin.get_preserved_filters(request)
         self.sortable_by = sortable_by
         self.search_help_text = search_help_text
 
@@ -92,7 +91,7 @@ class ChangeList:
 
         self.root_queryset = model_admin.get_queryset(request)
         self.queryset = self.get_queryset(request)
-        self.get_results()
+        self.get_results(request)
 
     def __repr__(self):
         return "<%s: model=%s model_admin=%s>" % (
@@ -239,9 +238,9 @@ class ChangeList:
                 p[k] = v
         return "?%s" % urlencode(sorted(p.items()))
 
-    def get_results(self):
+    def get_results(self, request):
         paginator = self.model_admin.get_paginator(
-            self.queryset, self.list_per_page
+            request, self.queryset, self.list_per_page
         )
         # Get the number of objects, with admin filters applied.
         result_count = paginator.count
@@ -453,6 +452,7 @@ class ChangeList:
 
         # Apply search results
         qs, search_may_have_duplicates = self.model_admin.get_search_results(
+            request,
             qs,
             self.query,
         )

@@ -285,7 +285,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         from django_api_admin.models import DELETION, LogEntry
 
-        return LogEntry.objects.log_action(
+        return LogEntry.objects.log_actions(
             user_id=request.user.pk,
             queryset=queryset,
             action_flag=DELETION,
@@ -384,7 +384,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
         description = self._get_action_description(func, action)
         return func, action, description
 
-    def get_action_serializer(self, request):
+    def get_action_serializer_class(self, request):
+        """
+        Get the Serializer class used to validate actions. Populate it with the 
+        action, and  selected_ids choices based on the model
+        """
         from django_api_admin.serializers import ActionSerializer
 
         action_serializer = self.action_serializer or ActionSerializer
@@ -395,7 +399,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         for item in queryset:
             choices.append((f'{item.pk}', f'{str(item)}'))
 
-        # Dynamicall create an instace of the self.action_serializer with the `action` choices
+        # Dynamically create an instance of the self.action_serializer with the `action` choices
         # being the actions defined in the model_admin and the `selected_ids` being the `choices`
         return type(f'{self.model.__name__}ActionSerializer', (action_serializer,), {
             'action': serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
@@ -702,7 +706,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def response_add(self, request, obj, serializer, bulk_operation):
         """
-        Determine the HttpResponse for the add_view stage.
+        Determine the Response for the add_view stage.
         """
         return Response({
             "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was added successfully.'),
@@ -712,10 +716,44 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def response_change(self, request, obj, serializer, bulk_operation):
         """
-        Determine the HttpResponse for the change_view stage.
+        Determine the Response for the change_view stage.
         """
         return Response({
             "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully.'),
             "data": serializer.data,
             "inlines": bulk_operation.validated_data,
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_200_OK)
+
+    def response_action(self, request, queryset):
+        """
+        Handle an admin action.
+        """
+        serializer_class = self.get_action_serializer_class(request)
+        serializer = serializer_class(data=request.data)
+
+        # Validate the action name, and the selected
+        if serializer.is_valid():
+            # Preform the action on the selected items
+            action = serializer.validated_data.get('action')
+            select_across = serializer.validated_data.get('select_across')
+            func = self.get_actions(request)[action][0]
+
+            # Get a list of pks of selected changelist items
+            selected = request.data.get('selected_ids', None)
+            if not selected and not select_across:
+                msg = _("Items must be selected in order to perform "
+                        "actions on them. No items have been changed.")
+                return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+            if selected and not select_across:
+                queryset = queryset.filter(pk__in=selected)
+
+            response = func(self, request, queryset)
+
+            # If the action returns a response
+            if response:
+                return response
+
+            msg = _("Successfully performed the action")
+            return Response({'detail': msg}, status=status.HTTP_200_OK)
+
+        Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
