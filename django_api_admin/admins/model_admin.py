@@ -14,15 +14,17 @@ import enum
 import traceback
 from functools import update_wrapper, partial
 
-from django.core.exceptions import FieldDoesNotExist, ValidationError
-from django.core.paginator import Paginator
 from django.db import models
 from django.urls import path, include
-from django.utils.http import urlencode
+from django.core.paginator import Paginator
+from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.utils.text import capfirst, smart_split, unescape_string_literal
 
+from rest_framework import status
 from rest_framework import serializers
 from rest_framework.utils import model_meta
+from rest_framework.response import Response
 
 from django_api_admin.constants.vars import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
@@ -697,3 +699,10 @@ class APIModelAdmin(BaseAPIModelAdmin):
         for inline_operation in bulk_operation.result.values():
             self.save_inline_operation(
                 request, serializer, inline_operation, change)
+
+    def response_add(self, request, obj, serializer, bulk_operation):
+        return Response({
+            "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was added successfully.'),
+            "data": serializer.data,
+            "inlines": bulk_operation.validated_data,
+        }, status=status.HTTP_201_CREATED)

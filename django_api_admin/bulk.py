@@ -35,7 +35,7 @@ class BulkOperation:
         # Generate a list of the inline model admin names associated with the model_admin.
         inlines = self.model_admin.get_inline_instances(self.request)
         model_ids = [
-            "%s/%s" % (i.model._meta.app_label,
+            "%s.%s" % (i.model._meta.app_label,
                        i.model._meta.model_name)
             for i in inlines
         ]
@@ -158,11 +158,11 @@ class BulkOperation:
     def get_inline_by_model_id(self, model_id):
         """
         Get the inline instance that match the given model_id 
-        (i.e 'app_label/model_name') in the `self.model_admin.inlines`
+        (i.e 'app_label.model_name') in the `self.model_admin.inlines`
         """
         inlines = self.model_admin.get_inline_instances(self.request)
         for inline in inlines:
-            if model_id == "%s/%s" % (inline.model._meta.app_label,
+            if model_id == "%s.%s" % (inline.model._meta.app_label,
                                       inline.model._meta.model_name):
                 return inline
 

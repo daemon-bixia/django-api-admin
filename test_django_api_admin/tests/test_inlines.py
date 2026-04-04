@@ -80,7 +80,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
-                "test_django_api_admin/book": {
+                "test_django_api_admin.book": {
                     "add": {
                         "j18ca": {
                             "title": "The freedom model",
@@ -102,9 +102,9 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIsNotNone(response.data.get("inlines"))
         self.assertEqual(
-            len(response.data["inlines"]["test_django_api_admin/book"]["add"]), 3)
+            len(response.data["inlines"]["test_django_api_admin.book"]["add"]), 3)
         self.assertEqual(
-            response.data["inlines"]["test_django_api_admin/book"]["add"][0]["title"], "The freedom model")
+            response.data["inlines"]["test_django_api_admin.book"]["add"][0]["title"], "The freedom model")
 
     def test_inline_bulk_updates(self):
         url = reverse('api_admin:%s_%s_change' %
@@ -118,7 +118,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
-                "test_django_api_admin/book": {
+                "test_django_api_admin.book": {
                     "change": {
                         "ca4tq": {
                             "pk": self.a1_b1.pk,
@@ -142,13 +142,13 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.data.get('inlines'))
         self.assertEqual(
-            len(response.data["inlines"]["test_django_api_admin/book"]["change"]), 2)
-        self.assertEqual(response.data["inlines"]["test_django_api_admin/book"]
+            len(response.data["inlines"]["test_django_api_admin.book"]["change"]), 2)
+        self.assertEqual(response.data["inlines"]["test_django_api_admin.book"]
                          ["change"][0]['title'], "The book of nine secrets")
         self.assertEqual(
-            len(response.data["inlines"]["test_django_api_admin/book"]["delete"]), 1)
+            len(response.data["inlines"]["test_django_api_admin.book"]["delete"]), 1)
         self.assertEqual(
-            response.data["inlines"]["test_django_api_admin/book"]["delete"][0]['title'], "Pro git")
+            response.data["inlines"]["test_django_api_admin.book"]["delete"][0]['title'], "Pro git")
 
     def test_updating_unrelated_inlines(self):
         url = reverse('api_admin:%s_%s_add' % self.author_info)
@@ -161,7 +161,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
-                "test_django_api_admin/technique": {
+                "test_django_api_admin.technique": {
                     "add": {
                         "2cad3": {"name": "heavenly demon transformation art"}
                     }
@@ -172,7 +172,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIsNotNone(response.data.get("errors"))
         self.assertTrue(isinstance(
-            response.data["errors"]["test_django_api_admin/technique"]["non_field_errors"], list))
+            response.data["errors"]["test_django_api_admin.technique"]["non_field_errors"], list))
 
     def test_invalid_inline_data(self):
         url = reverse('api_admin:%s_%s_add' % self.author_info)
@@ -185,7 +185,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'publisher': [reverse("publisher-detail", kwargs={"pk": 1})],
             },
             "inlines": {
-                "test_django_api_admin/book": {
+                "test_django_api_admin.book": {
                     "add": {
                         "40fjq": {
                             # missing title
@@ -205,7 +205,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.post(url, data=data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertTrue(isinstance(
-            response.data["errors"]["test_django_api_admin/book"]["40fjq"]["title"], list))
+            response.data["errors"]["test_django_api_admin.book"]["40fjq"]["title"], list))
         self.assertEqual(len(Author.objects.filter(
             name="Nine Serenities Sovereign")), 0)
 
@@ -221,7 +221,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
-                "test_django_api_admin/book": {
+                "test_django_api_admin.book": {
                     "change": {
                         "abcsd": {
                             "pk": self.a2_b1.pk,
@@ -235,7 +235,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.put(url, data=data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertTrue(isinstance(
-            response.data["errors"]["test_django_api_admin/book"]["abcsd"]["pk"], list))
+            response.data["errors"]["test_django_api_admin.book"]["abcsd"]["pk"], list))
 
     def test_constructing_change_messages(self):
         url = reverse('api_admin:%s_%s_change' %
@@ -250,7 +250,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 "location": {"lat": 40.6892, "lng": 40.6892},
             },
             "inlines": {
-                "test_django_api_admin/book": {
+                "test_django_api_admin.book": {
                     "add": {
                         "j18ca": {
                             "title": "The freedom model",

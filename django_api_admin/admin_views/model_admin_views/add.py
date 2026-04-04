@@ -76,14 +76,10 @@ class AddView(APIView):
                     request, serializer, False)
                 self.model_admin.save_model(
                     request, new_object, serializer, False)
-                opts = self.model_admin.model._meta
-
-                msg = _(
-                    f'The {opts.verbose_name} “{str(new_object)}” was added successfully.')
-                data = {'data': serializer.data, 'detail': msg}
 
                 # Process bulk operations
                 inline_results = None
+                bulk_operation = None
                 if request.data.get("inlines"):
                     bulk_operation = BulkOperation(
                         request, self.model_admin, new_object, request.data.get("inlines"))
@@ -92,7 +88,6 @@ class AddView(APIView):
                         self.model_admin.save_related(
                             request, new_object, serializer, bulk_operation, False)
                         inline_results = bulk_operation.result
-                        data["inlines"] = bulk_operation.validated_data
                     else:
                         raise ValidationError(
                             {"errors": bulk_operation.errors})
@@ -105,6 +100,6 @@ class AddView(APIView):
                 self.model_admin.log_change(
                     request, new_object, change_message)
 
-                return Response(data, status=status.HTTP_201_CREATED)
+                return self.model_admin.response_add(request, new_object, serializer, bulk_operation)
 
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
