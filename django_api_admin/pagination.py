@@ -1,6 +1,6 @@
 from rest_framework.pagination import PageNumberPagination
 from math import ceil
-from django_api_admin.constants.vars import PAGE_VAR
+from django_api_admin.constants import PAGE_VAR
 
 
 class AdminResultsListPagination(PageNumberPagination):

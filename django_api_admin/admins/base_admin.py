@@ -28,7 +28,7 @@ from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
-from django_api_admin.constants.vars import LOOKUP_SEP
+from django_api_admin.constants import LOOKUP_SEP
 
 
 def get_content_type_for_model(obj):
@@ -336,7 +336,7 @@ class BaseAPIModelAdmin:
             else self.get_list_display(request)
         )
 
-    def to_field_allowed(self, to_field):
+    def to_field_allowed(self, request, to_field):
         """
         Return True if the model associated with this admin should be
         allowed to be referenced by the specified field.

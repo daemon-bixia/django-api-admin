@@ -157,7 +157,7 @@ class AutoCompleteView(APIView):
             source_field.remote_field, "field_name", remote_model._meta.pk.attname
         )
         to_field_name = remote_model._meta.get_field(to_field_name).attname
-        if not model_admin.to_field_allowed(to_field_name):
+        if not model_admin.to_field_allowed(request, to_field_name):
             raise PermissionDenied
 
         return term, model_admin, source_field, to_field_name

@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 
 from django.core.exceptions import FieldDoesNotExist
-from django_api_admin.constants.vars import LOOKUP_SEP
+from django_api_admin.constants import LOOKUP_SEP
 
 
 def lookup_spawns_duplicates(opts, lookup_path):

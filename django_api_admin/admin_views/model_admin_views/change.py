@@ -12,7 +12,7 @@ from django_api_admin.utils.quote import unquote
 from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.get_inlines import get_inlines
-from django_api_admin.constants.vars import TO_FIELD_VAR
+from django_api_admin.constants import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, BulkUpdates
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
 from django_api_admin.bulk import BulkOperation
@@ -170,7 +170,7 @@ class ChangeView(APIView):
     def get_object(self, request, object_id):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
-        if to_field and not self.model_admin.to_field_allowed(to_field):
+        if to_field and not self.model_admin.to_field_allowed(request, to_field):
             raise ParseError(
                 {'detail': _('The field %s cannot be referenced.') % to_field})
 

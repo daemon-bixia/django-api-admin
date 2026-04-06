@@ -2,7 +2,7 @@ from django.db.models import Model
 
 from rest_framework.utils import humanize_datetime
 
-from django_api_admin.constants.field_attributes import field_attributes
+from django_api_admin.constants import field_attributes
 
 
 def get_field_attributes(name, field, change, serializer):

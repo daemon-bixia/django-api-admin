@@ -8,11 +8,11 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
 
 from allauth.account.models import EmailAddress
 
-from test_django_api_admin.models import Author, Publisher
+from test_django_api_admin.models import Author, Publisher, Category, Article
 from test_django_api_admin.admin import site, AuthorAPIAdmin
 from test_django_api_admin.utils import login
 
-from django_api_admin.constants.vars import TO_FIELD_VAR
+from django_api_admin.constants import TO_FIELD_VAR
 
 
 UserModel = get_user_model()
@@ -29,8 +29,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
         # Create a superuser
         self.user = UserModel.objects.create_superuser(
-            username='admin', email="admin@email.com")
-        self.user.set_password('password')
+            username="admin", email="admin@email.com")
+        self.user.set_password("password")
         self.user.save()
 
         # Verify the user's email
@@ -44,7 +44,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         # Authenticate the superuser
         login(self.client, self.user)
 
-        # Create some valid authors
+        # Create some authors
         Author.objects.create(name="muhammad", age=60,
                               is_vip=True, user_id=self.user.pk)
         Author.objects.create(name="Ali", age=20,
@@ -53,10 +53,10 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
                               is_vip=True, user_id=self.user.pk)
         self.author_info = (Author._meta.app_label, Author._meta.model_name)
 
-        # Create some valid publishers
-        Publisher.objects.create(name='rock')
-        Publisher.objects.create(name='paper')
-        Publisher.objects.create(name='scissor')
+        # Create some publishers
+        Publisher.objects.create(name="rock")
+        Publisher.objects.create(name="paper")
+        Publisher.objects.create(name="scissor")
 
     def test_list_view(self):
         url = reverse('api_admin:%s_%s_list' % self.author_info)
@@ -129,13 +129,24 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     def test_delete_view(self):
         author = Author.objects.create(
             name="test", age=20, is_vip=True, user_id=self.user.pk)
-        url = reverse('api_admin:%s_%s_delete' %
-                      self.author_info, kwargs={'object_id': author.pk})
+        url = reverse("api_admin:%s_%s_delete" %
+                      self.author_info, kwargs={"object_id": author.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Author.objects.filter(pk=author.pk).exists())
         self.assertEqual(
-            response.data['detail'], 'The author “test” was deleted successfully.')
+            response.data["detail"], "The author “test” was deleted successfully.")
+
+    def test_delete_view_protected(self):
+        category = Category.objects.create(name="software")
+        Article.objects.create(
+            title="Best programming languages", category=category)
+        url = reverse("api_admin:%s_%s_delete" %
+                      (Category._meta.app_label, Category._meta.model_name),
+                      kwargs={"object_id": category.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "Cannot delete category")
 
     def test_delete_view_bad_to_field(self):
         author = Author.objects.create(

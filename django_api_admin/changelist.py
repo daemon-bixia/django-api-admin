@@ -25,7 +25,7 @@ from django_api_admin.serializers import ChangeListSerializer
 from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
-from django_api_admin.constants.vars import TO_FIELD_VAR, IS_POPUP_VAR, ALL_VAR, ORDER_VAR, SEARCH_VAR, PAGE_VAR, ERROR_FLAG
+from django_api_admin.constants import TO_FIELD_VAR, IS_POPUP_VAR, ALL_VAR, ORDER_VAR, SEARCH_VAR, PAGE_VAR, ERROR_FLAG
 
 
 class ChangeList:

@@ -26,13 +26,14 @@ from rest_framework import serializers
 from rest_framework.utils import model_meta
 from rest_framework.response import Response
 
-from django_api_admin.constants.vars import LOOKUP_SEP
+from django_api_admin.constants import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
 from django_api_admin.utils.model_format_dict import model_format_dict
 from django_api_admin.utils.modelserializer_factory import modelserializer_factory
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.construct_change_message import construct_change_message
+from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
 class ShowFacets(enum.Enum):
@@ -757,3 +758,19 @@ class APIModelAdmin(BaseAPIModelAdmin):
             return Response({'detail': msg}, status=status.HTTP_200_OK)
 
         Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def response_delete(self, request, obj_display, obj_id):
+        """
+        Determine the Response for the delete_view stage.
+        """
+        return Response({"detail": _("The %(name)s “%(obj)s” was deleted successfully.") % {
+                        "name": self.opts.verbose_name,
+                        "obj": obj_display,
+                        }}, status=status.HTTP_204_NO_CONTENT)
+
+    def get_deleted_objects(self, objs, request):
+        """
+        Hook for customizing the delete process for the delete view and the
+        "delete selected" action.
+        """
+        return get_deleted_objects(objs, request, self.admin_site)

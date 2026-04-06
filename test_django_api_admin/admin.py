@@ -9,7 +9,7 @@ from django.contrib import admin
 from django.utils import timezone
 
 from test_django_api_admin import views as custom_api_views
-from test_django_api_admin.models import Author, Publisher, Book, GuestEntry
+from test_django_api_admin.models import Author, Publisher, Book, GuestEntry, Category
 from test_django_api_admin.actions import make_old, make_young
 from test_django_api_admin.serializers import AuthorSerializer
 
@@ -104,6 +104,11 @@ class AuthorAPIAdmin(APIModelAdmin):
     @display(description='is this author old enough')
     def is_old_enough(self, obj, context=None):
         return obj.age > 10
+
+
+@register(Category, site=site)
+class CategoryAPIAdmin(APIModelAdmin):
+    list_display = ('name',)
 
 
 site.register(Book)

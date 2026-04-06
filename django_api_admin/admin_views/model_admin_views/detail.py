@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django_api_admin.utils.quote import unquote
-from django_api_admin.constants.vars import TO_FIELD_VAR
+from django_api_admin.constants import TO_FIELD_VAR
 
 
 class DetailView(APIView):
@@ -22,7 +22,7 @@ class DetailView(APIView):
     def get(self, request, object_id):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
-        if to_field and not self.model_admin.to_field_allowed(to_field):
+        if to_field and not self.model_admin.to_field_allowed(request, to_field):
             return Response({'detail': _('The field %s cannot be referenced.') % to_field},
                             status=status.HTTP_400_BAD_REQUEST)
         obj = self.model_admin.get_object(
