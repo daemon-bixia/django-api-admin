@@ -13,22 +13,25 @@
 import copy
 from functools import partial
 
+from django.contrib.auth import get_permission_codename
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import reverse
-from django.contrib.auth import get_permission_codename
 from django.utils.safestring import mark_safe
-from django.core.exceptions import FieldDoesNotExist
 
 from rest_framework import serializers
 
-from django_api_admin.filters import SimpleListFilter
-from django_api_admin.utils.url_params_from_lookup_dict import url_params_from_lookup_dict
 from django_api_admin.checks import BaseAPIModelAdminChecks
-from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
-from django_api_admin.utils.modelserializer_factory import modelserializer_factory
+from django_api_admin.constants import LOOKUP_SEP, SERIALIZER_FIELD_ATTRIBUTES
 from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
-from django_api_admin.constants import LOOKUP_SEP
+from django_api_admin.filters import SimpleListFilter
+from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
+from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.model_serializer_factory import model_serializer_factory
+from django_api_admin.utils.url_params_from_lookup_dict import (
+    url_params_from_lookup_dict,
+)
 
 
 def get_content_type_for_model(obj):
@@ -53,13 +56,14 @@ class BaseAPIModelAdmin:
     filter_horizontal = ()
     radio_fields = {}
     prepopulated_fields = {}
-    serializerfield_overrides = {}
+    serializer_field_overrides = {}
     readonly_fields = ()
     ordering = None
     sortable_by = None
     view_on_site = True
     show_full_result_count = True
     checks_class = BaseAPIModelAdminChecks
+    serializer_field_attributes = {}
 
     # These are the options used to customize the change/add page UI
     # server-side customizations like `exclude`, and `ordering` are not included
@@ -74,7 +78,13 @@ class BaseAPIModelAdmin:
     def check(self, **kwargs):
         return self.checks_class().check(self, **kwargs)
 
-    def serializerfield_for_dbfield(self, db_field, request, **kwargs):
+    def __init__(self):
+        field_attributes = copy.deepcopy(SERIALIZER_FIELD_ATTRIBUTES)
+        for k, v in self.serializer_field_attributes.items():
+            field_attributes[k] = v if v else []
+        self.serializer_field_attributes = field_attributes
+
+    def serializer_field_for_dbfield(self, db_field, request, **kwargs):
         """
         Hook for specifying the kwargs for the serializer Field's constructor
         for a given database Field instance.
@@ -84,33 +94,33 @@ class BaseAPIModelAdmin:
         """
         # Call the hook for the choice field
         if db_field.choices:
-            return self.serializerfield_for_choice_field(db_field, request, **kwargs)
+            return self.serializer_field_for_choice_field(db_field, request, **kwargs)
 
         # Call the hooks for the relational fields
         if isinstance(db_field, (models.ForeignKey, models.ManyToManyField)):
-            if db_field.__class__ in self.serializerfield_overrides:
+            if db_field.__class__ in self.serializer_field_overrides:
                 kwargs = {
-                    **self.serializerfield_overrides[db_field.__class__], **kwargs}
+                    **self.serializer_field_overrides[db_field.__class__], **kwargs}
 
             if isinstance(db_field, models.ForeignKey):
-                kwargs = self.serializerfield_for_foreignkey(
+                kwargs = self.serializer_field_for_foreignkey(
                     db_field, request, **kwargs)
             elif isinstance(db_field, models.ManyToManyField):
-                kwargs = self.serializerfield_for_manytomany(
+                kwargs = self.serializer_field_for_manytomany(
                     db_field, request, **kwargs)
 
             return kwargs
 
-        # If we've got overrides for the serializerfield defined, use 'em. **kwargs
-        # passed to serializerfield_for_dbfield override the defaults.
+        # If we've got overrides for the serializer_field defined, use 'em. **kwargs
+        # passed to serializer_field_for_dbfield override the defaults.
         for klass in db_field.__class__.mro():
-            if klass in self.serializerfield_overrides:
+            if klass in self.serializer_field_overrides:
                 return {
-                    **copy.deepcopy(self.serializerfield_overrides[klass]), **kwargs}
+                    **copy.deepcopy(self.serializer_field_overrides[klass]), **kwargs}
 
         return kwargs
 
-    def serializerfield_for_choice_field(self, db_field, request, **kwargs):
+    def serializer_field_for_choice_field(self, db_field, request, **kwargs):
         """
         Get the kwargs for the serializer Field's constructor for a database
         Field that has declared choices.
@@ -136,7 +146,7 @@ class BaseAPIModelAdmin:
                 )
         return None
 
-    def serializerfield_for_foreignkey(self, db_field, request, **kwargs):
+    def serializer_field_for_foreignkey(self, db_field, request, **kwargs):
         """
         Get the kwargs for the serializer Field's constructor for a ForeignKey.
         """
@@ -149,7 +159,7 @@ class BaseAPIModelAdmin:
 
         return kwargs
 
-    def serializerfield_for_manytomany(self, db_field, request, **kwargs):
+    def serializer_field_for_manytomany(self, db_field, request, **kwargs):
         """
         Get the kwargs for the serializer Field's constrcutor for a ManyToManyField.
         """
@@ -257,11 +267,11 @@ class BaseAPIModelAdmin:
             "fields": fields,
             "exclude": exclude,
             "read_only_fields": readonly_fields,
-            "serializerfield_callback": partial(self.serializerfield_for_dbfield, request=request),
+            "serializer_field_callback": partial(self.serializer_field_for_dbfield, request=request),
             **kwargs,
         }
 
-        return modelserializer_factory(self.model, **defaults)
+        return model_serializer_factory(self.model, **defaults)
 
     def get_empty_value_display(self):
         """
@@ -568,3 +578,13 @@ class BaseAPIModelAdmin:
     def is_inline(self):
         from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
         return isinstance(self, InlineAPIModelAdmin)
+
+    def get_form_fields(self, request, obj=None):
+        """
+        Given a serializer this function picks which fields should be used to create forms.
+        """
+        change = obj is not None
+        serializer_class = self.get_serializer_class(request, obj, change)
+        serializer = serializer_class(
+            instance=obj, context={"request": request})
+        return get_form_fields(serializer, self, change)

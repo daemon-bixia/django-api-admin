@@ -1,20 +1,17 @@
 from django.db.models import Model
-
 from rest_framework.utils import humanize_datetime
 
-from django_api_admin.constants import field_attributes
 
-
-def get_field_attributes(name, field, change, serializer):
+def get_field_attributes(name, field, serializer, model_admin, change):
     """
-    extracts attributes from the serializer fields that are used to create forms
+    Extracts attributes from the serializer fields that are used to create forms
     on the frontend.
     """
     # create a field dict with name of the field, and it's type
     # (i.e 'name': 'username', 'type': 'CharField', 'attrs': {'max_length': 50, ...})
     form_field = {'type': type(field).__name__, 'name': name, 'attrs': {}}
 
-    for attr_name in field_attributes[form_field['type']]:
+    for attr_name in model_admin.serializer_field_attributes[form_field['type']]:
         attr = getattr(field, attr_name, None)
         # if the attribute is an empty field (not set attribute) use null
         if attr_name == 'default' and getattr(attr, "__name__", None) == 'empty':

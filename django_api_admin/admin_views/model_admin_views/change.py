@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.utils.quote import unquote
-from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.constants import TO_FIELD_VAR
@@ -45,9 +44,8 @@ class ChangeView(APIView):
     def get(self, request, object_id):
         obj = self.get_object(request, object_id)
         # Initiate the serializer based on the request method
-        serializer = self.get_serializer_instance(request, obj)
         data = dict()
-        data['fields'] = get_form_fields(serializer, change=True)
+        data['fields'] = self.model_admin.get_form_fields(request)
         data['config'] = get_form_config(self.model_admin)
 
         # Include the model_admin's inlines in the form representation

@@ -30,7 +30,7 @@ from django_api_admin.constants import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
 from django_api_admin.utils.model_format_dict import model_format_dict
-from django_api_admin.utils.modelserializer_factory import modelserializer_factory
+from django_api_admin.utils.model_serializer_factory import model_serializer_factory
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.construct_change_message import construct_change_message
 from django_api_admin.utils.get_deleted_objects import get_deleted_objects
@@ -83,6 +83,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         self.model = model
         self.opts = model._meta
         self.admin_site = admin_site
+        super().__init__()
 
     def __str__(self):
         return "%s.%s" % (self.opts.app_label, self.__class__.__name__)
@@ -224,10 +225,10 @@ class APIModelAdmin(BaseAPIModelAdmin):
         is used.
         """
         defaults = {
-            "serializerfield_callback": partial(self.serializerfield_for_dbfield, request=request),
+            "serializer_field_callback": partial(self.serializer_field_for_dbfield, request=request),
             **kwargs,
         }
-        return modelserializer_factory(
+        return model_serializer_factory(
             self.model,
             self.serializer_class,
             fields=self.list_editable,
@@ -236,14 +237,12 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_serializer_classes_with_inlines(self, request, obj=None):
         """
-        Yield formsets and the corresponding inlines.
+        Yield serializer_class's and the corresponding inlines.
         """
         for inline in self.get_inline_instances(request, obj):
             yield inline.get_serializer_class(request, obj), inline
 
-    def get_paginator(
-        self, request, queryset, per_page, orphans=0, allow_empty_first_page=True
-    ):
+    def get_paginator(self, request, queryset, per_page, orphans=0, allow_empty_first_page=True):
         return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
 
     def log_addition(self, request, obj, message):

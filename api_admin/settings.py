@@ -20,9 +20,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Add 'testserver' only during tests or in development
-if 'test' in sys.argv or DEBUG:
-    ALLOWED_HOSTS.append('testserver')
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`

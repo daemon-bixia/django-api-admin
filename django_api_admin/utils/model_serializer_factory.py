@@ -2,12 +2,12 @@ from django.core.exceptions import ImproperlyConfigured
 from rest_framework.serializers import ModelSerializer
 
 
-def modelserializer_factory(
+def model_serializer_factory(
     model=None,
     serializer_class=ModelSerializer,
     fields=None,
     exclude=None,
-    serializerfield_callback=None,
+    serializer_field_callback=None,
     read_only_fields=None,
     readonly_fields=None,
     depth=None,
@@ -49,7 +49,7 @@ def modelserializer_factory(
     def build_field(self, field_name, info, model_class, nested_depth):
         """
         Overrides the default build_fields of the `ModelSerializer` class
-        by calling the serializerfield_callback method to override the fields.
+        by calling the serializer_field_callback method to override the fields.
         """
         cls, kwargs = serializer_class.build_field(
             self, field_name, info, model_class, nested_depth)
@@ -61,7 +61,7 @@ def modelserializer_factory(
             db_field = relation_info.model_field
 
         if db_field:
-            serializerfield_kwargs = serializerfield_callback(
+            serializerfield_kwargs = serializer_field_callback(
                 db_field, **kwargs)
 
             # Remove the field

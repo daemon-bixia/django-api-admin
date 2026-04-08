@@ -8,7 +8,6 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_form_config import get_form_config
 from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
@@ -45,8 +44,7 @@ class AddView(APIView):
         for the model admin. 
         """
         data = dict()
-        serializer = self.serializer_class()
-        data['fields'] = get_form_fields(serializer)
+        data['fields'] = self.model_admin.get_form_fields(request)
         data['config'] = get_form_config(self.model_admin)
 
         # Include the model_admin's inlines in the form representation

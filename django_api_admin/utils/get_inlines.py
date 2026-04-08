@@ -1,7 +1,6 @@
 from django.forms.models import _get_foreign_key
 
 from django_api_admin.utils.get_form_config import get_form_config
-from django_api_admin.utils.get_form_fields import get_form_fields
 from django_api_admin.utils.get_related_name import get_related_name
 from django_api_admin.utils.remove_field import remove_field
 
@@ -13,7 +12,6 @@ def get_inlines(request, model_admin, obj=None):
     inlines = []
 
     for inline_admin in model_admin.get_inline_instances(request):
-        serializer_class = inline_admin.get_serializer_class()
         # Hint: The parent_model is the model of the ModelAdmin to whose inlines list this inline admin was added
         fk = _get_foreign_key(inline_admin.parent_model,
                               inline_admin.model, fk_name=inline_admin.fk_name)
@@ -32,16 +30,14 @@ def get_inlines(request, model_admin, obj=None):
             related_instances = fk_field.all()
             fieldsets = []
             for instance in related_instances:
-                serializer = serializer_class(instance=instance)
-                fields = get_form_fields(serializer, change=True)
+                fields = inline_admin.get_form_fields(request, instance)
                 # Hint: fk field value is inferred automatically from obj
                 remove_field(fields, fk.name)
                 fieldsets.append({'pk': instance.pk, 'fields': fields})
             inline['fieldsets'] = fieldsets
         else:
             # In case of add view simply add a list of fields.
-            serializer = serializer_class()
-            fields = get_form_fields(serializer)
+            fields = inline_admin.get_form_fields(request)
             # Remove the foreign key field used to tie the inline_model admin with the model_admin.
             # Hint: we don't need to include the fk field in the form because it's inferred automatically based..
             # ...on the data of the new object being added

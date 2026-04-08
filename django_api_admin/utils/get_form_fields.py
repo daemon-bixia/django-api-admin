@@ -5,9 +5,9 @@ from rest_framework.utils.field_mapping import get_field_kwargs
 from django_api_admin.utils.get_field_attributes import get_field_attributes
 
 
-def get_form_fields(serializer, change=False):
+def get_form_fields(serializer, model_admin, change=False):
     """
-    given a serializer this function picks which fields should be
+    Given a serializer this function picks which fields should be
     used to create forms.
     """
     form_fields = list()
@@ -31,7 +31,7 @@ def get_form_fields(serializer, change=False):
                     **field_kwargs)
 
             form_field = get_field_attributes(
-                name, field, change, serializer)
+                name, field, serializer, model_admin, change)
 
             # Include child field for composite fields i.e ListField, DictField, HStoreField
             if type(field) in [serializers.ListField, serializers.DictField, serializers.HStoreField] and isinstance(type(form_field['attrs']['child']), _UnvalidatedField):

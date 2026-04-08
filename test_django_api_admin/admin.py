@@ -17,6 +17,7 @@ from django_api_admin.sites import APIAdminSite
 from django_api_admin.admins.inline_admin import TabularInlineAPI
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.decorators import register, display
+from django_api_admin.constants import SHARED_FIELD_ATTRIBUTES
 
 
 class CustomAPIAdminSite(APIAdminSite):
@@ -84,8 +85,12 @@ class AuthorAPIAdmin(APIModelAdmin):
     autocomplete_fields = ('publisher',)
     date_hierarchy = 'date_joined'
 
-    serializerfield_overrides = {
+    serializer_field_overrides = {
         models.CharField: {'help_text': 'This is a custom help text for all CharFields'},
+    }
+
+    serializer_field_attributes = {
+        "LocationField": [*SHARED_FIELD_ATTRIBUTES]
     }
 
     actions = (make_old, make_young,)
@@ -99,7 +104,7 @@ class AuthorAPIAdmin(APIModelAdmin):
     exclude = ('gender',)
     readonly_fields = ('date_joined', 'is_old_enough')
 
-    inlines = [APIBookInline, ]
+    inlines = [APIBookInline]
 
     @display(description='is this author old enough')
     def is_old_enough(self, obj, context=None):
