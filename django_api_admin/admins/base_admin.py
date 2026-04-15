@@ -27,7 +27,7 @@ from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
 from django_api_admin.filters import SimpleListFilter
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
-from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.model_serializer_factory import model_serializer_factory
 from django_api_admin.utils.url_params_from_lookup_dict import (
     url_params_from_lookup_dict,
@@ -64,16 +64,6 @@ class BaseAPIModelAdmin:
     show_full_result_count = True
     checks_class = BaseAPIModelAdminChecks
     serializer_field_attributes = {}
-
-    # These are the options used to customize the change/add page UI
-    # server-side customizations like `exclude`, and `ordering` are not included
-    form_options = [
-        'fieldsets', 'fields',
-        'save_on_top', 'save_as', 'save_as_continue',
-        'view_on_site', 'radio_fields', 'prepopulated_fields',
-        'filter_horizontal', 'filter_vertical', 'raw_id_fields',
-        'autocomplete_fields'
-    ]
 
     def check(self, **kwargs):
         return self.checks_class().check(self, **kwargs)
@@ -579,7 +569,7 @@ class BaseAPIModelAdmin:
         from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
         return isinstance(self, InlineAPIModelAdmin)
 
-    def get_form_fields(self, request, obj=None):
+    def get_form_fields_description(self, request, obj=None):
         """
         Given a serializer this function picks which fields should be used to create forms.
         """
@@ -587,4 +577,4 @@ class BaseAPIModelAdmin:
         serializer_class = self.get_serializer_class(request, obj, change)
         serializer = serializer_class(
             instance=obj, context={"request": request})
-        return get_form_fields(serializer, self, change)
+        return get_form_fields_description(serializer, self, change)

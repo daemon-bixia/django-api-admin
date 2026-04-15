@@ -11,7 +11,7 @@ from rest_framework.exceptions import NotFound
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 
-from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.lookup_field import lookup_field
 from django_api_admin.exceptions import IncorrectLookupParameters
@@ -158,7 +158,7 @@ class ChangeListView(APIView):
         serializer_class = cl.model_admin.get_changelist_serializer_class(
             request)
         serializer = serializer_class()
-        config['editing_fields'] = get_form_fields(serializer)
+        config['editing_fields'] = get_form_fields_description(serializer)
 
         return config
 

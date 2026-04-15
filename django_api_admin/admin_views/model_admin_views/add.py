@@ -8,8 +8,6 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from django_api_admin.utils.get_form_config import get_form_config
-from django_api_admin.utils.get_inlines import get_inlines
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
 from django_api_admin.bulk import BulkOperation
@@ -43,16 +41,7 @@ class AddView(APIView):
         Handle GET requests to retrieve form field attributes and configuration
         for the model admin. 
         """
-        data = dict()
-        data['fields'] = self.model_admin.get_form_fields(request)
-        data['config'] = get_form_config(self.model_admin)
-
-        # Include the model_admin's inlines in the form representation
-        if not self.model_admin.is_inline:
-            inlines = get_inlines(request, self.model_admin)
-            if len(inlines):
-                data['inlines'] = inlines
-
+        data = self.model_admin.get_form_description(request, obj=None)
         return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):

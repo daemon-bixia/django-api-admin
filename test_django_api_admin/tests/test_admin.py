@@ -10,6 +10,7 @@ from allauth.account.models import EmailAddress
 
 from test_django_api_admin.models import Author, Publisher, Category, Article
 from test_django_api_admin.admin import site, AuthorAPIAdmin
+from test_django_api_admin import views
 from test_django_api_admin.utils import login
 
 from django_api_admin.constants import TO_FIELD_VAR
@@ -22,6 +23,9 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
         path('api_admin/', site.urls),
         path('_allauth/', include('allauth.headless.urls')),
+        path('api/publisher/<int:pk>/',
+             views.PublisherDetailView.as_view(), name="publisher-detail"),
+
     ]
 
     def setUp(self) -> None:
@@ -159,6 +163,60 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.data['detail'],
                          'The field name cannot be referenced.')
 
+    def test_add_form_description(self):
+        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        form = data["form"]
+        self.assertEqual(form["model"], "test_django_api_admin.author")
+        self.assertEqual(form["readonly"], ["date_joined", "is_old_enough"])
+        self.assertEqual(len(form["fields"]), 6)
+
+        # Assert on specific fields
+        field_names = [f["name"] for f in form["fields"]]
+        self.assertEqual(
+            field_names, ["name", "age", "is_vip", "user", "publisher", "location"])
+
+        # Name field details
+        name_field = form["fields"][0]
+        self.assertEqual(name_field["type"], "CharField")
+        self.assertEqual(name_field["attrs"]["label"], "Name")
+        self.assertEqual(name_field["attrs"]["help_text"],
+                         "This is a custom help text for all CharFields")
+        self.assertEqual(name_field["attrs"]["max_length"], 100)
+
+        # Age field - ChoiceField
+        age_field = form["fields"][1]
+        self.assertEqual(age_field["type"], "ChoiceField")
+        self.assertEqual(age_field["attrs"]["choices"], {
+                         60: 'senior', 1: 'baby', 2: 'also a baby'})
+
+        # Publisher - ManyRelatedField
+        publisher_field = form["fields"][4]
+        self.assertEqual(publisher_field["type"], "ManyRelatedField")
+        self.assertEqual(publisher_field["attrs"]["label"], "Publisher")
+
+        # Fieldsets
+        self.assertEqual(form["fieldsets"][0][0], "Information")
+        self.assertIn("is_old_enough", form["fieldsets"][0][1]["fields"])
+
+        # Misc admin options
+        self.assertEqual(form["raw_id_fields"], ("publisher",))
+        self.assertEqual(form["autocomplete_fields"], ("publisher",))
+        self.assertTrue(form["save_as_continue"])
+        self.assertTrue(form["view_on_site"])
+
+        # Permissions
+        self.assertTrue(form["permissions"]["has_add_permission"])
+
+        # Formsets
+        self.assertEqual(len(data["formsets"]), 1)
+        book_formset = data["formsets"][0]
+        self.assertEqual(book_formset["model"], "test_django_api_admin.book")
+        self.assertEqual(book_formset["extra"], 3)
+        self.assertEqual(book_formset["admin_style"], "tabular")
+
     def test_add_view(self):
         url = reverse('api_admin:%s_%s_add' % self.author_info)
         data = {
@@ -180,6 +238,13 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data[0]['object_repr'], 'test4')
+
+    def test_change_form_description(self):
+        author = Author.objects.get(pk=1)
+        url = reverse('api_admin:%s_%s_change' %
+                      self.author_info, kwargs={'object_id': author.pk})
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
 
     def test_change_view(self):
         author = Author.objects.create(

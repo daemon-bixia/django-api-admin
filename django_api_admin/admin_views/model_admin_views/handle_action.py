@@ -8,7 +8,7 @@ from rest_framework.exceptions import NotFound
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.exceptions import IncorrectLookupParameters
-from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
 
@@ -39,7 +39,7 @@ class HandleActionView(APIView):
         the admin action.
         """
         serializer = self.get_serializer_class(request)()
-        form_fields = get_form_fields(serializer)
+        form_fields = get_form_fields_description(serializer)
         return Response({'fields': form_fields}, status=status.HTTP_200_OK)
 
     @extend_schema(

@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
-from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
 
@@ -39,7 +39,7 @@ class PasswordChangeView(APIView):
         """
         data = dict()
         serializer = self.serializer_class()
-        data['fields'] = get_form_fields(serializer)
+        data['fields'] = get_form_fields_description(serializer)
         return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(

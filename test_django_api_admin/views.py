@@ -12,7 +12,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django_api_admin.utils.get_form_fields import get_form_fields
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from test_django_api_admin.models import Author, Publisher
 from test_django_api_admin.serializers import AuthorSerializer, PublisherSerializer
 
@@ -423,7 +423,7 @@ class TestView(APIView):
                 SerializerClass, meta, fields)
 
             serializer = self.serializer_class(context={'request': request})
-            form_fields = get_form_fields(serializer,)
+            form_fields = get_form_fields_description(serializer,)
         except KeyError:
             return Response({'detail': 'test field not supported'})
 

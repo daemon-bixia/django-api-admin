@@ -5,7 +5,7 @@ from rest_framework.utils.field_mapping import get_field_kwargs
 from django_api_admin.utils.get_field_attributes import get_field_attributes
 
 
-def get_form_fields(serializer, model_admin, change=False):
+def get_form_fields_description(serializer, model_admin, change=False):
     """
     Given a serializer this function picks which fields should be
     used to create forms.

@@ -20,6 +20,7 @@ from django.core.paginator import Paginator
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.utils.text import capfirst, smart_split, unescape_string_literal
+from django.forms.models import _get_foreign_key
 
 from rest_framework import status
 from rest_framework import serializers
@@ -105,7 +106,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                     or inline.has_delete_permission(request)
                 ):
                     continue
-                if not inline.has_add_permission(request):
+                if not inline.has_add_permission(request, obj):
                     inline.max_num = 0
             inline_instances.append(inline)
 
@@ -773,3 +774,99 @@ class APIModelAdmin(BaseAPIModelAdmin):
         "delete selected" action.
         """
         return get_deleted_objects(objs, request, self.admin_site)
+
+    def get_inline_formset_description(self, request, serializer_classes, inline_instances, obj=None):
+        # Edit permissions on parent model are required for editable inlines.
+        can_edit_parent = (
+            self.has_change_permission(request, obj)
+            if obj
+            else self.has_add_permission(request)
+        )
+        inline_admin_formsets = []
+        for inline in inline_instances:
+            if can_edit_parent:
+                has_add_permission = inline.has_add_permission(request, obj)
+                has_change_permission = inline.has_change_permission(
+                    request, obj)
+                has_delete_permission = inline.has_delete_permission(
+                    request, obj)
+            else:
+                # Disable all edit-permissions, and override formset settings.
+                has_add_permission = has_change_permission = has_delete_permission = (
+                    False
+                )
+            has_view_permission = inline.has_view_permission(request, obj)
+            inline_admin_formsets.append({
+                "model": f"{inline.model._meta.app_label}.{inline.model._meta.model_name}",
+                "readonly": list(inline.get_readonly_fields(request, obj)),
+                "fields": inline.get_form_fields_description(request, obj),
+                "fieldsets": list(inline.get_fieldsets(request, obj)),
+                "prepopulated":  dict(inline.get_prepopulated_fields(request, obj)),
+                "permissions": {
+                    "has_add_permission": has_add_permission,
+                    "has_change_permission": has_change_permission,
+                    "has_delete_permission": has_delete_permission,
+                    "has_view_permission": has_view_permission,
+                },
+                "extra": inline.extra,
+                "min_num": inline.min_num,
+                "max_num": inline.max_num,
+                "verbose_name": inline.verbose_name,
+                "verbose_name_plural": inline.verbose_name_plural,
+                "can_delete": inline.can_delete,
+                "show_change_link": inline.show_change_link,
+                "admin_style": inline.admin_style,
+            })
+        return inline_admin_formsets
+
+    def get_form_description(self, request, obj=None):
+        form_description = {
+            "form": {
+                "model": f"{self.model._meta.app_label}.{self.model._meta.model_name}",
+                "readonly": list(self.get_readonly_fields(request, obj)),
+                "fields": self.get_form_fields_description(request, obj),
+                "fieldsets": list(self.get_fieldsets(request, obj)),
+                "prepopulated": dict(self.get_prepopulated_fields(request, obj)),
+                "permissions": {
+                    "has_add_permission": self.has_add_permission(request),
+                    "has_change_permission": self.has_change_permission(request, obj),
+                    "has_delete_permission": self.has_delete_permission(request, obj),
+                    "has_view_permission": self.has_view_permission(request, obj),
+                },
+                "save_as": self.save_as,
+                "save_as_continue": self.save_as_continue,
+                "save_on_top": self.save_on_top,
+                "filter_horizontal": self.filter_horizontal,
+                "filter_vertical": self.filter_vertical,
+                "raw_id_fields": self.raw_id_fields,
+                "radio_fields": self.radio_fields,
+                "view_on_site": self.view_on_site,
+                "autocomplete_fields": self.autocomplete_fields,
+            }
+        }
+
+        if self.inlines:
+            inline_instances = self.get_inline_instances(request, obj)
+            serializer_classes = []
+
+            for inline in inline_instances:
+                fk = _get_foreign_key(
+                    inline.parent_model, inline.model, fk_name=inline.fk_name)
+                related_name = fk.remote_field.accessor_name
+                reverse_field = getattr(obj, related_name)
+                related_instances = reverse_field.all()
+                change = len(related_instances) > 0
+                if change:
+                    for instance in related_instances:
+                        serializer_class = inline.get_serializer_class(
+                            request, instance, change)
+                        serializer_classes.append(serializer_class)
+                else:
+                    serializer_class = inline.get_serializer_class(
+                        request, None, change)
+                    serializer_classes.append(serializer_class)
+
+            form_description["formsets"] = self.get_inline_formset_description(
+                request, serializer_classes, inline_instances, obj)
+
+        return form_description
