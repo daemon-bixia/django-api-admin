@@ -8,7 +8,7 @@ from rest_framework.test import (APIRequestFactory, APITestCase,
 
 from allauth.account.models import EmailAddress
 
-from test_django_api_admin.models import Author, Publisher, Category, Article
+from test_django_api_admin.models import Author, Publisher, Category, Article, Book
 from test_django_api_admin.admin import site, AuthorAPIAdmin
 from test_django_api_admin import views
 from test_django_api_admin.utils import login
@@ -163,11 +163,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.data['detail'],
                          'The field name cannot be referenced.')
 
-    def test_add_form_description(self):
-        url = reverse('api_admin:%s_%s_add' % self.author_info)
-        response = self.client.get(url, format="json")
-        self.assertEqual(response.status_code, 200)
-        data = response.data
+    def _assert_author_form_description(self, data):
         form = data["form"]
         self.assertEqual(form["model"], "test_django_api_admin.author")
         self.assertEqual(form["readonly"], ["date_joined", "is_old_enough"])
@@ -207,15 +203,27 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertTrue(form["save_as_continue"])
         self.assertTrue(form["view_on_site"])
 
-        # Permissions
-        self.assertTrue(form["permissions"]["has_add_permission"])
-
-        # Formsets
-        self.assertEqual(len(data["formsets"]), 1)
-        book_formset = data["formsets"][0]
+        # Inline formsets
+        self.assertEqual(len(data["inlines"]), 1)
+        book_formset = data["inlines"][0]
         self.assertEqual(book_formset["model"], "test_django_api_admin.book")
         self.assertEqual(book_formset["extra"], 3)
         self.assertEqual(book_formset["admin_style"], "tabular")
+
+    def test_add_form_description(self):
+        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self._assert_author_form_description(data)
+
+        # Permissions
+        self.assertTrue(data["form"]["permissions"]["has_add_permission"])
+
+        # Inline formset specific
+        book_formset = data["inlines"][0]
+        self.assertEqual(len(book_formset["formset"]), 1)
+        self.assertEqual(book_formset["formset"][0][0]["type"], "CharField")
 
     def test_add_view(self):
         url = reverse('api_admin:%s_%s_add' % self.author_info)
@@ -241,10 +249,34 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
     def test_change_form_description(self):
         author = Author.objects.get(pk=1)
+        book_1 = Book.objects.create(
+            title="Spice and Wolf, Vol. 1", author=author)
+        book_2 = Book.objects.create(
+            title="Spice and Wolf, Vol. 2", author=author)
         url = reverse('api_admin:%s_%s_change' %
                       self.author_info, kwargs={'object_id': author.pk})
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, 200)
+        data = response.data
+        self._assert_author_form_description(data)
+
+        form = data["form"]
+        # Permissions
+        self.assertTrue(form["permissions"]["has_change_permission"])
+
+        # Current values
+        self.assertEqual(form["fields"][0]["attrs"]["current_value"], author.name)
+        self.assertEqual(form["fields"][1]["attrs"]["current_value"], author.age)
+
+        # Inline formsets
+        book_formset = data["inlines"][0]
+        self.assertEqual(len(book_formset["formset"]), 3)
+        # First book title (CharField)
+        self.assertEqual(book_formset["formset"][0][0]["attrs"]["current_value"], book_1.title)
+        # Second book title
+        self.assertEqual(book_formset["formset"][1][0]["attrs"]["current_value"], book_2.title)
+        # Third form (extra) should not have current_value
+        self.assertNotIn("current_value", book_formset["formset"][2][0]["attrs"])
 
     def test_change_view(self):
         author = Author.objects.create(

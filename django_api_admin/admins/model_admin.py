@@ -775,15 +775,19 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         return get_deleted_objects(objs, request, self.admin_site)
 
-    def get_inline_formset_description(self, request, serializer_classes, inline_instances, obj=None):
+    def get_inline_formsets_description(self, request, serializer_classes, inline_instances, obj=None):
         # Edit permissions on parent model are required for editable inlines.
         can_edit_parent = (
             self.has_change_permission(request, obj)
             if obj
             else self.has_add_permission(request)
         )
-        inline_admin_formsets = []
+
+        inlines_descriptions = []
+
         for inline in inline_instances:
+            model_name = f"{inline.model._meta.app_label}.{inline.model._meta.model_name}"
+
             if can_edit_parent:
                 has_add_permission = inline.has_add_permission(request, obj)
                 has_change_permission = inline.has_change_permission(
@@ -796,10 +800,10 @@ class APIModelAdmin(BaseAPIModelAdmin):
                     False
                 )
             has_view_permission = inline.has_view_permission(request, obj)
-            inline_admin_formsets.append({
-                "model": f"{inline.model._meta.app_label}.{inline.model._meta.model_name}",
+
+            inline_description = {
+                "model": model_name,
                 "readonly": list(inline.get_readonly_fields(request, obj)),
-                "fields": inline.get_form_fields_description(request, obj),
                 "fieldsets": list(inline.get_fieldsets(request, obj)),
                 "prepopulated":  dict(inline.get_prepopulated_fields(request, obj)),
                 "permissions": {
@@ -816,8 +820,27 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 "can_delete": inline.can_delete,
                 "show_change_link": inline.show_change_link,
                 "admin_style": inline.admin_style,
-            })
-        return inline_admin_formsets
+            }
+
+            formset = []
+
+            if obj:
+                fk = _get_foreign_key(inline.parent_model,
+                                      inline.model, fk_name=inline.fk_name)
+                related_name = fk.remote_field.accessor_name
+                reverse_field = getattr(obj, related_name)
+                related_instances = reverse_field.all()
+
+                for instance in related_instances:
+                    formset.append(
+                        inline.get_form_fields_description(request, instance))
+
+            formset.append(inline.get_form_fields_description(request, None))
+
+            inline_description["formset"] = formset
+            inlines_descriptions.append(inline_description)
+
+        return inlines_descriptions
 
     def get_form_description(self, request, obj=None):
         form_description = {
@@ -847,26 +870,30 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
         if self.inlines:
             inline_instances = self.get_inline_instances(request, obj)
-            serializer_classes = []
+            serializer_classes = {}
 
             for inline in inline_instances:
-                fk = _get_foreign_key(
-                    inline.parent_model, inline.model, fk_name=inline.fk_name)
-                related_name = fk.remote_field.accessor_name
-                reverse_field = getattr(obj, related_name)
-                related_instances = reverse_field.all()
-                change = len(related_instances) > 0
-                if change:
+                model_name = f"{inline.model._meta.app_label}.{inline.model._meta.model_name}"
+                serializer_classes[model_name] = []
+
+                if obj:
+                    fk = _get_foreign_key(
+                        inline.parent_model, inline.model, fk_name=inline.fk_name)
+                    related_name = fk.remote_field.accessor_name
+                    reverse_field = getattr(obj, related_name)
+                    related_instances = reverse_field.all()
+
                     for instance in related_instances:
                         serializer_class = inline.get_serializer_class(
-                            request, instance, change)
-                        serializer_classes.append(serializer_class)
-                else:
-                    serializer_class = inline.get_serializer_class(
-                        request, None, change)
-                    serializer_classes.append(serializer_class)
+                            request, instance, True)
+                        serializer_classes[model_name].append(
+                            serializer_class)
 
-            form_description["formsets"] = self.get_inline_formset_description(
+                serializer_class = inline.get_serializer_class(
+                    request, None, False)
+                serializer_classes[model_name].append(serializer_class)
+
+            form_description["inlines"] = self.get_inline_formsets_description(
                 request, serializer_classes, inline_instances, obj)
 
         return form_description
