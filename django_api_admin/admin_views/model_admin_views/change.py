@@ -14,6 +14,7 @@ from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, Bu
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
 from django_api_admin.bulk import BulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data
+from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 
 
 class ChangeView(APIView):
@@ -41,54 +42,19 @@ class ChangeView(APIView):
     )
     def get(self, request, object_id):
         obj = self.get_object(request, object_id)
-        data = self.model_admin.get_form_description(request, obj)
+
+        if not self.model_admin.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+
+        if not self.model_admin.has_change_permission(request, obj):
+            fieldsets = self.get_fieldsets(request, obj)
+            readonly_fields = flatten_fieldsets(fieldsets)
+            data = self.model_admin.get_form_description(
+                request, obj, {"readonly_fields": readonly_fields})
+        else:
+            data = self.model_admin.get_form_description(request, obj)
+
         return Response(data, status=status.HTTP_200_OK)
-
-    def update(self, request, object_id):
-        with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
-            obj = self.get_object(request, object_id)
-
-            # Test user change permission in this model.
-            if not self.model_admin.has_change_permission(request):
-                raise PermissionDenied
-
-            # Initiate the serializer based on the request method
-            serializer = self.get_serializer_instance(request, obj)
-
-            # Validate the update data
-            if serializer.is_valid():
-                changed_data = get_changed_data(serializer)
-                updated_object = self.model_admin.save_serializer(
-                    request, serializer, True)
-                self.model_admin.save_model(
-                    request, updated_object, serializer, True)
-
-                # Process bulk operations
-                inline_results = None
-                bulk_operation = None
-                if request.data.get("inlines"):
-                    bulk_operation = BulkOperation(
-                        request, self.model_admin, updated_object, request.data.get("inlines"))
-
-                    if bulk_operation.is_valid():
-                        self.model_admin.save_related(
-                            request, updated_object, serializer, bulk_operation, True)
-                        inline_results = bulk_operation.result
-                    else:
-                        raise ValidationError(
-                            {"errors": bulk_operation.errors})
-                else:
-                    serializer.save_m2m()
-
-                # Construct the change message, and log the changes
-                change_message = self.model_admin.construct_change_message(
-                    request, (serializer, changed_data), inline_results, False)
-                self.model_admin.log_change(
-                    request, updated_object, change_message)
-
-                return self.model_admin.response_change(request, updated_object, serializer, bulk_operation)
-
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         responses={
@@ -135,6 +101,52 @@ class ChangeView(APIView):
     )
     def patch(self, request, object_id):
         return self.update(request, object_id)
+
+    def update(self, request, object_id):
+        with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
+            obj = self.get_object(request, object_id)
+
+            # Test user change permission in this model.
+            if not self.model_admin.has_change_permission(request, obj):
+                raise PermissionDenied
+
+            # Initiate the serializer based on the request method
+            serializer = self.get_serializer_instance(request, obj)
+
+            # Validate the update data
+            if serializer.is_valid():
+                changed_data = get_changed_data(serializer)
+                updated_object = self.model_admin.save_serializer(
+                    request, serializer, True)
+                self.model_admin.save_model(
+                    request, updated_object, serializer, True)
+
+                # Process bulk operations
+                inline_results = None
+                bulk_operation = None
+                if request.data.get("inlines"):
+                    bulk_operation = BulkOperation(
+                        request, self.model_admin, updated_object, request.data.get("inlines"))
+
+                    if bulk_operation.is_valid():
+                        self.model_admin.save_related(
+                            request, updated_object, serializer, bulk_operation, True)
+                        inline_results = bulk_operation.result
+                    else:
+                        raise ValidationError(
+                            {"errors": bulk_operation.errors})
+                else:
+                    serializer.save_m2m()
+
+                # Construct the change message, and log the changes
+                change_message = self.model_admin.construct_change_message(
+                    request, (serializer, changed_data), inline_results, False)
+                self.model_admin.log_change(
+                    request, updated_object, change_message)
+
+                return self.model_admin.response_change(request, updated_object, serializer, bulk_operation)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_instance(self, request, obj):
         serializer = None

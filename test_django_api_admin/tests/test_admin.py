@@ -25,7 +25,6 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         path('_allauth/', include('allauth.headless.urls')),
         path('api/publisher/<int:pk>/',
              views.PublisherDetailView.as_view(), name="publisher-detail"),
-
     ]
 
     def setUp(self) -> None:
@@ -166,7 +165,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     def _assert_author_form_description(self, data):
         form = data["form"]
         self.assertEqual(form["model"], "test_django_api_admin.author")
-        self.assertEqual(form["readonly"], ["date_joined", "is_old_enough"])
+        self.assertEqual(form["readonly_fields"], [
+                         "date_joined", "is_old_enough"])
         self.assertEqual(len(form["fields"]), 6)
 
         # Assert on specific fields
@@ -233,7 +233,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 'age': 60,
                 'is_vip': True,
                 'user': self.user.pk,
-                'publisher': [1]
+                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
             }
         }
         response = self.client.post(url, data=data, format="json")
@@ -265,39 +265,44 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertTrue(form["permissions"]["has_change_permission"])
 
         # Current values
-        self.assertEqual(form["fields"][0]["attrs"]["current_value"], author.name)
-        self.assertEqual(form["fields"][1]["attrs"]["current_value"], author.age)
+        self.assertEqual(form["fields"][0]["attrs"]
+                         ["current_value"], author.name)
+        self.assertEqual(form["fields"][1]["attrs"]
+                         ["current_value"], author.age)
 
         # Inline formsets
         book_formset = data["inlines"][0]
         self.assertEqual(len(book_formset["formset"]), 3)
         # First book title (CharField)
-        self.assertEqual(book_formset["formset"][0][0]["attrs"]["current_value"], book_1.title)
+        self.assertEqual(book_formset["formset"][0]
+                         [0]["attrs"]["current_value"], book_1.title)
         # Second book title
-        self.assertEqual(book_formset["formset"][1][0]["attrs"]["current_value"], book_2.title)
+        self.assertEqual(book_formset["formset"][1]
+                         [0]["attrs"]["current_value"], book_2.title)
         # Third form (extra) should not have current_value
-        self.assertNotIn("current_value", book_formset["formset"][2][0]["attrs"])
+        self.assertNotIn(
+            "current_value", book_formset["formset"][2][0]["attrs"])
 
     def test_change_view(self):
         author = Author.objects.create(
-            name='hassan', age=60, is_vip=False, user_id=self.user.pk)
-        url = reverse('api_admin:%s_%s_change' %
-                      self.author_info, kwargs={'object_id': author.pk})
+            name="hassan", age=60, is_vip=False, user_id=self.user.pk)
+        url = reverse("api_admin:%s_%s_change" %
+                      self.author_info, kwargs={"object_id": author.pk})
         data = {
-            'data': {
-                'name': 'muhammad',
-                'age': '60',
-                'is_vip': True,
-                'publisher': [1]
+            "data": {
+                "name": "muhammad",
+                "age": "60",
+                "is_vip": True,
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             }
         }
         response = self.client.patch(url, data=data, format="json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['data']['name'], 'muhammad')
+        self.assertEqual(response.data["data"]["name"], "muhammad")
 
-        url = reverse('api_admin:%s_%s_history' % self.author_info,
-                      kwargs={'object_id': author.id}) + '?p=1&page_size=1'
+        url = reverse("api_admin:%s_%s_history" % self.author_info,
+                      kwargs={"object_id": author.id}) + "?p=1&page_size=1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.data) == 1)
@@ -363,11 +368,12 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         fields = serializer.get_fields()
 
         self.assertEqual(list(fields.keys()), [
-                         'name', 'age', 'is_vip', 'user',
-                         'publisher', 'is_old_enough', 'date_joined'])
-        self.assertIsNotNone(fields['name'].help_text)
-        self.assertTrue(serializer.data['is_old_enough'])
-        self.assertTrue(isinstance(serializer.data['date_joined'], str))
+                         "name", "age", "is_vip", "user",
+                         "publisher", "is_old_enough", "date_joined",
+                         "location", "pk"])
+        self.assertIsNotNone(fields["name"].help_text)
+        self.assertTrue(serializer.data["is_old_enough"])
+        self.assertTrue(isinstance(serializer.data["date_joined"], str))
 
     def test_get_changelist_serializer_class(self):
         request = self.factory.get('/')

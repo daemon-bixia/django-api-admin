@@ -41,6 +41,8 @@ class AddView(APIView):
         Handle GET requests to retrieve form field attributes and configuration
         for the model admin. 
         """
+        if not self.model_admin.has_add_permission(request):
+            raise PermissionDenied
         data = self.model_admin.get_form_description(request, obj=None)
         return Response(data, status=status.HTTP_200_OK)
 

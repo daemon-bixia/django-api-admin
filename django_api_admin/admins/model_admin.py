@@ -709,21 +709,27 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         Determine the Response for the add_view stage.
         """
-        return Response({
+        data = {
             "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was added successfully.'),
             "data": serializer.data,
-            "inlines": bulk_operation.validated_data,
-        }, status=status.HTTP_201_CREATED)
+        }
+        if bulk_operation:
+            data["inlines"] = bulk_operation.validated_data,
+
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def response_change(self, request, obj, serializer, bulk_operation):
         """
         Determine the Response for the change_view stage.
         """
-        return Response({
+        data = {
             "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully.'),
             "data": serializer.data,
-            "inlines": bulk_operation.validated_data,
-        }, status=status.HTTP_200_OK)
+        }
+        if bulk_operation:
+            data["inlines"] = bulk_operation.validated_data,
+
+        return Response(data, status=status.HTTP_200_OK)
 
     def response_action(self, request, queryset):
         """
@@ -803,7 +809,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
             inline_description = {
                 "model": model_name,
-                "readonly": list(inline.get_readonly_fields(request, obj)),
+                "readonly_fields": list(inline.get_readonly_fields(request, obj)),
                 "fieldsets": list(inline.get_fieldsets(request, obj)),
                 "prepopulated":  dict(inline.get_prepopulated_fields(request, obj)),
                 "permissions": {
@@ -842,11 +848,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
         return inlines_descriptions
 
-    def get_form_description(self, request, obj=None):
+    def get_form_description(self, request, obj=None, **kwargs):
         form_description = {
             "form": {
                 "model": f"{self.model._meta.app_label}.{self.model._meta.model_name}",
-                "readonly": list(self.get_readonly_fields(request, obj)),
+                "readonly_fields": list(self.get_readonly_fields(request, obj)),
                 "fields": self.get_form_fields_description(request, obj),
                 "fieldsets": list(self.get_fieldsets(request, obj)),
                 "prepopulated": dict(self.get_prepopulated_fields(request, obj)),
@@ -865,6 +871,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 "radio_fields": self.radio_fields,
                 "view_on_site": self.view_on_site,
                 "autocomplete_fields": self.autocomplete_fields,
+                **kwargs,
             }
         }
 
