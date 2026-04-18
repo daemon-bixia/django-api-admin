@@ -34,6 +34,7 @@ from django_api_admin.utils.model_format_dict import model_format_dict
 from django_api_admin.utils.model_serializer_factory import model_serializer_factory
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.construct_change_message import construct_change_message
+from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
@@ -904,3 +905,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 request, serializer_classes, inline_instances, obj)
 
         return form_description
+
+    def get_changelist_form_fields_description(self, request, obj):
+        serializer_class = self.get_changelist_serializer_class(
+            request)
+        serializer = serializer_class(
+            instance=obj, context={"request": request})
+        return get_form_fields_description(
+            serializer, self, True)

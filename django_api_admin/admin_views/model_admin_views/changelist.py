@@ -10,8 +10,6 @@ from rest_framework.exceptions import NotFound
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
-
-from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.lookup_field import lookup_field
 from django_api_admin.exceptions import IncorrectLookupParameters
@@ -75,8 +73,8 @@ class ChangeListView(APIView):
         Return changelist rows actual list of data.
         """
         rows = []
-        # generate changelist attributes (e.g result_list, paginator, result_count)
-        cl.get_results()
+        # Generate changelist attributes (e.g result_list, paginator, result_count)
+        cl.get_results(request)
         empty_value_display = cl.model_admin.get_empty_value_display()
         for result in cl.result_list:
             model_info = (cl.model_admin.admin_site.name, type(
@@ -87,18 +85,20 @@ class ChangeListView(APIView):
                 'cells': {}
             }
 
+            # Construct the `cells` dictionary
             for field_name in self.get_fields_list(request, cl):
                 try:
+                    # Get the field value
                     _, _, value = lookup_field(
                         field_name, result, cl.model_admin)
 
-                    # if the value is a Model instance get the string representation
+                    # If the value is a Model instance get the string representation
                     if value and isinstance(value, Model):
                         result_repr = str(value)
                     else:
                         result_repr = value
 
-                    # if there are choices display the choice description string instead of the value
+                    # If there are choices display the choice description string instead of the value
                     try:
                         model_field = result._meta.get_field(field_name)
                         choices = getattr(model_field, 'choices', None)
@@ -110,9 +110,17 @@ class ChangeListView(APIView):
                     except FieldDoesNotExist:
                         pass
 
-                    # if the value is null set result_repr to empty_value_display
+                    # If the value is null set result_repr to empty_value_display
                     if value is None:
                         result_repr = empty_value_display
+
+                    # If the `field_name` is in `cl.list_editable` use the form fields description
+                    if field_name in cl.list_editable:
+                        fields_description = self.model_admin.get_changelist_form_fields_description(
+                            request, result)
+                        for field_description in fields_description:
+                            if field_description["name"] == field_name:
+                                result_repr = field_description
 
                 except ObjectDoesNotExist:
                     result_repr = empty_value_display
@@ -124,19 +132,19 @@ class ChangeListView(APIView):
     def get_config(self, request, cl):
         config = {}
 
-        # add the ModelAdmin attributes that the changelist uses
+        # Add the ModelAdmin attributes that the changelist uses
         for option_name in cl.model_admin.changelist_options:
             config[option_name] = (getattr(cl.model_admin, option_name, None))
 
-        # changelist pagination attributes
+        # Changelist pagination attributes
         config['full_count'] = cl.full_result_count
         config['result_count'] = cl.result_count
 
-        # a list of action names and choices
+        # A list of action names and choices
         config['action_choices'] = cl.model_admin.get_action_choices(
             request, [])
 
-        # a list of filters titles and choices
+        # A list of filters titles and choices
         filters_spec, _, _, _, _ = cl.get_filters(request)
         if filters_spec:
             config['filters'] = [
@@ -144,7 +152,7 @@ class ChangeListView(APIView):
         else:
             config['filters'] = []
 
-        # a list of fields that you can sort with
+        # A list of fields that you can sort with
         list_display_fields = []
         for field_name in self.get_fields_list(request, cl):
             try:
@@ -153,12 +161,6 @@ class ChangeListView(APIView):
             except FieldDoesNotExist:
                 pass
         config['list_display_fields'] = list_display_fields
-
-        # a dict of serializer fields attributes for every field in list editable
-        serializer_class = cl.model_admin.get_changelist_serializer_class(
-            request)
-        serializer = serializer_class()
-        config['editing_fields'] = get_form_fields_description(serializer)
 
         return config
 

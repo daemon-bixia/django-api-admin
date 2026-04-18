@@ -357,6 +357,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['rows'][0]['cells']['name'], 'muhammad')
+        self.assertEqual(
+            response.data["rows"][0]["cells"]["age"]["attrs"]["current_value"], 60)
 
     def test_get_serializer_class(self):
         request = self.factory.get('/')
