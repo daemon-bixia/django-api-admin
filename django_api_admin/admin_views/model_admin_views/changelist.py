@@ -22,7 +22,7 @@ class ChangeListView(APIView):
     Return a JSON object representing the django admin changelist table.
     supports querystring filtering, pagination and search also changes based on list display.
     """
-    serializer_class = ChangelistResponseSerializer
+    serializer_class = None
     permission_classes = []
     model_admin = None
 
@@ -56,6 +56,13 @@ class ChangeListView(APIView):
         config = self.get_config(request, cl)
         return Response({'config': config, 'columns': columns, 'rows': rows},
                         status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer_class = self.model_admin.get_changelist_serializer_class(
+            request)
+
+        for pk, data in request.data.get('data', {}).items():
+            pass
 
     def get_columns(self, request, cl):
         """

@@ -548,15 +548,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         return construct_change_message(request, serializer, serializers, add)
 
-    def get_changelist_view(self):
-        from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
-
-        defaults = {
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
-        }
-        return ChangeListView.as_view(**defaults)
-
     def get_handle_action_view(self):
         from django_api_admin.admin_views.model_admin_views.handle_action import HandleActionView
 
@@ -913,3 +904,33 @@ class APIModelAdmin(BaseAPIModelAdmin):
             instance=obj, context={"request": request})
         return get_form_fields_description(
             serializer, self, True)
+
+    def _get_edited_object_pks(self, request, prefix):
+        """Return POST data values of list_editable primary keys."""
+        return [pk for pk in request.data.get('data', {}).keys()]
+
+    def _get_list_editable_queryset(self, request, prefix):
+        """
+        Based on POST data, return a queryset of the objects that were edited
+        via list_editable.
+        """
+        object_pks = self._get_edited_object_pks(request, prefix)
+        queryset = self.get_queryset(request)
+        validate = queryset.model._meta.pk.to_python
+        try:
+            for pk in object_pks:
+                validate(pk)
+        except ValidationError:
+            # Disable the optimization if the POST data was tampered with.
+            return queryset
+        return queryset.filter(pk__in=object_pks)
+
+    def get_changelist_view(self):
+        from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
+
+        defaults = {
+            "serializer_class": self.get_changelist_serializer_class(None),
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self
+        }
+        return ChangeListView.as_view(**defaults)
