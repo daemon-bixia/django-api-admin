@@ -1,5 +1,4 @@
 from django.utils.translation import override as translation_override
-from rest_framework import relations
 
 
 def construct_change_message(request, main_result, inline_results, add):

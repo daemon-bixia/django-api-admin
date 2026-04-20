@@ -12,7 +12,7 @@ from django_api_admin.utils.quote import unquote
 from django_api_admin.constants import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples, BulkUpdates
 from django_api_admin.serializers import FormFieldsSerializer, BulkUpdatesResponseSerializer
-from django_api_admin.bulk import BulkOperation
+from django_api_admin.bulk import InlineBulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
 
@@ -125,7 +125,7 @@ class ChangeView(APIView):
                 inline_results = None
                 bulk_operation = None
                 if request.data.get("inlines"):
-                    bulk_operation = BulkOperation(
+                    bulk_operation = InlineBulkOperation(
                         request, self.model_admin, updated_object, request.data.get("inlines"))
 
                     if bulk_operation.is_valid():

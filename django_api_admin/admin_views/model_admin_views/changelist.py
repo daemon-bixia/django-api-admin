@@ -1,12 +1,13 @@
 from django.db.models import Model
-from django.utils.translation import gettext_lazy as _
+from django.db import router, transaction
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import ValidationError, PermissionDenied
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
@@ -15,6 +16,8 @@ from django_api_admin.utils.lookup_field import lookup_field
 from django_api_admin.exceptions import IncorrectLookupParameters
 from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, ChangeList
+from django_api_admin.bulk import ChangelistBulkOperation
+from django_api_admin.utils.model_ngettext import model_ngettext
 
 
 class ChangeListView(APIView):
@@ -47,22 +50,59 @@ class ChangeListView(APIView):
         }
     )
     def get(self, request):
+        if not self.has_view_or_change_permission(request):
+            raise PermissionDenied
+
         try:
             cl = self.model_admin.get_changelist_instance(request)
         except IncorrectLookupParameters as e:
-            raise NotFound(str(e))
+            raise ValidationError(str(e))
+
         columns = self.get_columns(request, cl)
         rows = self.get_rows(request, cl)
         config = self.get_config(request, cl)
         return Response({'config': config, 'columns': columns, 'rows': rows},
                         status=status.HTTP_200_OK)
 
-    def post(self, request):
+    def put(self, request):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
         serializer_class = self.model_admin.get_changelist_serializer_class(
             request)
+        modified_objects = self.model_admin._get_list_editable_queryset()
+        cl.bulk_operation = ChangelistBulkOperation(
+            request, self.model_admin, modified_objects, request.data.get('data', {}), serializer_class)
+        if cl.bulk_operation.is_valid():
+            changecount = 0
+            with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
+                for serializer, changed_data in cl.bulk_operation.result.values():
+                    if changed_data:
+                        updated_object = self.model_admin.save_serializer(
+                            request, serializer, changed=True)
+                        self.model_admin.save_model(
+                            request, updated_object, serializer, change=True)
+                        serializer.save_m2m()
+                        change_message = self.model_admin.construct_change_message(
+                            request, (serializer, changed_data), None, False)
+                        self.model_admin.log_change(
+                            request, updated_object, change_message)
+                        changecount += 1
+            if changecount:
+                msg = ngettext(
+                    "%(count)s %(name)s was changed successfully.",
+                    "%(count)s %(name)s were changed successfully.",
+                    changecount,
+                ) % {
+                    "count": changecount,
+                    "name": model_ngettext(self.opts, changecount),
+                }
 
-        for pk, data in request.data.get('data', {}).items():
-            pass
+            return Response({
+                "detail": msg,
+                "data": cl.bulk_operation.validated_data
+            }, status=status.HTTP_200_OK)
+
+        raise ValidationError({"errors": cl.bulk_operation.errors})
 
     def get_columns(self, request, cl):
         """

@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
-from django_api_admin.bulk import BulkOperation
+from django_api_admin.bulk import InlineBulkOperation
 
 
 class AddView(APIView):
@@ -70,7 +70,7 @@ class AddView(APIView):
                 inline_results = None
                 bulk_operation = None
                 if request.data.get("inlines"):
-                    bulk_operation = BulkOperation(
+                    bulk_operation = InlineBulkOperation(
                         request, self.model_admin, new_object, request.data.get("inlines"))
 
                     if bulk_operation.is_valid():

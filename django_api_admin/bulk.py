@@ -7,15 +7,15 @@ from django_api_admin.utils.get_related_name import get_related_name
 from django_api_admin.utils.get_changed_data import get_changed_data
 
 
-class BulkOperation:
+class InlineBulkOperation:
     errors = {}
     result = {}
 
     def __init__(self, request, model_admin, obj, data):
         self.request = request
         self.model_admin = model_admin
-        self.data = data
         self.obj = obj
+        self.data = data
 
     def is_valid(self):
         if not self.keys_are_valid_inline_names():
@@ -179,5 +179,52 @@ class BulkOperation:
                         serializer = serializer[0]
                     data[inline_name][operation_name].append(
                         serializer.data)
+
+        return data
+
+
+class ChangelistBulkOperation:
+    errors = {}
+    result = {}
+
+    def __init__(self, request, model_admin, instances, data, serializer_class):
+        self.request = request
+        self.model_admin = model_admin
+        self.instances = instances
+        self.data = data
+        self.serializer_class = serializer_class
+
+    def is_valid(self):
+        """
+        Ensure all data is validated by the serializer correctly
+        """
+        for pk, data in self.data.items():
+            # Get the object we're editing
+            instance = next(
+                (i for i in self.instances if i.pk == pk), None)
+            if not instance:
+                verbose_name = self.model_admin.model.verbose_name
+                self.errors["pk"] = [_(
+                    "Couldn't find %s associated with the data at row %s \
+                    is not found, check that the 'pk' value represents a  \
+                    valid %s in the database" % (verbose_name, pk, verbose_name))]
+                continue
+
+            # Validate the object using the `serializer_class`
+            serializer = self.serializer_class(instance, data=data)
+            if serializer.is_valid():
+                changed_data = get_changed_data(serializer)
+                self.result[pk].append((serializer, changed_data))
+            else:
+                self.errors[pk] = serializer.errors
+
+        return not bool(self.errors)
+
+    @property
+    def validated_data(self):
+        data = dict()
+
+        for pk, (serializer, changed_data) in self.result.items():
+            data[pk] = serializer.data
 
         return data
