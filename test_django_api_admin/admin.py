@@ -65,7 +65,7 @@ class PublisherAPIAdmin(APIModelAdmin):
     search_fields = ('name',)
 
 
-# register in api_admin_site
+# Register in api_admin_site
 @register(Author, site=site)
 class AuthorAPIAdmin(APIModelAdmin):
     serializer_class = AuthorSerializer
@@ -100,7 +100,7 @@ class AuthorAPIAdmin(APIModelAdmin):
         ('Information', {
             'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined', 'location')}),
     )
-    # a list of field names to exclude from the add/change form.
+    # A list of field names to exclude from the add/change form.
     exclude = ('gender',)
     readonly_fields = ('date_joined', 'is_old_enough')
 
@@ -118,7 +118,8 @@ class CategoryAPIAdmin(APIModelAdmin):
 
 site.register(Book)
 
-# register in default admin site
+
+# Register in default admin site
 
 
 class BookInline(admin.TabularInline):

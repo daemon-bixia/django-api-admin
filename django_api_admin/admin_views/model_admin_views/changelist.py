@@ -50,7 +50,7 @@ class ChangeListView(APIView):
         }
     )
     def get(self, request):
-        if not self.has_view_or_change_permission(request):
+        if not self.model_admin.has_view_or_change_permission(request):
             raise PermissionDenied
 
         try:
@@ -61,15 +61,25 @@ class ChangeListView(APIView):
         columns = self.get_columns(request, cl)
         rows = self.get_rows(request, cl)
         config = self.get_config(request, cl)
-        return Response({'config': config, 'columns': columns, 'rows': rows},
-                        status=status.HTTP_200_OK)
+
+        return Response({
+            "config": config,
+            "columns": columns,
+            "rows": rows
+        }, status=status.HTTP_200_OK)
 
     def put(self, request):
-        if not self.has_change_permission(request):
+        try:
+            cl = self.model_admin.get_changelist_instance(request)
+        except IncorrectLookupParameters as e:
+            raise ValidationError(str(e))
+
+        if not self.model_admin.has_change_permission(request):
             raise PermissionDenied
         serializer_class = self.model_admin.get_changelist_serializer_class(
             request)
-        modified_objects = self.model_admin._get_list_editable_queryset()
+        modified_objects = self.model_admin._get_list_editable_queryset(
+            request)
         cl.bulk_operation = ChangelistBulkOperation(
             request, self.model_admin, modified_objects, request.data.get('data', {}), serializer_class)
         if cl.bulk_operation.is_valid():
@@ -78,7 +88,7 @@ class ChangeListView(APIView):
                 for serializer, changed_data in cl.bulk_operation.result.values():
                     if changed_data:
                         updated_object = self.model_admin.save_serializer(
-                            request, serializer, changed=True)
+                            request, serializer, change=True)
                         self.model_admin.save_model(
                             request, updated_object, serializer, change=True)
                         serializer.save_m2m()
@@ -94,13 +104,13 @@ class ChangeListView(APIView):
                     changecount,
                 ) % {
                     "count": changecount,
-                    "name": model_ngettext(self.opts, changecount),
+                    "name": model_ngettext(self.model_admin.opts, changecount),
                 }
 
-            return Response({
-                "detail": msg,
-                "data": cl.bulk_operation.validated_data
-            }, status=status.HTTP_200_OK)
+                return Response({
+                    "detail": msg,
+                    "data": cl.bulk_operation.validated_data
+                }, status=status.HTTP_200_OK)
 
         raise ValidationError({"errors": cl.bulk_operation.errors})
 

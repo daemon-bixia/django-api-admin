@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django_api_admin.utils.quote import unquote
-from django_api_admin.constants import TO_FIELD_VAR
+from django_api_admin.admins.model_admin import TO_FIELD_VAR
 
 
 class DetailView(APIView):

@@ -22,7 +22,7 @@ from django.utils.safestring import mark_safe
 from rest_framework import serializers
 
 from django_api_admin.checks import BaseAPIModelAdminChecks
-from django_api_admin.constants import LOOKUP_SEP, SERIALIZER_FIELD_ATTRIBUTES
+from django_api_admin.constants import SERIALIZER_FIELD_ATTRIBUTES
 from django_api_admin.exceptions import NotRegistered
 from django_api_admin.fields import MethodField
 from django_api_admin.filters import SimpleListFilter
@@ -399,7 +399,7 @@ class BaseAPIModelAdmin:
 
         relation_parts = []
         prev_field = None
-        for part in lookup.split(LOOKUP_SEP):
+        for part in lookup.split(models.constants.LOOKUP_SEP):
             try:
                 field = model._meta.get_field(part)
             except FieldDoesNotExist:
@@ -437,8 +437,8 @@ class BaseAPIModelAdmin:
 
         # Is it a valid relational lookup?
         return not {
-            LOOKUP_SEP.join(relation_parts),
-            LOOKUP_SEP.join(relation_parts + [part]),
+            models.constants.LOOKUP_SEP.join(relation_parts),
+            models.constants.LOOKUP_SEP.join(relation_parts + [part]),
         }.isdisjoint(valid_lookups)
 
     def has_add_permission(self, request):

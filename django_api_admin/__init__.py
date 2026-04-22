@@ -13,8 +13,7 @@ from django_api_admin.filters import (
     RelatedOnlyFieldListFilter,
     SimpleListFilter,
 )
-from django_api_admin.constants import HORIZONTAL, VERTICAL
-from django_api_admin.admins.model_admin import APIModelAdmin
+from django_api_admin.admins.model_admin import APIModelAdmin, HORIZONTAL, VERTICAL
 from django_api_admin.admins.inline_admin import StackedInlineAPI, TabularInlineAPI
 from django_api_admin.sites import APIAdminSite, site
 

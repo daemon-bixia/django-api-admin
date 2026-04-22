@@ -28,7 +28,7 @@ class LogEntrySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AdminLogRequestSerializer(serializers.Serializer):
+class HistoryViewRequestSerializer(serializers.Serializer):
     """
     Serializer for the admin log request.
     """
@@ -114,7 +114,7 @@ class ActionSerializer(serializers.Serializer):
 
 class ChangeListSerializer(serializers.Serializer):
     """
-    validates the changelist querystring
+    Validates the changelist querystring
     """
     q = serializers.CharField(required=False, trim_whitespace=False)
     p = serializers.IntegerField(required=False, min_value=1)

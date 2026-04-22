@@ -16,7 +16,7 @@ from functools import update_wrapper, partial
 
 from django.db import models
 from django.urls import path, include
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, InvalidPage
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.utils.text import capfirst, smart_split, unescape_string_literal
@@ -26,8 +26,9 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.utils import model_meta
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 
-from django_api_admin.constants import LOOKUP_SEP
+from django.db.models.constants import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
 from django_api_admin.utils.model_format_dict import model_format_dict
@@ -38,10 +39,20 @@ from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
+IS_POPUP_VAR = "_popup"
+SOURCE_MODEL_VAR = "_source_model"
+TO_FIELD_VAR = "_to_field"
+IS_FACETS_VAR = "_facets"
+EMPTY_VALUE_STRING = "-"
+
+
 class ShowFacets(enum.Enum):
     NEVER = "NEVER"
     ALLOW = "ALLOW"
     ALWAYS = "ALWAYS"
+
+
+HORIZONTAL, VERTICAL = 1, 2
 
 
 class APIModelAdmin(BaseAPIModelAdmin):
@@ -60,7 +71,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
     save_as = False
     save_as_continue = True
     save_on_top = False
-    paginator = Paginator
+    paginator = None
     show_facets = ShowFacets.ALLOW
     inlines = ()
 
@@ -85,6 +96,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         self.model = model
         self.opts = model._meta
         self.admin_site = admin_site
+        self.paginator = self.paginator or admin_site.paginator or Paginator
         super().__init__()
 
     def __str__(self):
@@ -136,8 +148,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
                  wrap(self.get_detail_view()), name=f'{info}_detail'),
             path(f'{prefix}/<path:object_id>/delete/',
                  wrap(self.get_delete_view()), name=f'{info}_delete'),
-            path(f'{prefix}/<path:object_id>/history/',
-                 wrap(self.get_history_view()), name=f'{info}_history'),
             path(f'{prefix}/<path:object_id>/change/',
                  wrap(self.get_change_view()), name=f'{info}_change'),
         ]
@@ -557,16 +567,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         }
         return HandleActionView.as_view(**defaults)
 
-    def get_history_view(self):
-        from django_api_admin.admin_views.model_admin_views.history import HistoryView
-
-        defaults = {
-            'serializer_class': self.admin_site.log_entry_serializer,
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
-        }
-        return HistoryView.as_view(**defaults)
-
     def save_serializer(self, request, serializer, change):
         """
         Given a ModelSerializer return an unsaved instance. ``change`` is True if
@@ -905,16 +905,16 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return get_form_fields_description(
             serializer, self, True)
 
-    def _get_edited_object_pks(self, request, prefix):
+    def _get_edited_object_pks(self, request):
         """Return POST data values of list_editable primary keys."""
-        return [pk for pk in request.data.get('data', {}).keys()]
+        return [data["pk"] for data in request.data.get('data', {})]
 
-    def _get_list_editable_queryset(self, request, prefix):
+    def _get_list_editable_queryset(self, request):
         """
         Based on POST data, return a queryset of the objects that were edited
         via list_editable.
         """
-        object_pks = self._get_edited_object_pks(request, prefix)
+        object_pks = self._get_edited_object_pks(request)
         queryset = self.get_queryset(request)
         validate = queryset.model._meta.pk.to_python
         try:

@@ -17,6 +17,7 @@ from functools import update_wrapper
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.core.paginator import Paginator, InvalidPage
 from django.db.models.base import ModelBase
 from django.urls import NoReverseMatch, path, re_path, include, reverse
 from django.utils.functional import LazyObject
@@ -28,12 +29,12 @@ from django.views.decorators.csrf import csrf_protect
 
 from django_api_admin import actions
 from django_api_admin.admins.model_admin import APIModelAdmin
-from django_api_admin.pagination import AdminLogPagination, AdminResultsListPagination
 from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.exceptions import NotFound
 
 all_sites = WeakSet()
 
@@ -48,14 +49,13 @@ class APIAdminSite():
     # Optional views
     include_swagger_ui_view = True
 
+    # Pagination
+    paginator = Paginator
+
     # Default serializers
     password_change_serializer = None
     log_entry_serializer = None
     user_serializer = None
-
-    # Default result pagination style
-    default_pagination_class = AdminResultsListPagination
-    default_log_pagination_class = AdminLogPagination
 
     # Text to put at the end of each page's <title>.
     site_title = gettext_lazy("Django site admin")
@@ -280,7 +280,7 @@ class APIAdminSite():
                  name='language_catalog'),
             path('site_context/', wrap(self.get_site_context_view()),
                  name='site_context'),
-            path('admin_log/', wrap(self.get_admin_log_view()),
+            path('admin_log/', wrap(self.get_history_view()),
                  name='admin_log'),
             path('permissions/', wrap(self.get_permissions_view()),
                  name='permissions'),
@@ -443,10 +443,6 @@ class APIAdminSite():
             "is_nav_sidebar_enabled": self.enable_nav_sidebar,
         }
 
-    def paginate_queryset(self, queryset, request, view=None):
-        paginator = self.default_pagination_class()
-        return paginator.paginate_queryset(queryset.order_by('pk'), request, view=view)
-
     def get_log_entry_serializer(self):
         return type('LogEntrySerializer', (self.log_entry_serializer,), {
             'user': self.user_serializer(read_only=True),
@@ -457,6 +453,36 @@ class APIAdminSite():
         Returns the authentication classes used by the views
         """
         return self.authentication_classes
+
+    def paginate_queryset(self, request, paginator, page_kwarg, **kwargs):
+        """Paginate the queryset, if needed."""
+        page = kwargs.get(page_kwarg) or request.GET.get(
+            page_kwarg) or 1
+        try:
+            page_number = int(page)
+        except ValueError:
+            if page == "last":
+                page_number = paginator.num_pages
+            else:
+                raise NotFound(
+                    _("Page is not “last”, nor can it be converted to an int.")
+                )
+        try:
+            page = paginator.page(page_number)
+            return (page, page.object_list, page.has_other_pages())
+        except InvalidPage as e:
+            raise NotFound(
+                _("Invalid page (%(page_number)s): %(message)s")
+                % {"page_number": page_number, "message": str(e)}
+            )
+        try:
+            page = paginator.page(page_number)
+            return (page, page.object_list, page.has_other_pages())
+        except InvalidPage as e:
+            raise NotFound(
+                _("Invalid page (%(page_number)s): %(message)s")
+                % {"page_number": page_number, "message": str(e)}
+            )
 
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
@@ -513,16 +539,15 @@ class APIAdminSite():
         }
         return SiteContextView.as_view(**defaults)
 
-    def get_admin_log_view(self):
-        from django_api_admin.admin_views.admin_site_views.admin_log import AdminLogView
+    def get_history_view(self):
+        from django_api_admin.admin_views.admin_site_views.history import HistoryView
 
         defaults = {
-            'pagination_class': self.default_log_pagination_class,
-            'serializer_class': self.get_log_entry_serializer(),
-            'authentication_classes': self.get_authentication_classes(),
-            'admin_site': self
+            "serializer_class": self.get_log_entry_serializer(),
+            "authentication_classes": self.get_authentication_classes(),
+            "admin_site": self
         }
-        return AdminLogView.as_view(**defaults)
+        return HistoryView.as_view(**defaults)
 
     def get_view_on_site_view(self):
         from django_api_admin.admin_views.admin_site_views.view_on_site import ViewOnSiteView

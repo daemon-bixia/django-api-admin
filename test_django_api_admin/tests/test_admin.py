@@ -13,7 +13,7 @@ from test_django_api_admin.admin import site, AuthorAPIAdmin
 from test_django_api_admin import views
 from test_django_api_admin.utils import login
 
-from django_api_admin.constants import TO_FIELD_VAR
+from django_api_admin.admins.model_admin import TO_FIELD_VAR
 
 
 UserModel = get_user_model()
@@ -62,10 +62,10 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         Publisher.objects.create(name="scissor")
 
     def test_list_view(self):
-        url = reverse('api_admin:%s_%s_list' % self.author_info)
+        url = reverse("api_admin:%s_%s_list" % self.author_info)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]['name'], 'muhammad')
+        self.assertEqual(response.data[0]["name"], "muhammad")
 
     def test_detail_view(self):
         url = reverse('api_admin:%s_%s_detail' %
@@ -356,9 +356,26 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['rows'][0]['cells']['name'], 'muhammad')
+        self.assertEqual(response.data["config"]["list_display"], (
+            "name", "age", "user", "is_old_enough", "title", "gender", "date_joined"))
+        self.assertEqual(len(response.data["columns"]), 6)
+        self.assertEqual(response.data["columns"][0]["field"], "name")
+        self.assertEqual(response.data["rows"][0]["cells"]["name"], "muhammad")
         self.assertEqual(
             response.data["rows"][0]["cells"]["age"]["attrs"]["current_value"], 60)
+
+        data = {
+            "data": [{
+                "pk": 1,
+                "name": "Zhuo Fan",
+                "age": 2,
+            }]
+        }
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["detail"],
+                         "1 author was changed successfully.")
+        self.assertEqual(response.data["data"][1]["age"], 2)
 
     def test_get_serializer_class(self):
         request = self.factory.get('/')

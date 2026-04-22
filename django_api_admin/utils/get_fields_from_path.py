@@ -5,8 +5,8 @@
 # Licensed under the BSD 3-Clause License.
 # -----------------------------------------------------------------------------
 
+from django.db.models.constants import LOOKUP_SEP
 from django_api_admin.utils.get_model_from_relation import get_model_from_relation
-from django_api_admin.constants import LOOKUP_SEP
 
 
 def get_fields_from_path(model, path):

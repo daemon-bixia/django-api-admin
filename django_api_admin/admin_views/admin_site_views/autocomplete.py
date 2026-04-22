@@ -19,7 +19,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 from django_api_admin.serializers import AutoCompleteSerializer
@@ -32,6 +31,11 @@ class AutoCompleteView(APIView):
     """
     permission_classes = []
     admin_site = None
+
+    paginate_orphans = 0
+    page_kwarg = "page"
+    allow_empty = True
+    paginate_by = 20
 
     @extend_schema(
         parameters=[AutoCompleteSerializer],
@@ -82,19 +86,26 @@ class AutoCompleteView(APIView):
         if not self.has_perm(request):
             raise PermissionDenied
 
-        self.queryset = self.get_queryset(request)
-        page = self.admin_site.paginate_queryset(
-            self.queryset, request, view=self)
-
-        # serialize data
-        serializer_class = self.model_admin.get_serializer_class(request)
-        serializer = serializer_class(page, many=True)
-        data = serializer.data
+        self.object_list = self.get_queryset(request)
+        context = self.get_context_data()
 
         return Response(
-            data,
+            {
+                "results": [
+                    self.serialize_result(obj, to_field_name)
+                    for obj in context["object_list"]
+                ],
+                "pagination": {"more": context["page_obj"].has_next}
+            },
             status=status.HTTP_200_OK
         )
+
+    def serialize_result(self, obj, to_field_name):
+        """
+        Convert the provided model object to a dictionary that is added to the
+        results list.
+        """
+        return {"id": str(getattr(obj, to_field_name)), "text": str(obj)}
 
     def get_queryset(self, request):
         """Return queryset based on model_admin.get_search_results()."""
@@ -125,32 +136,32 @@ class AutoCompleteView(APIView):
             field_name = request.GET["field_name"]
         except KeyError:
             raise ParseError(
-                {'detail': _('missing values app_label, model_name, and field_name')})
+                {"detail": _("missing values app_label, model_name, and field_name")})
 
         # Retrieve objects from parameters.
         try:
             source_model = apps.get_model(app_label, model_name)
         except LookupError:
-            raise ParseError({'detail': _('source model not found')})
+            raise ParseError({"detail": _("source model not found")})
         try:
             source_field = source_model._meta.get_field(field_name)
         except FieldDoesNotExist:
             raise ParseError(
-                {f'detail': _(f'source field not found in source model {source_model._meta.verbose_name}')})
+                {"detail": _(f"source field not found in source model {source_model._meta.verbose_name}")})
         try:
             remote_model = source_field.remote_field.model
         except AttributeError:
             raise ParseError(
-                {'detail': _(f'unable to locate the related model using source field {source_field.name}')})
+                {"detail": _(f"unable to locate the related model using source field {source_field.name}")})
         try:
             model_admin = self.admin_site._registry[remote_model]
         except KeyError:
             raise ParseError(
-                {'detail': _('the remote model is not registered in the admin')})
+                {"detail": _("the remote model is not registered in the admin")})
 
         # Validate suitability of objects.
         if not getattr(model_admin, "search_fields"):
-            raise ParseError(_('%s must have search_fields for the autocomplete_view."') % type(
+            raise ParseError(_("%s must have search_fields for the autocomplete_view.") % type(
                 model_admin).__qualname__)
 
         to_field_name = getattr(
@@ -165,3 +176,37 @@ class AutoCompleteView(APIView):
     def has_perm(self, request):
         """Check if user has permission to access the related model."""
         return self.model_admin.has_view_permission(request)
+
+    def get_context_data(self, object_list=None, **kwargs):
+        """Get the context for this view."""
+        queryset = object_list if object_list is not None else self.object_list
+        context_object_name = "%s_list" % object_list.model._meta.model_name
+        if self.paginate_by:
+            paginator = self.model_admin.get_paginator(
+                queryset,
+                self.paginate_by,
+                self.paginate_orphans,
+                self.allow_empty,
+            )
+            page, queryset, is_paginated = self.model_admin.admin_site.paginate_queryset(
+                self.request, paginator, self.page_kwarg)
+            context = {
+                "paginator": paginator,
+                "page_obj": page,
+                "is_paginated": is_paginated,
+                "object_list": queryset,
+            }
+        else:
+            context = {
+                "paginator": None,
+                "page_obj": None,
+                "is_paginated": False,
+                "object_list": queryset,
+            }
+        if context_object_name is not None:
+            context[context_object_name] = queryset
+        context.update(kwargs)
+        context.setdefault("view", self)
+        if self.extra_context is not None:
+            kwargs.update(self.extra_context)
+        return context

@@ -18,14 +18,36 @@ from django.core.paginator import InvalidPage
 from django.db.models import Exists, F, Field, ManyToOneRel, OrderBy, OuterRef
 from django.utils.timezone import make_aware
 from django.utils.http import urlencode
+from django.db.models.constants import LOOKUP_SEP
 
-from django_api_admin.exceptions import DisallowedModelAdminLookup, IncorrectLookupParameters
+from django_api_admin.exceptions import (
+    DisallowedModelAdminLookup,
+    IncorrectLookupParameters,
+    DisallowedModelAdminToField
+)
 from django_api_admin.filters import FieldListFilter
 from django_api_admin.serializers import ChangeListSerializer
 from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
-from django_api_admin.constants import TO_FIELD_VAR, IS_POPUP_VAR, ALL_VAR, ORDER_VAR, SEARCH_VAR, PAGE_VAR, ERROR_FLAG
+from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, TO_FIELD_VAR, IS_POPUP_VAR, ShowFacets
+
+# Changelist settings
+ALL_VAR = "all"
+ORDER_VAR = "o"
+PAGE_VAR = "p"
+SEARCH_VAR = "q"
+ERROR_FLAG = "e"
+
+IGNORED_PARAMS = (
+    ALL_VAR,
+    ORDER_VAR,
+    SEARCH_VAR,
+    IS_FACETS_VAR,
+    IS_POPUP_VAR,
+    SOURCE_MODEL_VAR,
+    TO_FIELD_VAR,
+)
 
 
 class ChangeList:
@@ -55,7 +77,6 @@ class ChangeList:
         self.list_display = list_display
         self.list_display_links = list_display_links
         self.list_filter = list_filter
-        self.list_editable = list_editable
         self.has_filters = None
         self.has_active_filters = None
         self.clear_all_filters_qs = None
@@ -67,31 +88,45 @@ class ChangeList:
         self.model_admin = model_admin
         self.sortable_by = sortable_by
         self.search_help_text = search_help_text
-
+        self.bulk_operation = None
+        # Get search parameters from the query string.
         search_serializer = self.serializer_class(data=request.GET)
+        errors = []
         if not search_serializer.is_valid():
-            errors = [
-                {'detail': ", ".join(error)}
-                for error in search_serializer.errors.values()
-            ]
-            raise IncorrectLookupParameters(errors)
+            for error in search_serializer.errors.values():
+                errors.append({'detail': ", ".join(error)})
         self.query = search_serializer.validated_data.get(SEARCH_VAR) or ""
-
         try:
             self.page_num = int(request.GET.get(PAGE_VAR, 1))
         except ValueError:
             self.page_num = 1
-
-        self.show_all = "all" in request.GET
+        self.show_all = ALL_VAR in request.GET
         self.params = dict(request.GET.items())
+        self.add_facets = model_admin.show_facets is ShowFacets.ALWAYS or (
+            model_admin.show_facets is ShowFacets.ALLOW and IS_FACETS_VAR in request.GET
+        )
+        self.is_facets_optional = model_admin.show_facets is ShowFacets.ALLOW
+        to_field = request.GET.get(TO_FIELD_VAR)
+        if to_field and not model_admin.to_field_allowed(request, to_field):
+            raise DisallowedModelAdminToField(
+                "The field %s cannot be referenced." % to_field
+            )
+        self.to_field = to_field
+        self.params = dict(request.GET.items())
+        self.filter_params = dict(request.GET.lists())
         if PAGE_VAR in self.params:
             del self.params[PAGE_VAR]
+            del self.filter_params[PAGE_VAR]
         if ERROR_FLAG in self.params:
             del self.params[ERROR_FLAG]
-
+            del self.filter_params[ERROR_FLAG]
+        self.remove_facet_link = self.get_query_string(remove=[IS_FACETS_VAR])
+        self.add_facet_link = self.get_query_string({IS_FACETS_VAR: True})
+        self.list_editable = list_editable
         self.root_queryset = model_admin.get_queryset(request)
         self.queryset = self.get_queryset(request)
         self.get_results(request)
+        self.pk_attname = self.lookup_opts.pk.attname
 
     def __repr__(self):
         return "<%s: model=%s model_admin=%s>" % (
@@ -108,7 +143,7 @@ class ChangeList:
         lookup_params = params.copy()  # a dictionary of the query string
         # Remove all the parameters that are globally and systematically
         # ignored.
-        for ignored in (ALL_VAR, ORDER_VAR, SEARCH_VAR, IS_POPUP_VAR, TO_FIELD_VAR):
+        for ignored in IGNORED_PARAMS:
             if ignored in lookup_params:
                 del lookup_params[ignored]
         return lookup_params

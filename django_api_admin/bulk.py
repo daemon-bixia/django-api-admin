@@ -198,7 +198,13 @@ class ChangelistBulkOperation:
         """
         Ensure all data is validated by the serializer correctly
         """
-        for pk, data in self.data.items():
+
+        if not self.data:
+            self.errors["non_field_errors"] = ["Change data cannot be empty"]
+            return False
+
+        for data in self.data:
+            pk = data["pk"]
             # Get the object we're editing
             instance = next(
                 (i for i in self.instances if i.pk == pk), None)
@@ -214,7 +220,7 @@ class ChangelistBulkOperation:
             serializer = self.serializer_class(instance, data=data)
             if serializer.is_valid():
                 changed_data = get_changed_data(serializer)
-                self.result[pk].append((serializer, changed_data))
+                self.result[pk] = (serializer, changed_data)
             else:
                 self.errors[pk] = serializer.errors
 
