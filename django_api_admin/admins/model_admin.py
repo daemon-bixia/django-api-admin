@@ -16,7 +16,7 @@ from functools import update_wrapper, partial
 
 from django.db import models
 from django.urls import path, include
-from django.core.paginator import Paginator, InvalidPage
+from django.core.paginator import Paginator
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.utils.text import capfirst, smart_split, unescape_string_literal
@@ -26,7 +26,6 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.utils import model_meta
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 
 from django.db.models.constants import LOOKUP_SEP
 from django_api_admin.checks import APIModelAdminChecks
@@ -141,8 +140,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
                  name=f'{info}_list'),
             path(f'{prefix}/changelist/',
                  wrap(self.get_changelist_view()), name=f'{info}_changelist'),
-            path(f'{prefix}/perform_action/',
-                 wrap(self.get_handle_action_view()), name=f'{info}_perform_action'),
             path(f'{prefix}/add/', wrap(self.get_add_view()), name=f'{info}_add'),
             path(f'{prefix}/<path:object_id>/detail/',
                  wrap(self.get_detail_view()), name=f'{info}_detail'),
@@ -238,6 +235,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         defaults = {
             "serializer_field_callback": partial(self.serializer_field_for_dbfield, request=request),
+            "class_name": f"{self.model.__name__}ChangelistSerializer",
             **kwargs,
         }
         return model_serializer_factory(
@@ -557,15 +555,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         Construct a JSON structure describing changes from a changed object.
         """
         return construct_change_message(request, serializer, serializers, add)
-
-    def get_handle_action_view(self):
-        from django_api_admin.admin_views.model_admin_views.handle_action import HandleActionView
-
-        defaults = {
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
-        }
-        return HandleActionView.as_view(**defaults)
 
     def save_serializer(self, request, serializer, change):
         """

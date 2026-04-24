@@ -11,13 +11,14 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
-from django_api_admin.utils.label_for_field import label_for_field
-from django_api_admin.utils.lookup_field import lookup_field
 from django_api_admin.exceptions import IncorrectLookupParameters
 from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, ChangeList
 from django_api_admin.bulk import ChangelistBulkOperation
+from django_api_admin.utils.get_form_fields import get_form_fields_description
+from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.model_ngettext import model_ngettext
+from django_api_admin.utils.lookup_field import lookup_field
 
 
 class ChangeListView(APIView):
@@ -53,27 +54,49 @@ class ChangeListView(APIView):
         if not self.model_admin.has_view_or_change_permission(request):
             raise PermissionDenied
 
-        try:
-            cl = self.model_admin.get_changelist_instance(request)
-        except IncorrectLookupParameters as e:
-            raise ValidationError(str(e))
-
+        cl = self.get_changelist_instance(request)
         columns = self.get_columns(request, cl)
         rows = self.get_rows(request, cl)
         config = self.get_config(request, cl)
 
+        action_serializer = self.get_action_serializer(request)
+        form_fields = get_form_fields_description(action_serializer)
+
         return Response({
+            "action_form": {"fields": form_fields},
             "config": config,
             "columns": columns,
             "rows": rows
         }, status=status.HTTP_200_OK)
 
-    def put(self, request):
-        try:
-            cl = self.model_admin.get_changelist_instance(request)
-        except IncorrectLookupParameters as e:
-            raise ValidationError(str(e))
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                description=_(
+                    "Action executed successfully on selected objects"),
+                response=dict,
+                examples=[
+                    OpenApiExample(
+                        name=_("Success Response"),
+                        summary=_("Example of a successful action execution"),
+                        description=_(
+                            "Returns a success message after performing the selected action on chosen objects"),
+                        value={"detail": "action was performed successfully"},
+                        status_codes=["200"]
+                    )
+                ]
+            ),
+            403: CommonAPIResponses.permission_denied(),
+            401: CommonAPIResponses.unauthorized()
+        }
+    )
+    def post(self, request):
+        cl = self.get_changelist_instance(request)
+        queryset = cl.get_queryset(request)
+        return self.model_admin.response_action(request, queryset)
 
+    def put(self, request):
+        cl = self.get_changelist_instance(request)
         if not self.model_admin.has_change_permission(request):
             raise PermissionDenied
         serializer_class = self.model_admin.get_changelist_serializer_class(
@@ -81,7 +104,7 @@ class ChangeListView(APIView):
         modified_objects = self.model_admin._get_list_editable_queryset(
             request)
         cl.bulk_operation = ChangelistBulkOperation(
-            request, self.model_admin, modified_objects, request.data.get('data', {}), serializer_class)
+            request, self.model_admin, modified_objects, request.data.get("data", {}), serializer_class)
         if cl.bulk_operation.is_valid():
             changecount = 0
             with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
@@ -227,3 +250,12 @@ class ChangeListView(APIView):
         fields_list = tuple(
             filter(lambda item: item not in exclude, list_display))
         return fields_list
+
+    def get_changelist_instance(self, request):
+        try:
+            return self.model_admin.get_changelist_instance(request)
+        except IncorrectLookupParameters as e:
+            raise ValidationError(str(e))
+
+    def get_action_serializer(self):
+        return self.model_admin.get_action_serializer_class(self.request)

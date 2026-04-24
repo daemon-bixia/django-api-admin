@@ -104,8 +104,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
             ],
             'select_across': False,
         }
-        self.author_info = (Author._meta.app_label, Author._meta.model_name)
-        url = reverse('api_admin:%s_%s_perform_action' % self.author_info)
+        url = reverse("api_admin:%s_%s_changelist" % self.author_info)
         response = self.client.post(url, data=action_dict)
         self.assertEqual(response.status_code, 200)
 

@@ -342,6 +342,7 @@ class RowSerializer(serializers.Serializer):
 
 
 class ChangelistResponseSerializer(serializers.Serializer):
+    action_form = FormFieldsSerializer()
     config = ConfigSerializer()
     columns = ColumnSerializer(many=True)
     rows = RowSerializer(many=True)
