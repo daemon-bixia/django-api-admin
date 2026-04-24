@@ -239,12 +239,14 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['data']['name'], 'test4')
 
-        author_id = response.data['data']['pk']
-        url = reverse('api_admin:%s_%s_history' %
-                      self.author_info, kwargs={'object_id': author_id})
+        author_id = response.data["data"]["pk"]
+        url = reverse("api_admin:history", query={
+                      "app_label": "test_django_api_admin",
+                      "model": "Author", "object_id": author_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]['object_repr'], 'test4')
+        self.assertEqual(response.data["object_list"]
+                         [0]["object_repr"], "test4")
 
     def test_change_form_description(self):
         author = Author.objects.get(pk=1)

@@ -154,7 +154,7 @@ class AutoCompleteView(APIView):
             raise ParseError(
                 {"detail": _(f"unable to locate the related model using source field {source_field.name}")})
         try:
-            model_admin = self.admin_site._registry[remote_model]
+            model_admin = self.admin_site.get_model_admin(remote_model)
         except KeyError:
             raise ParseError(
                 {"detail": _("the remote model is not registered in the admin")})

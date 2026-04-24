@@ -35,7 +35,6 @@ from django_api_admin.utils.model_serializer_factory import model_serializer_fac
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.construct_change_message import construct_change_message
 from django_api_admin.utils.get_form_fields import get_form_fields_description
-from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
 IS_POPUP_VAR = "_popup"
@@ -754,13 +753,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
                         "name": self.opts.verbose_name,
                         "obj": obj_display,
                         }}, status=status.HTTP_204_NO_CONTENT)
-
-    def get_deleted_objects(self, objs, request):
-        """
-        Hook for customizing the delete process for the delete view and the
-        "delete selected" action.
-        """
-        return get_deleted_objects(objs, request, self.admin_site)
 
     def get_inline_formsets_description(self, request, serializer_classes, inline_instances, obj=None):
         # Edit permissions on parent model are required for editable inlines.

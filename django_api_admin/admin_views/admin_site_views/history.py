@@ -1,22 +1,23 @@
 import json
 
 from django.utils.translation import gettext_lazy as _
+from django.apps import apps
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.models import LogEntry
 from django_api_admin.openapi import CommonAPIResponses
 from django_api_admin.serializers import LogEntrySerializer, HistoryViewRequestSerializer
+from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
 
 
 class HistoryView(APIView):
-    """
-    Returns a list of actions that were preformed using django admin.
-    """
+    "The 'history' admin view for the entire site."
     serializer_class = None
     permission_classes = []
     ordering_fields = ["action_time", "-action_time"]
@@ -42,34 +43,38 @@ class HistoryView(APIView):
         tags=["admin-log"]
     )
     def get(self, request):
-        queryset = LogEntry.objects.all()
-
-        # Order the queryset
-        try:
-            ordering = self.request.query_params.get("o")
-            if ordering is not None:
-                if ordering not in self.ordering_fields:
-                    raise KeyError
-                queryset = queryset.order_by(ordering)
-        except KeyError:
-            return Response({"detail": _("Wrong ordering field set.")}, status=status.HTTP_400_BAD_REQUEST)
+        # Get the queryset
+        ordering = self.request.query_params.get("o", "action_time")
+        if ordering not in self.ordering_fields:
+            raise KeyError
+        action_list = LogEntry.objects.all().order_by(ordering)
 
         # Filter the queryset.
-        try:
-            object_id = self.request.query_params.get("object_id")
-            if object_id is not None:
-                queryset = queryset.filter(object_id=object_id)
-        except KeyError:
-            return Response({"detail": _("Bad filters.")}, status=status.HTTP_400_BAD_REQUEST)
+        app_label = self.request.query_params.get("app_label", None)
+        model_name = self.request.query_params.get("model", None)
+        object_id = self.request.query_params.get("object_id", None)
+        if app_label is not None and model_name is not None and object_id is not None:
+            model = apps.get_model(app_label, model_name)
+            action_list = action_list.filter(
+                object_id=object_id,
+                content_type=get_content_type_for_model(model),
+            ).select_related()
+
+        # Check for change or view permissions
+        for obj in action_list:
+            model_admin = self.admin_site.get_model_admin(
+                obj.content_type.model_class())
+            if not model_admin.has_view_or_change_permission(request, obj):
+                raise PermissionDenied
 
         # Paginate queryset.
         paginator = self.admin_site.paginator(
-            queryset,
+            action_list,
             self.paginate_by,
             self.paginate_orphans,
             self.allow_empty,
         )
-        page, queryset, is_paginated = paginator.paginate_queryset(
+        page, queryset, is_paginated = self.admin_site.paginate_queryset(
             request, paginator, self.page_kwarg)
         serializer = self.serializer_class(queryset, many=True)
 

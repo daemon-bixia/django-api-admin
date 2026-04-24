@@ -32,6 +32,7 @@ from django_api_admin.utils.model_serializer_factory import model_serializer_fac
 from django_api_admin.utils.url_params_from_lookup_dict import (
     url_params_from_lookup_dict,
 )
+from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
 def get_content_type_for_model(obj):
@@ -554,6 +555,13 @@ class BaseAPIModelAdmin:
             'model_admin': self,
         }
         return ChangeView.as_view(**defaults)
+
+    def get_deleted_objects(self, objs, request):
+        """
+        Hook for customizing the delete process for the delete view and the
+        "delete selected" action.
+        """
+        return get_deleted_objects(objs, request, self.admin_site)
 
     def get_delete_view(self):
         from django_api_admin.admin_views.model_admin_views.delete import DeleteView
