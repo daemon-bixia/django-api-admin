@@ -79,7 +79,9 @@ class InlineBulkOperation:
                 for row_id, data in value["add"].items():
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
-                    serializer = serializer_class(data=data)
+                    serializer_params = self.model_admin.get_inline_serializer_kwargs(
+                        self.request, "add", inline, data=data)
+                    serializer = serializer_class(**serializer_params)
 
                     if serializer.is_valid():
                         self.result[key]["add"].append(
@@ -110,8 +112,10 @@ class InlineBulkOperation:
                         }
                         continue
 
+                    serializer_params = self.model_admin.get_inline_serializer_kwargs(
+                        self.request, "change", inline, instance=instance, data=data)
                     serializer = serializer_class(
-                        instance, data=data, partial=True)
+                        **serializer_params)
 
                     if serializer.is_valid():
                         changed_data = get_changed_data(serializer)
@@ -140,7 +144,9 @@ class InlineBulkOperation:
                         instances.pop(idx)
 
                 for instance in instances:
-                    serializer = serializer_class(instance)
+                    serializer_params = self.model_admin.get_inline_serializer_kwargs(
+                        self.request, "delete", inline, instance=instance)
+                    serializer = serializer_class(**serializer_params)
                     self.result[key]["delete"].append(
                         serializer)
 

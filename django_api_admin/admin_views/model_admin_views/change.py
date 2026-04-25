@@ -127,7 +127,6 @@ class ChangeView(APIView):
                 if request.data.get("inlines"):
                     bulk_operation = InlineBulkOperation(
                         request, self.model_admin, updated_object, request.data.get("inlines"))
-
                     if bulk_operation.is_valid():
                         self.model_admin.save_related(
                             request, updated_object, serializer, bulk_operation, True)

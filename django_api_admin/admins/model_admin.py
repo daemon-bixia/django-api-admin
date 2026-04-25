@@ -694,7 +694,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "data": serializer.data,
         }
         if bulk_operation:
-            data["inlines"] = bulk_operation.validated_data,
+            data["inlines"] = bulk_operation.validated_data
 
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -707,7 +707,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "data": serializer.data,
         }
         if bulk_operation:
-            data["inlines"] = bulk_operation.validated_data,
+            data["inlines"] = bulk_operation.validated_data
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -915,3 +915,20 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "model_admin": self
         }
         return ChangeListView.as_view(**defaults)
+
+    def get_inline_serializer_kwargs(self, request, operation, inline, instance=None, data=None):
+        inline_serializer_params = {
+            "data": data, "context": {"request": request}}
+
+        if operation == "change":
+            inline_serializer_params.update({
+                "instance": instance,
+                "partial": True
+            })
+        elif operation == "delete":
+            del inline_serializer_params["data"]
+            inline_serializer_params.update({
+                "instance": instance
+            })
+
+        return inline_serializer_params

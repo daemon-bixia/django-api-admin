@@ -18,7 +18,6 @@ from django.core.paginator import InvalidPage
 from django.db.models import Exists, F, Field, ManyToOneRel, OrderBy, OuterRef
 from django.utils.timezone import make_aware
 from django.utils.http import urlencode
-from django.db.models.constants import LOOKUP_SEP
 
 from django_api_admin.exceptions import (
     DisallowedModelAdminLookup,
