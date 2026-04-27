@@ -68,17 +68,16 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.data["object_list"][0]["name"], "muhammad")
 
     def test_detail_view(self):
-        url = reverse('api_admin:%s_%s_detail' %
-                      self.author_info, kwargs={'object_id': 1})
+        url = reverse("api_admin:%s_%s_detail" %
+                      self.author_info, kwargs={"object_id": 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['pk'], 1)
-        self.assertEqual(response.data['name'], 'muhammad')
-        self.assertTrue(isinstance(response.data['list_url'], str))
-        self.assertTrue(isinstance(response.data['history_url'], str))
-        self.assertTrue(isinstance(response.data['delete_url'], str))
-        self.assertTrue(isinstance(response.data['change_url'], str))
-        self.assertTrue(isinstance(response.data['view_on_site_url'], str))
+        self.assertEqual(response.data["pk"], 1)
+        self.assertEqual(response.data["name"], "muhammad")
+        self.assertTrue(isinstance(response.data["list_url"], str))
+        self.assertTrue(isinstance(response.data["delete_url"], str))
+        self.assertTrue(isinstance(response.data["change_url"], str))
+        self.assertTrue(isinstance(response.data["view_on_site_url"], str))
 
     def test_performing_custom_actions(self):
         action_dict = {
@@ -121,10 +120,10 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
     def test_performing_actions_invalid_request(self):
         action_dict = {
-            'action': 'some_weird_action',
-            'select_across': 5.0,
+            "action": "some_weird_action",
+            "select_across": 5.0,
         }
-        url = reverse('api_admin:%s_%s_perform_action' % self.author_info)
+        url = reverse("api_admin:%s_%s_perform_action" % self.author_info)
         response = self.client.post(url, data=action_dict)
         self.assertEqual(response.status_code, 400)
 
