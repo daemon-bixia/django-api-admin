@@ -23,6 +23,7 @@ class ListView(APIView):
     def get(self, request):
         queryset = self.model_admin.get_queryset(request)
         paginator = self.model_admin.get_paginator(
+            request,
             queryset,
             self.paginate_by,
             self.paginate_orphans,

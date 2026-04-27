@@ -65,7 +65,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         url = reverse("api_admin:%s_%s_list" % self.author_info)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]["name"], "muhammad")
+        self.assertEqual(response.data["object_list"][0]["name"], "muhammad")
 
     def test_detail_view(self):
         url = reverse('api_admin:%s_%s_detail' %
@@ -154,7 +154,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         author = Author.objects.create(
             name="test2", age=20, is_vip=True, user_id=self.user.pk)
         url = reverse("api_admin:%s_%s_delete" % self.author_info, kwargs={
-                      "object_id": author.pk}) + f"?{TO_FIELD_VAR}=name"
+            "object_id": author.pk}) + f"?{TO_FIELD_VAR}=name"
         response = self.client.post(url)
         self.assertEqual(response.status_code, 400)
         self.assertTrue(Author.objects.filter(pk=author.pk).exists())
@@ -239,8 +239,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
         author_id = response.data["data"]["pk"]
         url = reverse("api_admin:history", query={
-                      "app_label": "test_django_api_admin",
-                      "model": "Author", "object_id": author_id})
+            "app_label": "test_django_api_admin",
+            "model": "Author", "object_id": author_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["object_list"]
@@ -301,8 +301,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.data["data"]["name"], "muhammad")
 
         url = reverse("api_admin:history", query={
-                      "app_label": "test_django_api_admin",
-                      "model": "Author", "object_id": author.id,
+            "app_label": "test_django_api_admin",
+            "model": "Author", "object_id": author.id,
                       "page": 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

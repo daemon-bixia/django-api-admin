@@ -183,6 +183,7 @@ class AutoCompleteView(APIView):
         context_object_name = "%s_list" % object_list.model._meta.model_name
         if self.paginate_by:
             paginator = self.model_admin.get_paginator(
+                self.request,
                 queryset,
                 self.paginate_by,
                 self.paginate_orphans,
