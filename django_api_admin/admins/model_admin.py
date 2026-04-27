@@ -15,7 +15,7 @@ import traceback
 from functools import update_wrapper, partial
 
 from django.db import models
-from django.urls import path, include
+from django.urls import path
 from django.core.paginator import Paginator
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -35,6 +35,7 @@ from django_api_admin.utils.model_serializer_factory import model_serializer_fac
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.construct_change_message import construct_change_message
 from django_api_admin.utils.get_form_fields import get_form_fields_description
+from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 
 
 IS_POPUP_VAR = "_popup"
@@ -132,26 +133,21 @@ class APIModelAdmin(BaseAPIModelAdmin):
             wrapper.model_admin = self
             return update_wrapper(wrapper, view)
 
-        info = f'{self.model._meta.app_label}_{self.model._meta.model_name}'
-        prefix = f'{self.model._meta.app_label}/{self.model._meta.model_name}'
+        info = f"{self.model._meta.app_label}_{self.model._meta.model_name}"
+        prefix = f"{self.model._meta.app_label}/{self.model._meta.model_name}"
         urlpatterns = [
-            path(f'{prefix}/list/', wrap(self.get_list_view()),
-                 name=f'{info}_list'),
-            path(f'{prefix}/changelist/',
-                 wrap(self.get_changelist_view()), name=f'{info}_changelist'),
-            path(f'{prefix}/add/', wrap(self.get_add_view()), name=f'{info}_add'),
-            path(f'{prefix}/<path:object_id>/detail/',
-                 wrap(self.get_detail_view()), name=f'{info}_detail'),
-            path(f'{prefix}/<path:object_id>/delete/',
-                 wrap(self.get_delete_view()), name=f'{info}_delete'),
-            path(f'{prefix}/<path:object_id>/change/',
-                 wrap(self.get_change_view()), name=f'{info}_change'),
+            path(f"{prefix}/list/", wrap(self.get_list_view()),
+                 name=f"{info}_list"),
+            path(f"{prefix}/changelist/",
+                 wrap(self.get_changelist_view()), name=f"{info}_changelist"),
+            path(f"{prefix}/add/", wrap(self.get_add_view()), name=f"{info}_add"),
+            path(f"{prefix}/<path:object_id>/detail/",
+                 wrap(self.get_detail_view()), name=f"{info}_detail"),
+            path(f"{prefix}/<path:object_id>/delete/",
+                 wrap(self.get_delete_view()), name=f"{info}_delete"),
+            path(f"{prefix}/<path:object_id>/change/",
+                 wrap(self.get_change_view()), name=f"{info}_change"),
         ]
-
-        # Add Inline admins urls
-        for inline_admin in self.get_inline_instances(None):
-            urlpatterns.append(
-                path(f'{prefix}/inlines/', include(inline_admin.urls)))
 
         return urlpatterns
 
@@ -886,6 +882,46 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return get_form_fields_description(
             serializer, self, True)
 
+    def get_list_view(self):
+        from django_api_admin.admin_views.model_admin_views.list import ListView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return ListView.as_view(**defaults)
+
+    def get_detail_view(self):
+        from django_api_admin.admin_views.model_admin_views.detail import DetailView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self
+        }
+        return DetailView.as_view(**defaults)
+
+    def get_add_view(self):
+        from django_api_admin.admin_views.model_admin_views.add import AddView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return AddView.as_view(**defaults)
+
+    def get_change_view(self):
+        from django_api_admin.admin_views.model_admin_views.change import ChangeView
+
+        defaults = {
+            'serializer_class': self.get_serializer_class(None),
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self,
+        }
+        return ChangeView.as_view(**defaults)
+
     def _get_edited_object_pks(self, request):
         """Return POST data values of list_editable primary keys."""
         return [data["pk"] for data in request.data.get('data', {})]
@@ -915,6 +951,22 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "model_admin": self
         }
         return ChangeListView.as_view(**defaults)
+
+    def get_deleted_objects(self, objs, request):
+        """
+        Hook for customizing the delete process for the delete view and the
+        "delete selected" action.
+        """
+        return get_deleted_objects(objs, request, self.admin_site)
+
+    def get_delete_view(self):
+        from django_api_admin.admin_views.model_admin_views.delete import DeleteView
+
+        defaults = {
+            'authentication_classes': self.admin_site.get_authentication_classes(),
+            'model_admin': self
+        }
+        return DeleteView.as_view(**defaults)
 
     def get_inline_serializer_kwargs(self, request, operation, inline, instance=None, data=None):
         inline_serializer_params = {

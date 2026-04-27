@@ -23,7 +23,7 @@ form_fields = {
             }
         }
     ]
-},
+}
 
 
 class APIResponseExamples:

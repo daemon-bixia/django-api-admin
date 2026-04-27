@@ -67,36 +67,6 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
         except (model.DoesNotExist, ValidationError, ValueError):
             return None
 
-    def get_urls(self):
-        from django.urls import path
-        from functools import update_wrapper
-
-        def wrap(view):
-            def wrapper(*args, **kwargs):
-                return self.admin_site.admin_view(view)(*args, **kwargs)
-
-            wrapper.model_admin = self
-            return update_wrapper(wrapper, view)
-
-        info = f'{self.parent_model._meta.app_label}_{self.parent_model._meta.model_name}_{self.opts.app_label}_{self.opts.model_name}'
-        prefix = f'{self.model._meta.model_name}'
-
-        return [
-            path(f'{prefix}/list/', wrap(self.get_list_view()),
-                 name=f'{info}_list'),
-            path(f'{prefix}/add/', wrap(self.get_add_view()), name=f'{info}_add'),
-            path(f'{prefix}/<path:object_id>/detail/',
-                 wrap(self.get_detail_view()), name=f'{info}_detail'),
-            path(f'{prefix}/<path:object_id>/change/',
-                 wrap(self.get_change_view()), name=f'{info}_change'),
-            path(f'{prefix}/<path:object_id>/delete/',
-                 wrap(self.get_delete_view()), name=f'{info}_delete'),
-        ]
-
-    @property
-    def urls(self):
-        return self.get_urls()
-
     def _has_any_perms_for_target_model(self, request, perms):
         """
         This method is called only when the ModelAdmin's model is for an
