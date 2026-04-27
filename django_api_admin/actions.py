@@ -21,7 +21,7 @@ def delete_selected(modeladmin, request, queryset):
     _deletable_objects, _model_count, perms_needed, _protected = get_deleted_objects(
         queryset, request, modeladmin.admin_site)
 
-    # check the permissions
+    # Check the permissions
     if perms_needed:
         objects_name = model_ngettext(queryset)
         msg = _("Cannot delete %(name)s") % {"name": objects_name}

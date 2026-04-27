@@ -717,16 +717,16 @@ class APIModelAdmin(BaseAPIModelAdmin):
         # Validate the action name, and the selected
         if serializer.is_valid():
             # Preform the action on the selected items
-            action = serializer.validated_data.get('action')
-            select_across = serializer.validated_data.get('select_across')
+            action = serializer.validated_data.get("action")
+            select_across = serializer.validated_data.get("select_across")
             func = self.get_actions(request)[action][0]
 
             # Get a list of pks of selected changelist items
-            selected = request.data.get('selected_ids', None)
+            selected = request.data.get("selected_ids", None)
             if not selected and not select_across:
                 msg = _("Items must be selected in order to perform "
                         "actions on them. No items have been changed.")
-                return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
             if selected and not select_across:
                 queryset = queryset.filter(pk__in=selected)
 
@@ -737,9 +737,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 return response
 
             msg = _("Successfully performed the action")
-            return Response({'detail': msg}, status=status.HTTP_200_OK)
+            return Response({"detail": msg}, status=status.HTTP_200_OK)
 
-        Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def response_delete(self, request, obj_display, obj_id):
         """

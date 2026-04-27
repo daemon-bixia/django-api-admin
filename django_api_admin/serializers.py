@@ -108,7 +108,7 @@ class ActionSerializer(serializers.Serializer):
     checks that a valid action is selected
     """
     action = serializers.ChoiceField(choices=[("", "---------"), ])
-    selected_ids = serializers.MultipleChoiceField(choices=[('', '')])
+    selected_ids = serializers.MultipleChoiceField(choices=[("", "")])
     select_across = serializers.BooleanField(required=False, default=0)
 
 

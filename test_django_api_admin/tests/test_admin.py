@@ -81,16 +81,15 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
     def test_performing_custom_actions(self):
         action_dict = {
-            'action': 'make_old',
-            'selected_ids': [
+            "action": "make_old",
+            "selected_ids": [
                 1,
                 2
             ],
-            'select_across': False,
+            "select_across": False,
         }
 
-        self.author_info = (Author._meta.app_label, Author._meta.model_name)
-        url = reverse('api_admin:%s_%s_perform_action' % self.author_info)
+        url = reverse("api_admin:%s_%s_changelist" % self.author_info)
         response = self.client.post(url, data=action_dict)
         self.assertEqual(response.status_code,  200)
 
@@ -113,7 +112,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
             'selected_ids': [],
             'select_across': True
         }
-        url = reverse('api_admin:%s_%s_perform_action' % self.author_info)
+        url = reverse("api_admin:%s_%s_changelist" % self.author_info)
         response = self.client.post(url, data=action_dict)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Author.objects.all().exists(), False)
@@ -123,7 +122,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
             "action": "some_weird_action",
             "select_across": 5.0,
         }
-        url = reverse("api_admin:%s_%s_perform_action" % self.author_info)
+        url = reverse("api_admin:%s_%s_changelist" % self.author_info)
         response = self.client.post(url, data=action_dict)
         self.assertEqual(response.status_code, 400)
 
