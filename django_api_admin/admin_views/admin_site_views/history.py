@@ -52,13 +52,20 @@ class HistoryView(APIView):
         # Filter the queryset.
         app_label = self.request.query_params.get("app_label", None)
         model_name = self.request.query_params.get("model", None)
-        object_id = self.request.query_params.get("object_id", None)
-        if app_label is not None and model_name is not None and object_id is not None:
+        if app_label is not None and model_name is not None:
             model = apps.get_model(app_label, model_name)
             action_list = action_list.filter(
-                object_id=object_id,
                 content_type=get_content_type_for_model(model),
-            ).select_related()
+            )
+
+            object_id = self.request.query_params.get("object_id", None)
+            if object_id is not None:
+                action_list = action_list.filter(
+                    object_id=object_id,
+                )
+
+        # Select the related instances
+        action_list = action_list.select_related()
 
         # Check for change or view permissions
         for obj in action_list:
@@ -67,7 +74,7 @@ class HistoryView(APIView):
             if not model_admin.has_view_or_change_permission(request, obj):
                 raise PermissionDenied
 
-        # Paginate queryset.
+        # Paginate queryset
         paginator = self.admin_site.paginator(
             action_list,
             self.paginate_by,

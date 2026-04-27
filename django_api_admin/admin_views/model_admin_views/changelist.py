@@ -59,8 +59,11 @@ class ChangeListView(APIView):
         rows = self.get_rows(request, cl)
         config = self.get_config(request, cl)
 
-        action_serializer = self.get_action_serializer(request)
-        form_fields = get_form_fields_description(action_serializer)
+        serializer_class = self.get_action_serializer_class(request)
+        serializer = serializer_class(context={"request": request})
+
+        form_fields = get_form_fields_description(
+            serializer, self.model_admin, change=False)
 
         return Response({
             "action_form": {"fields": form_fields},
@@ -257,5 +260,5 @@ class ChangeListView(APIView):
         except IncorrectLookupParameters as e:
             raise ValidationError(str(e))
 
-    def get_action_serializer(self):
-        return self.model_admin.get_action_serializer_class(self.request)
+    def get_action_serializer_class(self, request):
+        return self.model_admin.get_action_serializer_class(request)

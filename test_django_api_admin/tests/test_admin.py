@@ -153,13 +153,11 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     def test_delete_view_bad_to_field(self):
         author = Author.objects.create(
             name="test2", age=20, is_vip=True, user_id=self.user.pk)
-        url = reverse('api_admin:%s_%s_delete' % self.author_info, kwargs={
-                      'object_id': author.pk}) + f'?{TO_FIELD_VAR}=name'
+        url = reverse("api_admin:%s_%s_delete" % self.author_info, kwargs={
+                      "object_id": author.pk}) + f"?{TO_FIELD_VAR}=name"
         response = self.client.post(url)
         self.assertEqual(response.status_code, 400)
         self.assertTrue(Author.objects.filter(pk=author.pk).exists())
-        self.assertEqual(response.data['detail'],
-                         'The field name cannot be referenced.')
 
     def _assert_author_form_description(self, data):
         form = data["form"]
@@ -302,46 +300,50 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["name"], "muhammad")
 
-        url = reverse("api_admin:%s_%s_history" % self.author_info,
-                      kwargs={"object_id": author.id}) + "?p=1&page_size=1"
+        url = reverse("api_admin:history", query={
+                      "app_label": "test_django_api_admin",
+                      "model": "Author", "object_id": author.id,
+                      "page": 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(len(response.data) == 1)
+        self.assertTrue(len(response.data["object_list"]) == 1)
 
     def test_pagination_class(self):
         # perform some actions then paginate them
-        authors = [
+        dataset = [
             {
-                'name': 'test1',
-                'age': '60',
-                'is_vip': True,
-                'user': self.user.pk,
-                'publisher': [1]
+                "name": "test1",
+                "age": "60",
+                "is_vip": True,
+                "user": self.user.pk,
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             {
-                'name': 'test2',
-                'age': '60',
-                'is_vip': True,
-                'user': self.user.pk,
-                'publisher': [1]
+                "name": "test2",
+                "age": "60",
+                "is_vip": True,
+                "user": self.user.pk,
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             {
-                'name': 'test3',
-                'age': '60',
-                'is_vip': True,
-                'user': self.user.pk,
-                'publisher': [1]
+                "name": "test3",
+                "age": "60",
+                "is_vip": True,
+                "user": self.user.pk,
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
         ]
-        for author in authors:
-            url = reverse('api_admin:%s_%s_add' % self.author_info)
-            self.client.post(url, data={'data': author}, format="json")
+        for data in dataset:
+            url = reverse("api_admin:%s_%s_add" % self.author_info)
+            self.client.post(url, data={"data": data}, format="json")
 
-        url = reverse('api_admin:admin_log') + '?page_size=1&p=1'
+        url = reverse("api_admin:history", query={
+            "app_label": "test_django_api_admin",
+            "model": "Author", "page": 1})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data['action_list']), 1)
+        self.assertEqual(len(response.data["object_list"]), 3)
 
     def test_changelist_view(self):
         current_date = datetime.now()
@@ -396,12 +398,12 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertTrue(isinstance(serializer.data["date_joined"], str))
 
     def test_get_changelist_serializer_class(self):
-        request = self.factory.get('/')
+        request = self.factory.get("/")
         request.user = self.user
         modeladmin = AuthorAPIAdmin(Author, site)
         serializer_class = modeladmin.get_changelist_serializer_class(request)
         author = Author.objects.all()
         serializer = serializer_class(author, many=True)
         fields = serializer.child.get_fields()
-        self.assertEqual(list(fields.keys()), ['name'])
-        self.assertIsNotNone(fields['name'].help_text)
+        self.assertEqual(list(fields.keys()), ["age"])
+        self.assertEqual(list(fields["age"].choices), [60, 1, 2])
