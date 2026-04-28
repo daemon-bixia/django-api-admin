@@ -64,6 +64,12 @@ class Article(models.Model):
         return self.title
 
 
+class Revision(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.TextField(max_length=200)
+    article = models.ForeignKey(Article, on_delete=models.PROTECT)
+
+
 parent_choices = ((True, 'the person is a parent'),
                   (False, 'the person is not a parent'))
 

@@ -10,7 +10,7 @@ from allauth.account.models import EmailAddress
 
 from django_api_admin.models import LogEntry
 
-from test_django_api_admin.models import Author, Book, Publisher
+from test_django_api_admin.models import Author, Book, Publisher, Category, Article,  Revision
 from test_django_api_admin.admin import site
 from test_django_api_admin.utils import login
 from test_django_api_admin import views
@@ -20,17 +20,17 @@ UserModel = get_user_model()
 
 class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
-        path('api_admin/', site.urls),
-        path('_allauth/', include('allauth.headless.urls')),
-        path('api/publisher/<int:pk>/',
+        path("api_admin/", site.urls),
+        path("_allauth/", include("allauth.headless.urls")),
+        path("api/publisher/<int:pk>/",
              views.PublisherDetailView.as_view(), name="publisher-detail"),
     ]
 
     def setUp(self) -> None:
         # Create a superuser
         self.user = UserModel.objects.create_superuser(
-            username='admin', email="admin@email.com")
-        self.user.set_password('password')
+            username="admin", email="admin@email.com")
+        self.user.set_password("password")
         self.user.save()
 
         # Verify the user's email
@@ -300,3 +300,33 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertTrue("deleted" in change_message[4])
         self.assertEqual(
             change_message[4]["deleted"]["object"], "Pro git")
+
+    def test_deleting_protected_inline_instance(self):
+        category = Category.objects.create(name="Fiction")
+        article = Article.objects.create(
+            title="How to train your dragon", category=category)
+        Revision.objects.create(
+            title="Fix typo",
+            description="Changed drago to dragon ",
+            article=article,
+        )
+
+        category_info = (Category._meta.app_label, Category._meta.model_name)
+        url = reverse("api_admin:%s_%s_change" %
+                      category_info, kwargs={'object_id': category.pk})
+        data = {
+            "data": {
+                "name": "Animation",
+            },
+            "inlines": {
+                "test_django_api_admin.article": {
+                    "delete": {
+                        "abcde": article.pk,
+                    }
+                }
+            }
+        }
+        response = self.client.put(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response.data["errors"]["test_django_api_admin.article"]["abcde"][0].startswith(
+            "Deleting article How to train your dragon would require deleting the"),)

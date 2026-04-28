@@ -11,7 +11,6 @@
 # -----------------------------------------------------------------------------
 
 from django.contrib.auth import get_permission_codename
-from django.core.exceptions import ValidationError
 from django.utils.text import format_lazy
 
 from django_api_admin.admins.base_admin import BaseAPIModelAdmin
@@ -31,10 +30,9 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
     verbose_name_plural = None
     can_delete = True
     show_change_link = False
-    admin_style = None
     checks_class = InlineAPIModelAdminChecks
 
-    def __init__(self, parent_model, admin_site,):
+    def __init__(self, parent_model, admin_site):
         self.admin_site = admin_site
         self.parent_model = parent_model
         self.opts = self.model._meta
@@ -49,23 +47,23 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
         if self.verbose_name is None:
             self.verbose_name = self.opts.verbose_name
 
-    def get_object(self, request, object_id, from_field=None):
-        """
-        Return an instance matching the field and value provided, the primary
-        key is used if no field is provided. Return ``None`` if no match is
-        found or the object_id fails validation.
-        """
-        queryset = self.get_queryset(request)
-        model = queryset.model
-        field = (
-            model._meta.pk if from_field is None else model._meta.get_field(
-                from_field)
-        )
-        try:
-            object_id = field.to_python(object_id)
-            return queryset.get(**{field.name: object_id})
-        except (model.DoesNotExist, ValidationError, ValueError):
-            return None
+    def get_extra(self, request, obj=None, **kwargs):
+        """Hook for customizing the number of extra inline forms."""
+        return self.extra
+
+    def get_min_num(self, request, obj=None, **kwargs):
+        """Hook for customizing the min number of inline forms."""
+        return self.min_num
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        """Hook for customizing the max number of extra inline forms."""
+        return self.max_num
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if not self.has_view_or_change_permission(request):
+            queryset = queryset.none()
+        return queryset
 
     def _has_any_perms_for_target_model(self, request, perms):
         """
@@ -117,8 +115,8 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
 
 
 class TabularInlineAPI(InlineAPIModelAdmin):
-    admin_style = 'tabular'
+    pass
 
 
 class StackedInlineAPI(InlineAPIModelAdmin):
-    admin_style = 'stacked'
+    pass

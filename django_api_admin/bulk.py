@@ -1,5 +1,8 @@
+from django.db import router
 from django.utils.translation import gettext_lazy as _
 from django.forms.models import _get_foreign_key
+from django.contrib.admin.utils import NestedObjects
+from django.utils.text import get_text_list
 
 from rest_framework.exceptions import NotFound
 
@@ -129,20 +132,47 @@ class InlineBulkOperation:
                 instances = list(
                     inline.model.objects.filter(pk__in=primary_keys))
 
-                # Validate that all primary_keys are valid instances
+                # Validate the primary keys, and instances
                 for row_id, pk in value["delete"].items():
                     idx, instance = next(
                         ((idx, i) for idx, i in enumerate(instances) if i.pk == pk), None)
+
+                    # Validate that all primary_keys are valid instances
                     if not instance:
                         delete_errors[row_id] = {
                             "pk": [_(
                                 "Couldn't find %s associated with the data at row %s \
-                                 is not found, check that the 'pk' value represents a  \
+                                 is not found, check that the 'pk' value represents a \
                                  valid %s in the database" % (self.model_admin.model.verbose_name,
                                                               row_id, self.model_admin.model.verbose_name))]
                         }
                         instances.pop(idx)
+                        continue
 
+                    # Ensure no related "protected" records are going to be deleted
+                    using = router.db_for_write(inline.model)
+                    collector = NestedObjects(using=using)
+                    collector.collect([instance])
+                    if collector.protected:
+                        objs = []
+                        for p in collector.protected:
+                            objs.append(_("%(class_name)s %(instance)s") % {
+                                        "class_name": p._meta.verbose_name, "instance": p})
+                        params = {
+                            "class_name": inline.model._meta.verbose_name,
+                            "instance": instance,
+                            "related_objects": get_text_list(objs, _("and")),
+                        }
+                        msg = _(
+                            "Deleting %(class_name)s %(instance)s would require "
+                            "deleting the following protected related objects: "
+                            "%(related_objects)s"
+                        )
+                        delete_errors[row_id] = [msg % params]
+                        instances.pop(idx)
+                        continue
+
+                # Create a serializer for the instance to be deleted
                 for instance in instances:
                     serializer_params = self.model_admin.get_inline_serializer_kwargs(
                         self.request, "delete", inline, instance=instance)
@@ -183,8 +213,7 @@ class InlineBulkOperation:
                 for serializer in serializers:
                     if operation_name == "change":
                         serializer = serializer[0]
-                    data[inline_name][operation_name].append(
-                        serializer.data)
+                    data[inline_name][operation_name].append(serializer.data)
 
         return data
 

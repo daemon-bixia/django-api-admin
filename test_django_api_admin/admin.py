@@ -9,7 +9,7 @@ from django.contrib import admin
 from django.utils import timezone
 
 from test_django_api_admin import views as custom_api_views
-from test_django_api_admin.models import Author, Publisher, Book, GuestEntry, Category
+from test_django_api_admin.models import Author, Publisher, Book, GuestEntry, Category, Article
 from test_django_api_admin.actions import make_old, make_young
 from test_django_api_admin.serializers import AuthorSerializer
 
@@ -56,7 +56,7 @@ class CustomAPIAdminSite(APIAdminSite):
 site = CustomAPIAdminSite(name='api_admin', include_auth=True)
 
 
-class APIBookInline(TabularInlineAPI):
+class BookInlineAPIAdmin(TabularInlineAPI):
     model = Book
 
 
@@ -70,23 +70,23 @@ class PublisherAPIAdmin(APIModelAdmin):
 class AuthorAPIAdmin(APIModelAdmin):
     serializer_class = AuthorSerializer
 
-    list_display = ('name', 'age', 'user', 'is_old_enough',
-                    'title', 'gender', 'date_joined',)
-    list_display_links = ('name',)
-    list_filter = ('is_vip', 'age')
-    list_editable = ('age',)
+    list_display = ("name", "age", "user", "is_old_enough",
+                    "title", "gender", "date_joined",)
+    list_display_links = ("name",)
+    list_filter = ("is_vip", "age")
+    list_editable = ("age",)
     list_per_page = 6
-    empty_value_display = '-'
-    search_fields = ('name', 'publisher__name',)
-    ordering = ('-age',)
+    empty_value_display = "-"
+    search_fields = ("name", "publisher__name",)
+    ordering = ("-age",)
 
-    # filter_horizontal = ('publisher')
-    raw_id_fields = ('publisher', )
-    autocomplete_fields = ('publisher',)
-    date_hierarchy = 'date_joined'
+    # filter_horizontal = ("publisher")
+    raw_id_fields = ("publisher", )
+    autocomplete_fields = ("publisher",)
+    date_hierarchy = "date_joined"
 
     serializer_field_overrides = {
-        models.CharField: {'help_text': 'This is a custom help text for all CharFields'},
+        models.CharField: {"help_text": "This is a custom help text for all CharFields"},
     }
 
     serializer_field_attributes = {
@@ -97,23 +97,28 @@ class AuthorAPIAdmin(APIModelAdmin):
     actions_selection_counter = True
 
     fieldsets = (
-        ('Information', {
-            'fields': (('name', 'age'), 'is_vip', 'user', 'publisher', 'is_old_enough', 'date_joined', 'location')}),
+        ("Information", {
+            "fields": (("name", "age"), "is_vip", "user", "publisher", "is_old_enough", "date_joined", "location")}),
     )
     # A list of field names to exclude from the add/change form.
-    exclude = ('gender',)
-    readonly_fields = ('date_joined', 'is_old_enough')
+    exclude = ("gender",)
+    readonly_fields = ("date_joined", "is_old_enough")
 
-    inlines = [APIBookInline]
+    inlines = [BookInlineAPIAdmin]
 
-    @display(description='is this author old enough')
+    @display(description="is this author old enough")
     def is_old_enough(self, obj, context=None):
         return obj.age > 10
 
 
+class ArticleInlineAPIAdmin(TabularInlineAPI):
+    model = Article
+
+
 @register(Category, site=site)
 class CategoryAPIAdmin(APIModelAdmin):
-    list_display = ('name',)
+    list_display = ("name",)
+    inlines = [ArticleInlineAPIAdmin]
 
 
 site.register(Book)
