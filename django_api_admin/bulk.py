@@ -71,6 +71,9 @@ class InlineBulkOperation:
             # Get the fk used to create the inline relationship
             fk = _get_foreign_key(inline.parent_model,
                                   inline.model, fk_name=inline.fk_name)
+            related_name = fk.remote_field.accessor_name
+            reverse_field = getattr(self.obj, related_name)
+            related_instances_count = reverse_field.count()
 
             self.result[key] = {
                 "add": [], "change": [], "delete": []}
@@ -80,17 +83,31 @@ class InlineBulkOperation:
 
             if "add" in value:
                 for row_id, data in value["add"].items():
+                    # Validate the number of related instances does not exceed the
+                    # `max_num` set at the inline model
+                    if inline.max_num is not None and related_instances_count >= inline.max_num:
+                        add_errors[row_id] = [
+                            "Cannot exceed the `max_num` of `%s` allowed"
+                            % (inline.model._meta.verbose_name_plural)]
+
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
                     serializer_params = self.model_admin.get_inline_serializer_kwargs(
                         self.request, "add", inline, data=data)
                     serializer = serializer_class(**serializer_params)
 
-                    if serializer.is_valid():
-                        self.result[key]["add"].append(
-                            serializer)
-                    else:
-                        add_errors[row_id] = serializer.errors
+                    # Validate the add data using the inline serializer
+                    if row_id not in add_errors:
+                        if serializer.is_valid():
+                            self.result[key]["add"].append(serializer)
+                            related_instances_count += 1
+                        else:
+                            if row_id in add_errors:
+                                add_errors[row_id] = [
+                                    *add_errors[row_id], *list(serializer.errors.items())]
+                            else:
+                                add_errors[row_id] = list(
+                                    serializer.errors.items())
 
             if "change" in value:
                 fk_field = getattr(self.obj, get_related_name(fk), None)
@@ -101,31 +118,40 @@ class InlineBulkOperation:
                 for row_id, data in value["change"].items():
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
-
                     # Find the item to be updated in the queryset
                     instance = next(
                         (i for i in instances if i.pk == data.get("pk")), None)
+
+                    # Validate that all primary_keys are valid instances
                     if not instance:
-                        change_errors[row_id] = {
-                            "pk": [_(
-                                "Couldn't find %s associated with the data at row "
-                                "%s is not found, check that the 'pk' value "
-                                "represents a valid %s in the database" % (self.model_admin.model._meta.verbose_name,
-                                                                           row_id, inline.model._meta.verbose_name))]
+                        params = {
+                            "parent_model": self.model_admin.model._meta.verbose_name,
+                            "row_id": row_id,
+                            "inline_model": inline.model._meta.verbose_name
                         }
-                        continue
+                        change_errors[row_id] = [_(
+                            "Couldn't find %(parent_model)s associated with the data at row "
+                            "%(row_id)s is not found, check that the 'pk' value "
+                            "represents a valid %(inline_model)s in the database" % params)]
 
-                    serializer_params = self.model_admin.get_inline_serializer_kwargs(
-                        self.request, "change", inline, instance=instance, data=data)
-                    serializer = serializer_class(
-                        **serializer_params)
+                    # Validate the change data using the inline serializer
+                    if row_id not in change_errors:
+                        serializer_params = self.model_admin.get_inline_serializer_kwargs(
+                            self.request, "change", inline, instance=instance, data=data)
+                        serializer = serializer_class(
+                            **serializer_params)
 
-                    if serializer.is_valid():
-                        changed_data = get_changed_data(serializer)
-                        self.result[key]["change"].append(
-                            (serializer, changed_data))
-                    else:
-                        change_errors[row_id] = serializer.errors
+                        if serializer.is_valid():
+                            changed_data = get_changed_data(serializer)
+                            self.result[key]["change"].append(
+                                (serializer, changed_data))
+                        else:
+                            if row_id in change_errors:
+                                change_errors[row_id] = [
+                                    *change_errors[row_id], *list(serializer.errors.items())]
+                            else:
+                                change_errors[row_id] = list(
+                                    serializer.errors.items())
 
             if "delete" in value:
                 primary_keys = [pk for pk in value["delete"].values()]
@@ -137,17 +163,29 @@ class InlineBulkOperation:
                     idx, instance = next(
                         ((idx, i) for idx, i in enumerate(instances) if i.pk == pk), None)
 
+                    # Validate the number of instances is not less than the `min_num`
+                    # set at the inline model
+                    if inline.min_num is not None and related_instances_count <= inline.min_num:
+                        add_errors[row_id] = [
+                            "Cannot fall short of the `min_num` of `%s` allowed"
+                            % (inline.model._meta.verbose_name_plural)]
+
                     # Validate that all primary_keys are valid instances
                     if not instance:
-                        delete_errors[row_id] = {
-                            "pk": [_(
-                                "Couldn't find %s associated with the data at row %s \
-                                 is not found, check that the 'pk' value represents a \
-                                 valid %s in the database" % (self.model_admin.model.verbose_name,
-                                                              row_id, self.model_admin.model.verbose_name))]
+                        params = {
+                            "parent_model": self.model_admin.model.verbose_name,
+                            "row_id": row_id,
+                            "inline_model": inline.model._meta.verbose_name
                         }
-                        instances.pop(idx)
-                        continue
+                        msg = _(
+                            "Couldn't find %(parent_model)s associated with the data \
+                            at row %(row_id)s is not found, check that the 'pk' value \
+                            represents a valid %(inline_model)s in the database" % params)
+                        if row_id not in delete_errors:
+                            delete_errors[row_id] = [
+                                *delete_errors[row_id], msg]
+                        else:
+                            delete_errors[row_id] = [msg]
 
                     # Ensure no related "protected" records are going to be deleted
                     using = router.db_for_write(inline.model)
@@ -166,19 +204,22 @@ class InlineBulkOperation:
                         msg = _(
                             "Deleting %(class_name)s %(instance)s would require "
                             "deleting the following protected related objects: "
-                            "%(related_objects)s"
+                            "%(related_objects)s" % params
                         )
-                        delete_errors[row_id] = [msg % params]
-                        instances.pop(idx)
-                        continue
+                        if row_id in delete_errors:
+                            delete_errors[row_id] = [
+                                *delete_errors[row_id], msg]
+                        else:
+                            delete_errors[row_id] = [msg]
 
-                # Create a serializer for the instance to be deleted
-                for instance in instances:
-                    serializer_params = self.model_admin.get_inline_serializer_kwargs(
-                        self.request, "delete", inline, instance=instance)
-                    serializer = serializer_class(**serializer_params)
-                    self.result[key]["delete"].append(
-                        serializer)
+                    # Create a serializer for the instance to be deleted
+                    if row_id not in delete_errors:
+                        serializer_params = self.model_admin.get_inline_serializer_kwargs(
+                            self.request, "delete", inline, instance=instance)
+                        serializer = serializer_class(**serializer_params)
+                        self.result[key]["delete"].append(
+                            serializer)
+                        related_instances_count -= 1
 
             # If there are errors include them under the `model_id`
             if add_errors or change_errors or delete_errors:

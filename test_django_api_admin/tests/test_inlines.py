@@ -90,10 +90,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                             "title": "API security oauth2 and beyond",
                             "credits": [self.a1.pk]
                         },
-                        "$3fv2": {
-                            "title": "OpenId connect in action",
-                            "credits": [self.a1.pk]
-                        }
+
                     }
                 }
             }
@@ -102,7 +99,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIsNotNone(response.data.get("inlines"))
         self.assertEqual(
-            len(response.data["inlines"]["test_django_api_admin.book"]["add"]), 3)
+            len(response.data["inlines"]["test_django_api_admin.book"]["add"]), 2)
         self.assertEqual(
             response.data["inlines"]["test_django_api_admin.book"]["add"][0]["title"], "The freedom model")
 
@@ -188,13 +185,34 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 "test_django_api_admin.book": {
                     "add": {
                         "40fjq": {
-                            # missing title
+                            # Missing title
                             "credits": [self.a2.pk]
-                        }
+                        },
+                        "abcde": {
+                            "title": "Book A",
+                            "credits": [self.a2.pk]
+                        },
+                        "fghij": {
+                            "title": "Book B",
+                            "credits": [self.a2.pk]
+                        },
+                        "klmno": {
+                            "title": "Book C",
+                            "credits": [self.a2.pk]
+                        },
+                        "pqrstu": {
+                            "title": "Book D",
+                            "credits": [self.a2.pk]
+                        },
+                        "vwxyz": {
+                            # Exceeds the `max_num`
+                            "title": "Book E",
+                            "credits": [self.a2.pk]
+                        },
                     },
                     "change": {
                         "52dax": {
-                            # missing pk
+                            # Missing pk
                             "title": "the book of nine secrets",
                             "credits": [self.a2.pk]
                         }
@@ -205,7 +223,9 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.post(url, data=data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertTrue(isinstance(
-            response.data["errors"]["test_django_api_admin.book"]["40fjq"]["title"], list))
+            response.data["errors"]["test_django_api_admin.book"]["40fjq"][0], list))
+        self.assertTrue(isinstance(
+            response.data["errors"]["test_django_api_admin.book"]["vwxyz"], list))
         self.assertEqual(len(Author.objects.filter(
             name="Nine Serenities Sovereign")), 0)
 
@@ -235,7 +255,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.put(url, data=data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertTrue(isinstance(
-            response.data["errors"]["test_django_api_admin.book"]["abcsd"]["pk"], list))
+            response.data["errors"]["test_django_api_admin.book"]["abcsd"], list))
 
     def test_constructing_change_messages(self):
         url = reverse('api_admin:%s_%s_change' %
@@ -275,7 +295,8 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
                 },
             },
         }
-        self.client.put(url, data=data, format="json")
+        response = self.client.put(url, data=data, format="json")
+        self.assertEqual(response.status_code, 200)
 
         log_entry = LogEntry.objects.get(object_repr="René Descartes")
         change_message = json.loads(log_entry.change_message)
@@ -310,7 +331,6 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             description="Changed drago to dragon ",
             article=article,
         )
-
         category_info = (Category._meta.app_label, Category._meta.model_name)
         url = reverse("api_admin:%s_%s_change" %
                       category_info, kwargs={'object_id': category.pk})

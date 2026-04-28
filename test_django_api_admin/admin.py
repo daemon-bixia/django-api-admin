@@ -58,6 +58,8 @@ site = CustomAPIAdminSite(name='api_admin', include_auth=True)
 
 class BookInlineAPIAdmin(TabularInlineAPI):
     model = Book
+    min_num = 1
+    max_num = 4
 
 
 @register(Publisher, site=site)
