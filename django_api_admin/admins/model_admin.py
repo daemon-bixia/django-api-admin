@@ -85,10 +85,10 @@ class APIModelAdmin(BaseAPIModelAdmin):
     # These are the admin options used to customize the change list page UI
     # server-side customizations like `list_select_related` and `actions` are not included
     changelist_options = [
-        'actions_on_top', 'actions_on_bottom', 'actions_selection_counter',
-        'empty_value_display', 'list_display', 'list_display_links', 'list_editable', 'exclude',
-        'show_full_result_count', 'list_per_page', 'list_max_show_all',
-        'date_hierarchy', 'search_help_text', 'sortable_by', 'search_fields', 'preserve_filters',
+        "actions_on_top", "actions_on_bottom", "actions_selection_counter",
+        "empty_value_display", "list_display", "list_display_links", "list_editable", "exclude",
+        "show_full_result_count", "list_per_page", "list_max_show_all",
+        "date_hierarchy", "search_help_text", "sortable_by", "search_fields", "preserve_filters",
     ]
 
     def __init__(self, model, admin_site):

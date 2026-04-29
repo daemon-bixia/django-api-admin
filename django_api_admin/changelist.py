@@ -16,8 +16,11 @@ from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, SuspiciousOperation
 from django.core.paginator import InvalidPage
 from django.db.models import Exists, F, Field, ManyToOneRel, OrderBy, OuterRef
+from django.db.models.constants import LOOKUP_SEP
 from django.utils.timezone import make_aware
 from django.utils.http import urlencode
+
+from rest_framework.exceptions import ValidationError
 
 from django_api_admin.exceptions import (
     DisallowedModelAdminLookup,
@@ -50,7 +53,7 @@ IGNORED_PARAMS = (
 
 
 class ChangeList:
-    serializer_class = ChangeListSerializer
+    search_serializer_class = ChangeListSerializer
 
     def __init__(
         self,
@@ -89,18 +92,19 @@ class ChangeList:
         self.search_help_text = search_help_text
         self.bulk_operation = None
         # Get search parameters from the query string.
-        search_serializer = self.serializer_class(data=request.GET)
-        errors = []
-        if not search_serializer.is_valid():
-            for error in search_serializer.errors.values():
-                errors.append({'detail': ", ".join(error)})
-        self.query = search_serializer.validated_data.get(SEARCH_VAR) or ""
+        _search_serializer = self.search_serializer_class(data=request.GET)
+        if not _search_serializer.is_valid():
+            errors = []
+            for error in _search_serializer.errors.values():
+                errors.append({"detail": ", ".join(error)})
+            if errors:
+                raise ValidationError(errors)
+        self.query = _search_serializer.validated_data.get(SEARCH_VAR) or ""
         try:
             self.page_num = int(request.GET.get(PAGE_VAR, 1))
         except ValueError:
             self.page_num = 1
         self.show_all = ALL_VAR in request.GET
-        self.params = dict(request.GET.items())
         self.add_facets = model_admin.show_facets is ShowFacets.ALWAYS or (
             model_admin.show_facets is ShowFacets.ALLOW and IS_FACETS_VAR in request.GET
         )
@@ -122,7 +126,6 @@ class ChangeList:
         self.remove_facet_link = self.get_query_string(remove=[IS_FACETS_VAR])
         self.add_facet_link = self.get_query_string({IS_FACETS_VAR: True})
         self.list_editable = list_editable
-        self.root_queryset = model_admin.get_queryset(request)
         self.queryset = self.get_queryset(request)
         self.get_results(request)
         self.pk_attname = self.lookup_opts.pk.attname
@@ -138,7 +141,7 @@ class ChangeList:
         """
         Return all params except IGNORED_PARAMS.
         """
-        params = params or self.params
+        params = params or self.filter_params
         lookup_params = params.copy()  # a dictionary of the query string
         # Remove all the parameters that are globally and systematically
         # ignored.
@@ -152,10 +155,11 @@ class ChangeList:
         may_have_duplicates = False
         has_active_filters = False
 
-        for key, value in lookup_params.items():
-            if not self.model_admin.lookup_allowed(key, value):
-                raise DisallowedModelAdminLookup(
-                    f"Filtering by {key} not allowed")
+        for key, value_list in lookup_params.items():
+            for value in value_list:
+                if not self.model_admin.lookup_allowed(key, value_list, request):
+                    raise DisallowedModelAdminLookup(
+                        f"Filtering by {key} not allowed")
 
         filter_specs = []
         for list_filter in self.list_filter:
@@ -240,8 +244,8 @@ class ChangeList:
         # fields and to determine if at least one of them spawns duplicates. If
         # the lookup parameters aren't real fields, then bail out.
         try:
-            for key, value in lookup_params.items():
-                lookup_params[key] = prepare_lookup_value(key, value)
+            for key, value_list in lookup_params.items():
+                lookup_params[key] = prepare_lookup_value(key, value_list)
                 may_have_duplicates |= lookup_spawns_duplicates(
                     self.opts, key)
             return (
@@ -280,6 +284,9 @@ class ChangeList:
         result_count = paginator.count
 
         # Get the total number of objects, with no admin filters applied.
+        # Note this isn't necessarily the same as result_count in the case of
+        # no filtering. Filters defined in list_filters may still apply some
+        # default filtering which may be removed with query parameters.
         if self.model_admin.show_full_result_count:
             full_result_count = self.root_queryset.count()
         else:
@@ -299,7 +306,8 @@ class ChangeList:
         self.result_count = result_count
         self.show_full_result_count = self.model_admin.show_full_result_count
         # Admin actions are shown if there is at least one entry
-        # or if entries are not counted because show_full_result_count is disabled
+        # or if entries are not counted because show_full_result_count is
+        # disabled
         self.show_admin_actions = not self.show_full_result_count or bool(
             full_result_count
         )
@@ -308,51 +316,6 @@ class ChangeList:
         self.can_show_all = can_show_all
         self.multi_page = multi_page
         self.paginator = paginator
-
-    def get_ordering(self, queryset):
-        """
-        Return the list of ordering fields for the change list.
-        First check the get_ordering() method in model admin, then check
-        the object's default ordering. Then, any manually-specified ordering
-        from the query string overrides anything. Finally, a deterministic
-        order is guaranteed by calling _get_deterministic_ordering() with the
-        constructed ordering.
-        """
-        params = self.params
-        ordering = list(self._get_default_ordering())
-        if "o" in params:
-            # Clear ordering and used params
-            ordering = []
-            order_params = params["o"].split(".")
-            for p in order_params:
-                try:
-                    none, pfx, idx = p.rpartition("-")
-                    field_name = self.list_display[int(idx)]
-                    order_field = self.get_ordering_field(field_name)
-                    if not order_field:
-                        continue  # No 'admin_order_field', skip it
-                    if isinstance(order_field, OrderBy):
-                        if pfx == "-":
-                            order_field = order_field.copy()
-                            order_field.reverse_ordering()
-                        ordering.append(order_field)
-                    elif hasattr(order_field, "resolve_expression"):
-                        # order_field is an expression.
-                        ordering.append(
-                            order_field.desc() if pfx == "-" else order_field.asc()
-                        )
-                    # reverse order if order_field has already "-" as prefix
-                    elif order_field.startswith("-") and pfx == "-":
-                        ordering.append(order_field[1:])
-                    else:
-                        ordering.append(pfx + order_field)
-                except (IndexError, ValueError):
-                    continue  # Invalid ordering specified, skip it.
-
-        # Add the given query's ordering fields, if any.
-        ordering.extend(queryset.query.order_by)
-
-        return self._get_deterministic_ordering(ordering)
 
     def _get_default_ordering(self):
         ordering = []
@@ -381,75 +344,62 @@ class ChangeList:
             elif hasattr(self.model_admin, field_name):
                 attr = getattr(self.model_admin, field_name)
             else:
-                attr = getattr(self.model, field_name)
+                try:
+                    attr = getattr(self.model, field_name)
+                except AttributeError:
+                    if LOOKUP_SEP in field_name:
+                        return field_name
+                    raise
             if isinstance(attr, property) and hasattr(attr, "fget"):
                 attr = attr.fget
             return getattr(attr, "admin_order_field", None)
 
-    def _get_deterministic_ordering(self, ordering):
+    def get_ordering(self, queryset):
         """
-        Ensure a deterministic order across all database backends. Search for a
-        single field or unique together set of fields providing a total
-        ordering. If these are missing, augment the ordering with a descendant
-        primary key.
+        Return the list of ordering fields for the change list.
+        First check the get_ordering() method in model admin, then check
+        the object's default ordering. Then, any manually-specified ordering
+        from the query string overrides anything. Finally, a deterministic
+        order is guaranteed by calling _get_deterministic_ordering() with the
+        constructed ordering.
         """
-        ordering = list(ordering)
-        ordering_fields = set()
-        total_ordering_fields = {"pk"} | {
-            field.attname
-            for field in self.opts.fields
-            if field.unique and not field.null
-        }
-        for part in ordering:
-            # Search for single field providing a total ordering.
-            field_name = None
-            if isinstance(part, str):
-                field_name = part.lstrip("-")
-            elif isinstance(part, F):
-                field_name = part.name
-            elif isinstance(part, OrderBy) and isinstance(part.expression, F):
-                field_name = part.expression.name
-            if field_name:
-                # Normalize attname references by using get_field().
+        params = self.params
+        ordering = list(self._get_default_ordering())
+        if params.get(ORDER_VAR):
+            # Clear ordering and used params
+            ordering = []
+            order_params = params[ORDER_VAR].split(".")
+            for p in order_params:
                 try:
-                    field = self.opts.get_field(field_name)
-                except FieldDoesNotExist:
-                    # Could be "?" for random ordering or a related field
-                    # lookup. Skip this part of introspection for now.
-                    continue
-                # Ordering by a related field name orders by the referenced
-                # model's ordering. Skip this part of introspection for now.
-                if field.remote_field and field_name == field.name:
-                    continue
-                if field.attname in total_ordering_fields:
-                    break
-                ordering_fields.add(field.attname)
-        else:
-            # No single total ordering field, try unique_together and total
-            # unique constraints.
-            constraint_field_names = (
-                *self.opts.unique_together,
-                *(
-                    constraint.fields
-                    for constraint in self.opts.total_unique_constraints
-                ),
-            )
-            for field_names in constraint_field_names:
-                # Normalize attname references by using get_field().
-                fields = [
-                    self.opts.get_field(field_name) for field_name in field_names
-                ]
-                # Composite unique constraints containing a nullable column
-                # cannot ensure total ordering.
-                if any(field.null for field in fields):
-                    continue
-                if ordering_fields.issuperset(field.attname for field in fields):
-                    break
-            else:
-                # If no set of unique fields is present in the ordering, rely
-                # on the primary key to provide total ordering.
-                ordering.append("-pk")
-        return ordering
+                    none, pfx, idx = p.rpartition("-")
+                    field_name = self.list_display[int(idx)]
+                    order_field = self.get_ordering_field(field_name)
+                    if not order_field:
+                        continue  # No 'admin_order_field', skip it
+                    if isinstance(order_field, OrderBy):
+                        if pfx == "-":
+                            order_field = order_field.copy()
+                            order_field.reverse_ordering()
+                        ordering.append(order_field)
+                    elif hasattr(order_field, "resolve_expression"):
+                        # order_field is an expression.
+                        ordering.append(
+                            order_field.desc() if pfx == "-" else order_field.asc()
+                        )
+                    # Reverse order if order_field has already "-" as prefix
+                    elif pfx == "-" and order_field.startswith(pfx):
+                        ordering.append(order_field.removeprefix(pfx))
+                    else:
+                        ordering.append(pfx + order_field)
+                except (IndexError, ValueError):
+                    continue  # Invalid ordering specified, skip it.
+
+        # Add the given query's ordering fields, if any.
+        ordering.extend(queryset.query.order_by)
+
+        if queryset.order_by(*ordering).totally_ordered:
+            return ordering
+        return ordering + ["-pk"]
 
     def get_queryset(self, request):
         # First, we collect all the declared list filters.
