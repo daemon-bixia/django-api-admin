@@ -15,11 +15,12 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, SuspiciousOperation
 from django.core.paginator import InvalidPage
-from django.db.models import Exists, F, Field, ManyToOneRel, OrderBy, OuterRef
+from django.db.models import F, Field, ManyToOneRel, OrderBy
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.expressions import Combinable
 from django.utils.timezone import make_aware
 from django.utils.http import urlencode
+from django.urls import reverse
 
 from rest_framework.exceptions import ValidationError
 
@@ -30,10 +31,12 @@ from django_api_admin.exceptions import (
 )
 from django_api_admin.filters import FieldListFilter
 from django_api_admin.serializers import ChangeListSerializer
+from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, TO_FIELD_VAR, IS_POPUP_VAR, ShowFacets
 from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
-from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, TO_FIELD_VAR, IS_POPUP_VAR, ShowFacets
+from django_api_admin.utils.build_q_object_from_lookup_parameters import build_q_object_from_lookup_parameters
+from django_api_admin.utils.quote import quote
 
 # Changelist settings
 ALL_VAR = "all"
@@ -442,7 +445,7 @@ class ChangeList:
                 ordering_fields[idx] = "desc" if pfx == "-" else "asc"
         return ordering_fields
 
-    def get_queryset(self, request):
+    def get_queryset(self, request, exclude_parameters=None):
         # First, we collect all the declared list filters.
         (
             self.filter_specs,
@@ -454,15 +457,21 @@ class ChangeList:
         # Then, we let every list filter modify the queryset to its liking.
         qs = self.root_queryset
         for filter_spec in self.filter_specs:
-            new_qs = filter_spec.queryset(request, qs)
-            if new_qs is not None:
-                qs = new_qs
+            if (
+                exclude_parameters is None
+                or filter_spec.expected_parameters() != exclude_parameters
+            ):
+                new_qs = filter_spec.queryset(request, qs)
+                if new_qs is not None:
+                    qs = new_qs
 
         try:
             # Finally, we apply the remaining lookup parameters from the query
             # string (i.e. those that haven't already been processed by the
             # filters).
-            qs = qs.filter(**remaining_lookup_params)
+            q_object = build_q_object_from_lookup_parameters(
+                remaining_lookup_params)
+            qs = qs.filter(q_object)
         except (SuspiciousOperation, ImproperlyConfigured):
             # Allow certain types of errors to be re-raised as-is so that the
             # caller can treat them in a special way.
@@ -474,6 +483,13 @@ class ChangeList:
             # are not in the correct type, so we might get FieldError,
             # ValueError, ValidationError, or ?.
             raise IncorrectLookupParameters(e)
+
+        if not qs.query.select_related:
+            qs = self.apply_select_related(qs)
+
+        # Set ordering.
+        ordering = self.get_ordering(qs)
+        qs = qs.order_by(*ordering)
 
         # Apply search results
         qs, search_may_have_duplicates = self.model_admin.get_search_results(
@@ -489,17 +505,9 @@ class ChangeList:
         )
         # Remove duplicates from results, if necessary
         if filters_may_have_duplicates | search_may_have_duplicates:
-            qs = qs.filter(pk=OuterRef("pk"))
-            qs = self.root_queryset.filter(Exists(qs))
-
-        # Set ordering.
-        ordering = self.get_ordering(qs)
-        qs = qs.order_by(*ordering)
-
-        if not qs.query.select_related:
-            qs = self.apply_select_related(qs)
-
-        return qs
+            return qs.distinct()
+        else:
+            return qs
 
     def apply_select_related(self, qs):
         if self.list_select_related is True:
@@ -516,7 +524,7 @@ class ChangeList:
     def has_related_field_in_list_display(self):
         for field_name in self.list_display:
             try:
-                field = self.opts.get_field(field_name)
+                field = self.lookup_opts.get_field(field_name)
             except FieldDoesNotExist:
                 pass
             else:
@@ -525,3 +533,13 @@ class ChangeList:
                     if field_name != field.get_attname():
                         return True
         return False
+
+    def url_for_result(self, result):
+        pk = getattr(result, self.pk_attname)
+        return reverse(
+            "%s:%s_%s_change" % (
+                self.model_admin.admin_site.name,
+                self.opts.app_label, self.opts.model_name),
+            args=(quote(pk),),
+            current_app=self.model_admin.admin_site.name,
+        )
