@@ -9,6 +9,8 @@ def prepare_lookup_value(key, value, separator=","):
     """
     Return a lookup value prepared to be used in queryset filtering.
     """
+    if isinstance(value, list):
+        return [prepare_lookup_value(key, v, separator=separator) for v in value]
     # if key ends with __in, split parameter into separate values
     if key.endswith("__in"):
         value = value.split(separator)

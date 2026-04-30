@@ -101,8 +101,7 @@ class ChangeList:
             errors = []
             for error in _search_serializer.errors.values():
                 errors.append({"detail": ", ".join(error)})
-            if errors:
-                raise ValidationError(errors)
+            raise ValidationError(errors)
         self.query = _search_serializer.validated_data.get(SEARCH_VAR) or ""
         try:
             self.page_num = int(request.GET.get(PAGE_VAR, 1))
@@ -161,7 +160,7 @@ class ChangeList:
 
         for key, value_list in lookup_params.items():
             for value in value_list:
-                if not self.model_admin.lookup_allowed(key, value_list, request):
+                if not self.model_admin.lookup_allowed(key, value, request):
                     raise DisallowedModelAdminLookup(
                         f"Filtering by {key} not allowed")
 
@@ -199,7 +198,7 @@ class ChangeList:
                 # removed.
                 if lookup_params_count > len(lookup_params):
                     may_have_duplicates |= lookup_spawns_duplicates(
-                        self.opts,
+                        self.lookup_opts,
                         field_path,
                     )
             if spec and spec.has_output():
@@ -248,10 +247,10 @@ class ChangeList:
         # fields and to determine if at least one of them spawns duplicates. If
         # the lookup parameters aren't real fields, then bail out.
         try:
-            for key, value_list in lookup_params.items():
-                lookup_params[key] = prepare_lookup_value(key, value_list)
+            for key, value in lookup_params.items():
+                lookup_params[key] = prepare_lookup_value(key, value)
                 may_have_duplicates |= lookup_spawns_duplicates(
-                    self.opts, key)
+                    self.lookup_opts, key)
             return (
                 filter_specs,
                 bool(filter_specs),
