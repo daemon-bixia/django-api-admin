@@ -18,6 +18,7 @@ from django_api_admin.admins.inline_admin import TabularInlineAPI
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.decorators import register, display
 from django_api_admin.constants import SHARED_FIELD_ATTRIBUTES
+from django_api_admin.admins.model_admin import ShowFacets
 
 
 class CustomAPIAdminSite(APIAdminSite):
@@ -108,6 +109,8 @@ class AuthorAPIAdmin(APIModelAdmin):
 
     inlines = [BookInlineAPIAdmin]
 
+    show_facets = ShowFacets.ALWAYS
+
     @display(description="is this author old enough")
     def is_old_enough(self, obj, context=None):
         return obj.age > 10
@@ -170,6 +173,8 @@ class AuthorAdmin(admin.ModelAdmin):
     readonly_fields = ('date_joined', 'is_old_enough',)
 
     inlines = [BookInline]
+
+    show_facets = admin.ShowFacets.ALWAYS
 
     @admin.display(description='is this author a vip')
     def is_a_vip(self, obj):

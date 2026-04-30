@@ -15,19 +15,17 @@ certain test -- e.g. being a DateField or ForeignKey.
 
 import datetime
 
-from django.contrib.admin.exceptions import NotRegistered
-from django.contrib.admin.options import IncorrectLookupParameters
-from django.contrib.admin.utils import (
-    build_q_object_from_lookup_parameters,
-    get_last_value_from_parameters,
-    get_model_from_relation,
-    prepare_lookup_value,
-    reverse_field_path,
-)
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from django_api_admin.exceptions import NotRegistered, IncorrectLookupParameters
+from django_api_admin.utils.build_q_object_from_lookup_parameters import build_q_object_from_lookup_parameters
+from django_api_admin.utils.get_last_value_from_parameters import get_last_value_from_parameters
+from django_api_admin.utils.get_model_from_relation import get_model_from_relation
+from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
+from django_api_admin.utils.reverse_field_path import reverse_field_path
 
 
 class ListFilter:
@@ -375,6 +373,7 @@ class BooleanFieldListFilter(FieldListFilter):
         add_facets = changelist.add_facets
         facet_counts = self.get_facet_queryset(
             changelist) if add_facets else None
+        count = None
         for lookup, title, count_field in (
             (None, _("All"), None),
             ("1", field_choices.get(True, _("Yes")), "true__c"),
@@ -390,6 +389,7 @@ class BooleanFieldListFilter(FieldListFilter):
                     {self.lookup_kwarg: lookup}, [self.lookup_kwarg2]
                 ),
                 "display": title,
+                "count": count,
             }
         if self.field.null:
             display = field_choices.get(None, _("Unknown"))
@@ -402,6 +402,7 @@ class BooleanFieldListFilter(FieldListFilter):
                     {self.lookup_kwarg2: "True"}, [self.lookup_kwarg]
                 ),
                 "display": display,
+                "count": count,
             }
 
 

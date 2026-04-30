@@ -5,7 +5,6 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
 
@@ -148,7 +147,7 @@ class ChangeListView(APIView):
         for field_name in self.get_fields_list(request, cl):
             text, _ = label_for_field(
                 field_name, cl.model, model_admin=cl.model_admin, return_attr=True)
-            columns.append({'field': field_name, 'headerName': text})
+            columns.append({"field": field_name, "headerName": text})
         return columns
 
     def get_rows(self, request, cl):
@@ -218,20 +217,22 @@ class ChangeListView(APIView):
             config[option_name] = (getattr(cl.model_admin, option_name, None))
 
         # Changelist pagination attributes
-        config['full_count'] = cl.full_result_count
-        config['result_count'] = cl.result_count
+        config["full_count"] = cl.full_result_count
+        config["result_count"] = cl.result_count
 
         # A list of action names and choices
-        config['action_choices'] = cl.model_admin.get_action_choices(
+        config["action_choices"] = cl.model_admin.get_action_choices(
             request, [])
 
         # A list of filters titles and choices
-        filters_spec, _, _, _, _ = cl.get_filters(request)
-        if filters_spec:
-            config['filters'] = [
-                {"title": filter.title, "choices": filter.choices(cl)} for filter in filters_spec]
+        filter_specs, _, _, _, _ = cl.get_filters(request)
+        if filter_specs:
+            config["filters"] = [{
+                "title": s.title,
+                "choices": s.choices(cl),
+            } for s in filter_specs]
         else:
-            config['filters'] = []
+            config["filters"] = []
 
         # A list of fields that you can sort with
         list_display_fields = []
@@ -241,7 +242,7 @@ class ChangeListView(APIView):
                 list_display_fields.append(field_name)
             except FieldDoesNotExist:
                 pass
-        config['list_display_fields'] = list_display_fields
+        config["list_display_fields"] = list_display_fields
 
         # Include the active column ordering
         config["ordering_field_columns"] = cl.get_ordering_field_columns()
