@@ -14,45 +14,49 @@ UserModel = get_user_model()
 
 class CustomAPITestCase(APITestCase, URLPatternsTestCase):
     urlpatterns = [
-        path('custom_admin/', site.urls),
-        path('_allauth/', include('allauth.headless.urls')),
+        path("custom_admin/", site.urls),
+        path("_allauth/", include("allauth.headless.urls")),
 
     ]
 
     def setUp(self) -> None:
         # create a superuser
-        self.user = UserModel.objects.create_superuser(username='admin')
-        self.user.set_password('password')
+        self.user = UserModel.objects.create_superuser(username="admin")
+        self.user.set_password("password")
         self.user.save()
 
         # authenticate the superuser
         login(self.client, self.user)
 
     def test_site_name(self):
-        self.assertEqual(site.name, 'api_admin')
+        self.assertEqual(site.name, "api_admin")
 
     def test_index_view(self):
         # test if the index view works in a custom admin site
-        url = reverse(f'{site.name}:index')
+        url = reverse(
+            "api_admin:index",
+            current_app=site.name,
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
     def test_app_index_view(self):
         # test if the app index view works in a custom admin site
-        url = reverse(f'{site.name}:app_index', kwargs={
-                      'app_label': Person._meta.app_label})
+        url = reverse("api_admin:app_index",
+                      kwargs={"app_label": Person._meta.app_label},
+                      current_app=site.name,)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
     def test_root_view_disabled(self):
         try:
-            reverse(f'{site.name}:api-root')
+            reverse("api_admin:api-root", current_app=site.name)
             assert False
         except NoReverseMatch:
             assert True
 
     def test_custom_url_view(self):
-        url = reverse(f'{site.name}:hello')
+        url = reverse("api_admin:hello", current_app=site.name)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['message'], 'hello world')
+        self.assertEqual(response.data["message"], "hello world")

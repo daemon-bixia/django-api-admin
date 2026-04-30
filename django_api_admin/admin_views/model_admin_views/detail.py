@@ -39,9 +39,8 @@ class DetailView(APIView):
         serializer = self.serializer_class(obj)
         data = copy.deepcopy(serializer.data)
 
-        pattern = "%s:%s_%s_"
+        pattern = "api_admin:%s_%s_"
         info = (
-            self.model_admin.admin_site.name,
             self.model_admin.model._meta.app_label,
             self.model_admin.model._meta.model_name,
         )

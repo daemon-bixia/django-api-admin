@@ -179,18 +179,18 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
     def test_autocomplete_view(self):
         # Create an author, and a book
-        author = Author.objects.create(name='Muhammad', age=2, user=self.user)
-        publisher = Publisher.objects.create(name='the daily blob')
+        author = Author.objects.create(name="Muhammad", age=2, user=self.user)
+        publisher = Publisher.objects.create(name="the daily blob")
         author.publisher.add(publisher)
-        Book.objects.create(title='Things fall apart', author=author)
+        Book.objects.create(title="Things fall apart", author=author)
 
         # Select a book author by searching for the author using the publisher name of the author
-        url = reverse('api_admin:autocomplete')
+        url = reverse("api_admin:autocomplete")
         response = self.client.get(url, {
-            'term': 'blob',
-            'app_label': Author._meta.app_label,
-            'model_name': Book._meta.verbose_name,
-            'field_name': Author._meta.verbose_name
+            "term": "blob",
+            "app_label": Author._meta.app_label,
+            "model_name": Book._meta.verbose_name,
+            "field_name": Author._meta.verbose_name
         })
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]['name'], 'Muhammad')
+        self.assertEqual(response.data["results"][0]["text"], "Muhammad")

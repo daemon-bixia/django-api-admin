@@ -616,10 +616,9 @@ class ChangeList:
     def url_for_result(self, request, result):
         pk = getattr(result, self.pk_attname)
         model_info = (
-            self.model_admin.admin_site.name,
             self.opts.app_label, self.opts.model_name)
         return reverse(
-            "%s:%s_%s_change" % model_info,
+            "api_admin:%s_%s_change" % model_info,
             kwargs={"object_id": pk},
             current_app=self.model_admin.admin_site.name,
             request=request,

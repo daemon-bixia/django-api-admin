@@ -357,49 +357,49 @@ class APIAdminSite():
             if True not in perms.values():
                 continue
 
-            info = (self.name, app_label, model._meta.model_name)
+            info = (app_label, model._meta.model_name)
             model_dict = {
-                'name': capfirst(model._meta.verbose_name_plural),
-                'object_name': model._meta.object_name,
-                'perms': perms,
-                'list_url': None,
-                'changelist_url': None,
-                'add_url': None,
-                'perform_action_url': None,
+                "name": capfirst(model._meta.verbose_name_plural),
+                "object_name": model._meta.object_name,
+                "perms": perms,
+                "list_url": None,
+                "changelist_url": None,
+                "add_url": None,
+                "perform_action_url": None,
             }
 
-            if perms.get('change') or perms.get('view'):
-                model_dict['view_only'] = not perms.get('change')
+            if perms.get("change") or perms.get("view"):
+                model_dict["view_only"] = not perms.get("change")
                 try:
-                    model_dict['list_url'] = request.build_absolute_uri(
-                        reverse('%s:%s_%s_list' % info, current_app=self.name))
-                    model_dict['changelist_url'] = request.build_absolute_uri(
-                        reverse('%s:%s_%s_changelist' % info, current_app=self.name))
-                    model_dict['perform_action_url'] = request.build_absolute_uri(
-                        reverse('%s:%s_%s_perform_action' % info, current_app=self.name))
+                    model_dict["list_url"] = request.build_absolute_uri(
+                        reverse("api_admin:%s_%s_list" % info, current_app=self.name))
+                    model_dict["changelist_url"] = request.build_absolute_uri(
+                        reverse("api_admin:%s_%s_changelist" % info, current_app=self.name))
+                    model_dict["perform_action_url"] = request.build_absolute_uri(
+                        reverse("api_admin:%s_%s_perform_action" % info, current_app=self.name))
                 except NoReverseMatch:
                     pass
 
-            if perms.get('add'):
+            if perms.get("add"):
                 try:
-                    model_dict['add_url'] = request.build_absolute_uri(
-                        reverse('%s:%s_%s_add' % info, current_app=self.name))
+                    model_dict["add_url"] = request.build_absolute_uri(
+                        reverse("api_admin:%s_%s_add" % info, current_app=self.name))
                 except NoReverseMatch:
                     pass
 
             if app_label in app_dict:
-                app_dict[app_label]['models'].append(model_dict)
+                app_dict[app_label]["models"].append(model_dict)
             else:
                 app_dict[app_label] = {
-                    'name': apps.get_app_config(app_label).verbose_name,
-                    'app_label': app_label,
-                    'app_url': reverse(
-                        f'{self.name}:app_index',
-                        kwargs={'app_label': app_label},
+                    "name": apps.get_app_config(app_label).verbose_name,
+                    "app_label": app_label,
+                    "app_url": reverse(
+                        f"{self.name}:app_index",
+                        kwargs={"app_label": app_label},
                         current_app=self.name,
                     ),
-                    'has_module_perms': has_module_perms,
-                    'models': [model_dict],
+                    "has_module_perms": has_module_perms,
+                    "models": [model_dict],
                 }
 
         if label:

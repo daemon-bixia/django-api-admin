@@ -37,11 +37,10 @@ class ListView(APIView):
         serializer = self.serializer_class(queryset, many=True)
         data = copy.deepcopy(serializer.data)
         info = (
-            self.model_admin.admin_site.name,
             self.model_admin.model._meta.app_label,
             self.model_admin.model._meta.model_name
         )
-        pattern = "%s:%s_%s_detail"
+        pattern = "api_admin:%s_%s_detail"
         for item in data:
             item["detail_url"] = reverse(pattern % info, kwargs={
                                          "object_id": item["pk"]}, request=request)

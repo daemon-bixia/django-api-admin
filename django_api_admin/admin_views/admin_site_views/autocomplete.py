@@ -95,7 +95,7 @@ class AutoCompleteView(APIView):
                     self.serialize_result(obj, to_field_name)
                     for obj in context["object_list"]
                 ],
-                "pagination": {"more": context["page_obj"].has_next}
+                "pagination": {"more": context["page_obj"].has_next()}
             },
             status=status.HTTP_200_OK
         )
@@ -112,7 +112,7 @@ class AutoCompleteView(APIView):
         qs = self.model_admin.get_queryset(request)
         qs = qs.complex_filter(self.source_field.get_limit_choices_to())
         qs, search_use_distinct = self.model_admin.get_search_results(
-            qs, self.term)
+            request, qs, self.term)
         if search_use_distinct:
             qs = qs.distinct()
         return qs
@@ -180,7 +180,7 @@ class AutoCompleteView(APIView):
     def get_context_data(self, object_list=None, **kwargs):
         """Get the context for this view."""
         queryset = object_list if object_list is not None else self.object_list
-        context_object_name = "%s_list" % object_list.model._meta.model_name
+        context_object_name = "%s_list" % queryset.model._meta.model_name
         if self.paginate_by:
             paginator = self.model_admin.get_paginator(
                 self.request,
@@ -208,6 +208,4 @@ class AutoCompleteView(APIView):
             context[context_object_name] = queryset
         context.update(kwargs)
         context.setdefault("view", self)
-        if self.extra_context is not None:
-            kwargs.update(self.extra_context)
         return context
