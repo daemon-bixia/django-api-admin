@@ -13,7 +13,6 @@
 import warnings
 from datetime import datetime, timedelta
 
-from django.urls import reverse
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, SuspiciousOperation
 from django.core.paginator import InvalidPage
@@ -26,6 +25,7 @@ from django.utils.inspect import func_supports_parameter
 from django.utils.deprecation import RemovedInDjango60Warning
 
 from rest_framework.exceptions import ValidationError
+from rest_framework.reverse import reverse
 
 from django_api_admin.exceptions import (
     DisallowedModelAdminLookup,
@@ -613,12 +613,14 @@ class ChangeList:
                         return True
         return False
 
-    def url_for_result(self, result):
+    def url_for_result(self, request, result):
         pk = getattr(result, self.pk_attname)
+        model_info = (
+            self.model_admin.admin_site.name,
+            self.opts.app_label, self.opts.model_name)
         return reverse(
-            "%s:%s_%s_change" % (
-                self.model_admin.admin_site.name,
-                self.opts.app_label, self.opts.model_name),
-            args=(quote(pk),),
+            "%s:%s_%s_change" % model_info,
+            kwargs={"object_id": pk},
             current_app=self.model_admin.admin_site.name,
+            request=request,
         )

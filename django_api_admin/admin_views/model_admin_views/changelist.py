@@ -160,12 +160,10 @@ class ChangeListView(APIView):
         cl.get_results(request)
         empty_value_display = cl.model_admin.get_empty_value_display()
         for result in cl.result_list:
-            model_info = (cl.model_admin.admin_site.name, type(
-                result)._meta.app_label, type(result)._meta.model_name)
             row = {
-                'change_url': reverse('%s:%s_%s_change' % model_info, kwargs={'object_id': result.pk}, request=request),
-                'id': result.pk,
-                'cells': {}
+                "change_url": cl.url_for_result(request, result),
+                "id": result.pk,
+                "cells": {}
             }
 
             # Construct the `cells` dictionary
@@ -184,7 +182,7 @@ class ChangeListView(APIView):
                     # If there are choices display the choice description string instead of the value
                     try:
                         model_field = result._meta.get_field(field_name)
-                        choices = getattr(model_field, 'choices', None)
+                        choices = getattr(model_field, "choices", None)
                         if choices:
                             repr_list = [
                                 choice for choice in choices if choice[0] == value]
@@ -208,7 +206,7 @@ class ChangeListView(APIView):
                 except ObjectDoesNotExist:
                     result_repr = empty_value_display
 
-                row['cells'][field_name] = result_repr
+                row["cells"][field_name] = result_repr
             rows.append(row)
         return rows
 
@@ -244,6 +242,9 @@ class ChangeListView(APIView):
             except FieldDoesNotExist:
                 pass
         config['list_display_fields'] = list_display_fields
+
+        # Include the active column ordering
+        config["ordering_field_columns"] = cl.get_ordering_field_columns()
 
         return config
 
