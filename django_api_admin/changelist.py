@@ -39,7 +39,6 @@ from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
 from django_api_admin.utils.build_q_object_from_lookup_parameters import build_q_object_from_lookup_parameters
-from django_api_admin.utils.quote import quote
 
 # Changelist settings
 ALL_VAR = "all"
