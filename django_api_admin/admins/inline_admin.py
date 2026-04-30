@@ -115,8 +115,8 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
 
 
 class TabularInlineAPI(InlineAPIModelAdmin):
-    pass
+    admin_style = "tabular"
 
 
 class StackedInlineAPI(InlineAPIModelAdmin):
-    pass
+    admin_style = "stacked"

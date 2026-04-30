@@ -10,8 +10,10 @@
 # This file includes both Django code and your my own contributions.
 # -----------------------------------------------------------------------------
 
+import warnings
 from datetime import datetime, timedelta
 
+from django.urls import reverse
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured, SuspiciousOperation
 from django.core.paginator import InvalidPage
@@ -20,7 +22,8 @@ from django.db.models.constants import LOOKUP_SEP
 from django.db.models.expressions import Combinable
 from django.utils.timezone import make_aware
 from django.utils.http import urlencode
-from django.urls import reverse
+from django.utils.inspect import func_supports_parameter
+from django.utils.deprecation import RemovedInDjango60Warning
 
 from rest_framework.exceptions import ValidationError
 
@@ -158,9 +161,20 @@ class ChangeList:
         may_have_duplicates = False
         has_active_filters = False
 
+        supports_request = func_supports_parameter(
+            self.model_admin.lookup_allowed, "request"
+        )
+        if not supports_request:
+            warnings.warn(
+                f"`request` must be added to the signature of "
+                f"{self.model_admin.__class__.__qualname__}.lookup_allowed().",
+                RemovedInDjango60Warning,
+            )
         for key, value_list in lookup_params.items():
             for value in value_list:
-                if not self.model_admin.lookup_allowed(key, value, request):
+                params = (key, value, request) if supports_request else (
+                    key, value)
+                if not self.model_admin.lookup_allowed(*params):
                     raise DisallowedModelAdminLookup(
                         f"Filtering by {key} not allowed")
 
@@ -216,9 +230,9 @@ class ChangeList:
                 day = lookup_params.pop("%s__day" % self.date_hierarchy, None)
                 try:
                     from_date = datetime(
-                        int(year),
-                        int(month if month is not None else 1),
-                        int(day if day is not None else 1),
+                        int(year[-1]),
+                        int(month[-1] if month is not None else 1),
+                        int(day[-1] if day is not None else 1),
                     )
                 except ValueError as e:
                     raise IncorrectLookupParameters(e) from e
@@ -235,8 +249,8 @@ class ChangeList:
                     to_date = make_aware(to_date)
                 lookup_params.update(
                     {
-                        "%s__gte" % self.date_hierarchy: from_date,
-                        "%s__lt" % self.date_hierarchy: to_date,
+                        "%s__gte" % self.date_hierarchy: [from_date],
+                        "%s__lt" % self.date_hierarchy: [to_date],
                     }
                 )
 
@@ -266,7 +280,7 @@ class ChangeList:
             new_params = {}
         if remove is None:
             remove = []
-        p = self.params.copy()
+        p = self.filter_params.copy()
         for r in remove:
             for k in list(p):
                 if k.startswith(r):
@@ -277,7 +291,7 @@ class ChangeList:
                     del p[k]
             else:
                 p[k] = v
-        return "?%s" % urlencode(sorted(p.items()))
+        return "?%s" % urlencode(sorted(p.items()), doseq=True)
 
     def get_results(self, request):
         paginator = self.model_admin.get_paginator(
@@ -324,20 +338,20 @@ class ChangeList:
         ordering = []
         if self.model_admin.ordering:
             ordering = self.model_admin.ordering
-        elif self.opts.ordering:
-            ordering = self.opts.ordering
+        elif self.lookup_opts.ordering:
+            ordering = self.lookup_opts.ordering
         return ordering
 
     def get_ordering_field(self, field_name):
         """
         Return the proper model field name corresponding to the given
         field_name to use for ordering. field_name may either be the name of a
-        proper model field or the name of a method (on the admin or model) or a
-        callable with the 'admin_order_field' attribute. Return None if no
-        proper model field name can be matched.
+        proper model field, possibly across relations, or the name of a method
+        (on the admin or model) or a callable with the 'admin_order_field'
+        attribute. Return None if no proper model field name can be matched.
         """
         try:
-            field = self.opts.get_field(field_name)
+            field = self.lookup_opts.get_field(field_name)
             return field.name
         except FieldDoesNotExist:
             # See whether field_name is a name of a non-field
@@ -357,7 +371,7 @@ class ChangeList:
                 attr = attr.fget
             return getattr(attr, "admin_order_field", None)
 
-    def get_ordering(self, queryset):
+    def get_ordering(self, request, queryset):
         """
         Return the list of ordering fields for the change list.
         First check the get_ordering() method in model admin, then check
@@ -367,7 +381,10 @@ class ChangeList:
         constructed ordering.
         """
         params = self.params
-        ordering = list(self._get_default_ordering())
+        ordering = list(
+            self.model_admin.get_ordering(
+                request) or self._get_default_ordering()
+        )
         if params.get(ORDER_VAR):
             # Clear ordering and used params
             ordering = []
@@ -400,9 +417,72 @@ class ChangeList:
         # Add the given query's ordering fields, if any.
         ordering.extend(queryset.query.order_by)
 
-        if queryset.order_by(*ordering).totally_ordered:
-            return ordering
-        return ordering + ["-pk"]
+        return self._get_deterministic_ordering(ordering)
+
+    def _get_deterministic_ordering(self, ordering):
+        """
+        Ensure a deterministic order across all database backends. Search for a
+        single field or unique together set of fields providing a total
+        ordering. If these are missing, augment the ordering with a descendant
+        primary key.
+        """
+        ordering = list(ordering)
+        ordering_fields = set()
+        total_ordering_fields = {"pk"} | {
+            field.attname
+            for field in self.lookup_opts.fields
+            if field.unique and not field.null
+        }
+        for part in ordering:
+            # Search for single field providing a total ordering.
+            field_name = None
+            if isinstance(part, str):
+                field_name = part.lstrip("-")
+            elif isinstance(part, F):
+                field_name = part.name
+            elif isinstance(part, OrderBy) and isinstance(part.expression, F):
+                field_name = part.expression.name
+            if field_name:
+                # Normalize attname references by using get_field().
+                try:
+                    field = self.lookup_opts.get_field(field_name)
+                except FieldDoesNotExist:
+                    # Could be "?" for random ordering or a related field
+                    # lookup. Skip this part of introspection for now.
+                    continue
+                # Ordering by a related field name orders by the referenced
+                # model's ordering. Skip this part of introspection for now.
+                if field.remote_field and field_name == field.name:
+                    continue
+                if field.attname in total_ordering_fields:
+                    break
+                ordering_fields.add(field.attname)
+        else:
+            # No single total ordering field, try unique_together and total
+            # unique constraints.
+            constraint_field_names = (
+                *self.lookup_opts.unique_together,
+                *(
+                    constraint.fields
+                    for constraint in self.lookup_opts.total_unique_constraints
+                ),
+            )
+            for field_names in constraint_field_names:
+                # Normalize attname references by using get_field().
+                fields = [
+                    self.lookup_opts.get_field(field_name) for field_name in field_names
+                ]
+                # Composite unique constraints containing a nullable column
+                # cannot ensure total ordering.
+                if any(field.null for field in fields):
+                    continue
+                if ordering_fields.issuperset(field.attname for field in fields):
+                    break
+            else:
+                # If no set of unique fields is present in the ordering, rely
+                # on the primary key to provide total ordering.
+                ordering.append("-pk")
+        return ordering
 
     def get_ordering_field_columns(self):
         """
@@ -487,7 +567,7 @@ class ChangeList:
             qs = self.apply_select_related(qs)
 
         # Set ordering.
-        ordering = self.get_ordering(qs)
+        ordering = self.get_ordering(request, qs)
         qs = qs.order_by(*ordering)
 
         # Apply search results
@@ -529,7 +609,7 @@ class ChangeList:
             else:
                 if isinstance(field.remote_field, ManyToOneRel):
                     # <FK>_id field names don't require a join.
-                    if field_name != field.get_attname():
+                    if field_name != field.attname:
                         return True
         return False
 
