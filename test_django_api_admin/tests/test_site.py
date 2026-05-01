@@ -39,8 +39,8 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
         # Create a superuser
         self.user = UserModel.objects.create_superuser(
-            username='admin', email="admin@email.com")
-        self.user.set_password('password')
+            username="admin", email="admin@email.com")
+        self.user.set_password("password")
         self.user.save()
 
         # Verify the user's email

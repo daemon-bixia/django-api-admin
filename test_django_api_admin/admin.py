@@ -17,7 +17,7 @@ from django_api_admin.sites import APIAdminSite
 from django_api_admin.admins.inline_admin import TabularInlineAPI
 from django_api_admin.admins.model_admin import APIModelAdmin
 from django_api_admin.decorators import register, display
-from django_api_admin.constants import SHARED_FIELD_ATTRIBUTES
+from django_api_admin.constants import CORE_FIELD_ATTRIBUTES
 from django_api_admin.admins.model_admin import ShowFacets
 
 
@@ -93,7 +93,7 @@ class AuthorAPIAdmin(APIModelAdmin):
     }
 
     serializer_field_attributes = {
-        "LocationField": [*SHARED_FIELD_ATTRIBUTES]
+        "LocationField": [*CORE_FIELD_ATTRIBUTES]
     }
 
     actions = (make_old, make_young,)

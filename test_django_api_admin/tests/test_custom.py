@@ -3,6 +3,8 @@ from django.urls import include, path, reverse, NoReverseMatch
 
 from rest_framework.test import APITestCase, URLPatternsTestCase
 
+from allauth.account.models import EmailAddress
+
 from test_django_api_admin.admin import site
 from test_django_api_admin.models import Person
 from test_django_api_admin.utils import login
@@ -20,12 +22,21 @@ class CustomAPITestCase(APITestCase, URLPatternsTestCase):
     ]
 
     def setUp(self) -> None:
-        # create a superuser
-        self.user = UserModel.objects.create_superuser(username="admin")
+        # Create a superuser
+        self.user = UserModel.objects.create_superuser(
+            username="admin", email="admin@email.com")
         self.user.set_password("password")
         self.user.save()
 
-        # authenticate the superuser
+        # Verify the user's email
+        EmailAddress.objects.create(
+            user=self.user,
+            email="admin@email.com",
+            verified=True,
+            primary=True,
+        )
+
+        # Authenticate the superuser
         login(self.client, self.user)
 
     def test_site_name(self):
