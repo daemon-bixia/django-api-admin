@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        exclude = ('password',)
+        exclude = ("password",)
 
     def get_permissions(self, obj):
         return list(obj.get_all_permissions())
@@ -25,7 +25,7 @@ class LogEntrySerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = LogEntry
-        fields = '__all__'
+        fields = "__all__"
 
 
 class HistoryViewRequestSerializer(serializers.Serializer):
@@ -34,8 +34,8 @@ class HistoryViewRequestSerializer(serializers.Serializer):
     """
     o = serializers.ChoiceField(
         choices=[
-            ('action_time', 'Action Time (Ascending)'),
-            ('-action_time', 'Action Time (Descending)')
+            ("action_time", "Action Time (Ascending)"),
+            ("-action_time", "Action Time (Descending)")
         ],
         required=False
     )
@@ -47,56 +47,56 @@ class PasswordChangeSerializer(serializers.Serializer):
     Allow changing password by entering the old_password and a new one.
     """
     old_password = serializers.CharField(
-        label=_('Old password'),
+        label=_("Old password"),
         write_only=True,
         required=True,
-        style={'input_type': 'password'}
+        style={"input_type": "password"}
     )
     new_password1 = serializers.CharField(
-        label=_('New Password'),
+        label=_("New Password"),
         write_only=True,
         required=True,
-        style={'input_type': 'password'}
+        style={"input_type": "password"}
     )
     new_password2 = serializers.CharField(
-        label=_('New password confirmation'),
+        label=_("New password confirmation"),
         write_only=True,
         required=True,
-        style={'input_type': 'password'}
+        style={"input_type": "password"}
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.error_messages.update({
-            'password_mismatch': _('The two password fields didn’t match.'),
-            'password_incorrect': _("Your old password was entered incorrectly. Please enter it again."),
+            "password_mismatch": _("The two password fields didn’t match."),
+            "password_incorrect": _("Your old password was entered incorrectly. Please enter it again."),
         })
 
     def validate(self, data):
-        user = self.context['user']
+        user = self.context["user"]
 
-        old_password = data['old_password']
+        old_password = data["old_password"]
         if not user.check_password(old_password):
             raise serializers.ValidationError(
-                self.error_messages['password_incorrect'],
-                code='password_incorrect',
+                self.error_messages["password_incorrect"],
+                code="password_incorrect",
             )
 
-        password1 = data.get('new_password1')
-        password2 = data.get('new_password2')
+        password1 = data.get("new_password1")
+        password2 = data.get("new_password2")
 
         if password1 and password2 and password1 != password2:
             raise serializers.ValidationError(
-                self.error_messages['password_mismatch'],
-                code='password_mismatch'
+                self.error_messages["password_mismatch"],
+                code="password_mismatch"
             )
 
         return data
 
     def save(self, commit=True):
-        password = self.validated_data['new_password1']
-        user = self.context['user']
+        password = self.validated_data["new_password1"]
+        user = self.context["user"]
         user.set_password(password)
         if commit:
             user.save()
@@ -127,7 +127,7 @@ class AppIndexSerializer(serializers.Serializer):
     app_label = serializers.CharField()
 
     def validate(self, attrs):
-        if attrs['app_label'] not in self.context['registered_app_labels']:
+        if attrs["app_label"] not in self.context["registered_app_labels"]:
             raise serializers.ValidationError(
                 _("finish must occur after start"))
         return super().validate(attrs)

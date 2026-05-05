@@ -65,7 +65,7 @@ class BookInlineAPIAdmin(TabularInlineAPI):
 
 @register(Publisher, site=site)
 class PublisherAPIAdmin(APIModelAdmin):
-    search_fields = ('name',)
+    search_fields = ("name",)
 
 
 # Register in api_admin_site

@@ -6,7 +6,9 @@ from test_django_api_admin.fields import LocationField
 class AuthorSerializer(serializers.ModelSerializer):
     location = LocationField(source="*", required=False)
     publisher = serializers.HyperlinkedRelatedField(
-        many=True, view_name="publisher-detail", queryset=Publisher.objects.all())
+        many=True,
+        view_name="publisher-detail",
+        queryset=Publisher.objects.all())
 
     class Meta:
         model = Author
@@ -22,10 +24,12 @@ class AuthorSerializer(serializers.ModelSerializer):
             "title",
             "location"
         ]
-        read_only_fields = ['date_joined']
+        read_only_fields = ["date_joined"]
 
 
 class PublisherSerializer(serializers.ModelSerializer):
+    price = serializers.ModelField(
+        model_field=Publisher._meta.get_field("name"))
 
     class Meta:
         model = Publisher

@@ -60,6 +60,8 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         Publisher.objects.create(name="rock")
         Publisher.objects.create(name="paper")
         Publisher.objects.create(name="scissor")
+        self.publisher_info = (Publisher._meta.app_label,
+                               Publisher._meta.model_name)
 
     def test_list_view(self):
         url = reverse("api_admin:%s_%s_list" % self.author_info)
@@ -405,3 +407,10 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         fields = serializer.child.get_fields()
         self.assertEqual(list(fields.keys()), ["age"])
         self.assertEqual(list(fields["age"].choices), [60, 1, 2])
+
+    def test_publisher_add_form_description(self):
+        url = reverse('api_admin:%s_%s_add' % self.publisher_info)
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["form"]
+                         ["fields"][0]["type"], "CharField")
