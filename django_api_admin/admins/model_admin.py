@@ -886,9 +886,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.list import ListView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
+            "serializer_class": self.get_serializer_class(None),
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self,
         }
         return ListView.as_view(**defaults)
 
@@ -896,9 +896,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.detail import DetailView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
+            "serializer_class": self.get_serializer_class(None),
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self,
         }
         return DetailView.as_view(**defaults)
 
@@ -906,9 +906,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.add import AddView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
+            "serializer_class": self.get_serializer_class(None),
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self,
         }
         return AddView.as_view(**defaults)
 
@@ -916,9 +916,9 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.change import ChangeView
 
         defaults = {
-            'serializer_class': self.get_serializer_class(None),
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self,
+            "serializer_class": self.get_serializer_class(None),
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self,
         }
         return ChangeView.as_view(**defaults)
 
@@ -948,7 +948,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         defaults = {
             "serializer_class": self.get_changelist_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
-            "model_admin": self
+            "model_admin": self,
         }
         return ChangeListView.as_view(**defaults)
 
@@ -963,8 +963,8 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.admin_views.model_admin_views.delete import DeleteView
 
         defaults = {
-            'authentication_classes': self.admin_site.get_authentication_classes(),
-            'model_admin': self
+            "authentication_classes": self.admin_site.get_authentication_classes(),
+            "model_admin": self,
         }
         return DeleteView.as_view(**defaults)
 

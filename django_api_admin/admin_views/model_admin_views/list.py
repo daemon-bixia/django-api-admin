@@ -34,7 +34,8 @@ class ListView(APIView):
             paginator,
             self.page_kwarg
         )
-        serializer = self.serializer_class(queryset, many=True)
+        serializer = self.serializer_class(
+            queryset, many=True, context={"request": request})
         data = copy.deepcopy(serializer.data)
         info = (
             self.model_admin.model._meta.app_label,
