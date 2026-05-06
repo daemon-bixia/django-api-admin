@@ -19,7 +19,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.core.paginator import Paginator, InvalidPage
 from django.db.models.base import ModelBase
-from django.urls import NoReverseMatch, path, re_path, include, reverse
+from django.urls import path, re_path, include, reverse
 from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import capfirst

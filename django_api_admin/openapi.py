@@ -48,11 +48,11 @@ class CommonAPIResponses:
     @staticmethod
     def permission_denied():
         return OpenApiResponse(
-            description=_("Permission denied"),
+            description=_("Forbidden"),
             response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
-                    name=_("Permission Denied"),
+                    name=_("Permission denied"),
                     summary=_("Permission denied response"),
                     value={"detail": _(
                         "You do not have permission to perform this action.")},
@@ -98,7 +98,7 @@ class CommonAPIResponses:
     @staticmethod
     def unauthorized():
         return OpenApiResponse(
-            description=_("Authentication required"),
+            description=_("Not authenticated"),
             response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(

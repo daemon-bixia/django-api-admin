@@ -13,20 +13,19 @@ from django_api_admin.openapi import CommonAPIResponses
 
 class AppIndexView(APIView):
     """
-    Lists models inside a given app.
+    Retrieve an app that has models registered in the admin site using `app_label`.
     """
     serializer_class = AppIndexSerializer
     permission_classes = []
     admin_site = None
 
     @extend_schema(
-        operation_id="app_index",
+        operation_id="Get registered app details",
         request=AppIndexSerializer,
         responses={
             200: OpenApiResponse(
                 response=AppSerializer,
-                description=_(
-                    "Successfully constructed the list of registered models")
+                description=_("Application detail for the given `app_label`")
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized()
