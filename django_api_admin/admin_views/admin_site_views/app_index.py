@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
 from django_api_admin.serializers import AppIndexSerializer, AppSerializer
 from django_api_admin.openapi import CommonAPIResponses
@@ -21,7 +21,14 @@ class AppIndexView(APIView):
 
     @extend_schema(
         operation_id="Get registered app details",
-        request=AppIndexSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="app_label",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description=_("The label of the app to retrieve details for.")
+            ),
+        ],
         responses={
             200: OpenApiResponse(
                 response=AppSerializer,
@@ -55,7 +62,7 @@ class AppIndexView(APIView):
         registered_app_labels = {
             model._meta.app_label for model in self.admin_site._registry.keys()
         }
-        return AppIndexSerializer(
+        return self.serializer_class(
             data={"app_label": app_label},
             context={'registered_app_labels': registered_app_labels}
         )

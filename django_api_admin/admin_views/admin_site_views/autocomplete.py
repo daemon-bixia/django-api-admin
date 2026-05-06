@@ -19,15 +19,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, OpenApiParameter
 
-from django_api_admin.serializers import AutoCompleteSerializer
+from django_api_admin.serializers import AutoCompleteSerializer, AutocompleteResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses
 
 
 class AutoCompleteView(APIView):
     """
-    API view for handling autocomplete functionality in admin fields.
+    API view for handling the "search-as-you-type" functionality.
+    It extracts search parameters, validates user permissions, 
+    retrieves the relevant queryset, paginates the results, 
+    and returns them as a JSON response.
     """
     permission_classes = []
     admin_site = None
@@ -38,28 +41,31 @@ class AutoCompleteView(APIView):
     paginate_by = 20
 
     @extend_schema(
-        parameters=[AutoCompleteSerializer],
+        operation_id="Retrieve autocomplete results",
+        parameters=[
+            AutoCompleteSerializer,
+            OpenApiParameter(
+                name="page",
+                type=int,
+                default=1,
+                location=OpenApiParameter.QUERY,
+                description=_("A page number within the paginated result set.")
+            ),
+        ],
         responses={
             200: OpenApiResponse(
-                description=_("Successful autocomplete response"),
-                response=AutoCompleteSerializer,
+                description=_("List of objects matching the search term"),
+                response=AutocompleteResponseSerializer,
                 examples=[
                     OpenApiExample(
                         name=_("Success Response"),
-                        summary=_(
-                            "Example of a successful autocomplete response"),
-                        description="Returns matching records based on the search term",
-                        value=[{
-                            "id": 1,
-                            "name": "Muhammad",
-                            "age": 60,
-                            "is_vip": True,
-                            "date_joined": "2025-02-02T23:09:31.994853Z",
-                            "title": None,
-                            "user": 1,
-                            "publisher": [1],
-                            "pk": 1
-                        }],
+                        value={
+                            "results": [
+                                {"id": "1", "text": "Muhammad Salah"},
+                                {"id": "2", "text": "Another User"}
+                            ],
+                            "pagination": {"more": False}
+                        },
                         status_codes=["200"],
                     )
                 ]
@@ -67,15 +73,8 @@ class AutoCompleteView(APIView):
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
         },
-        description=_(
-            "Endpoint for autocomplete functionality on model fields")
     )
     def get(self, request):
-        """
-        Process the request to extract search parameters,
-        validates user permissions, retrieves the relevant queryset,
-        paginates the results, and returns them as a JSON response.
-        """
         (
             self.term,
             self.model_admin,

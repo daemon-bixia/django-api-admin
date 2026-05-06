@@ -53,7 +53,6 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Permission denied"),
-                    summary=_("Permission denied response"),
                     value={"detail": _(
                         "You do not have permission to perform this action.")},
                     status_codes=["403"]
@@ -103,10 +102,8 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Unauthorized"),
-                    summary=_("Missing or invalid authentication credentials"),
-                    value={
-                        "detail": _("Authentication credentials were not provided.")
-                    },
+                    value={"detail": _(
+                        "Authentication credentials were not provided.")},
                     status_codes=["401"]
                 )
             ]

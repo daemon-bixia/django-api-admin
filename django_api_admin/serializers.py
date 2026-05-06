@@ -156,14 +156,46 @@ class AppSerializer(serializers.Serializer):
 
 
 class AppListSerializer(serializers.Serializer):
-    app_list = AppSerializer(many=True)
+    app_list = AppSerializer(many=True,)
 
 
 class AutoCompleteSerializer(serializers.Serializer):
-    app_label = serializers.CharField(required=True)
-    model_name = serializers.CharField(required=True)
-    field_name = serializers.CharField(required=True)
-    term = serializers.CharField(required=False, default="")
+    app_label = serializers.CharField(
+        required=True,
+        help_text=_("The app label of the model to search.")
+    )
+    model_name = serializers.CharField(
+        required=True,
+        help_text=_("The name of the model to search.")
+    )
+    field_name = serializers.CharField(
+        required=True,
+        help_text=_("The name of the source field to use for the search.")
+    )
+    term = serializers.CharField(
+        required=False,
+        default="",
+        help_text=_("The search term to filter results.")
+    )
+
+
+class AutocompleteResultSerializer(serializers.Serializer):
+    id = serializers.CharField(help_text=_(
+        "The unique identifier of the object."))
+    text = serializers.CharField(
+        help_text=_("The display text of the object."))
+
+
+class AutocompletePaginationSerializer(serializers.Serializer):
+    more = serializers.BooleanField(help_text=_(
+        "Whether more results are available."))
+
+
+class AutocompleteResponseSerializer(serializers.Serializer):
+    results = AutocompleteResultSerializer(
+        many=True, help_text=_("The list of search results."))
+    pagination = AutocompletePaginationSerializer(
+        help_text=_("Pagination information."))
 
 
 class FormatsSerializer(serializers.Serializer):

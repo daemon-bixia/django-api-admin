@@ -22,7 +22,7 @@ class AppListView(APIView):
         responses={
             200: OpenApiResponse(
                 response=AppListSerializer,
-                description=_("A list of objects with application details")
+                description=_("List of objects with application details")
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized()
