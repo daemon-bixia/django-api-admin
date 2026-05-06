@@ -144,10 +144,6 @@ class ModelSerializer(serializers.Serializer):
     name = serializers.CharField()
     object_name = serializers.CharField()
     perms = PermissionsSerializer()
-    list_url = serializers.CharField()
-    changelist_url = serializers.CharField()
-    add_url = serializers.CharField()
-    perform_action_url = serializers.CharField()
     view_only = serializers.BooleanField()
 
 
@@ -355,4 +351,8 @@ class BulkUpdatesResponseSerializer(serializers.Serializer):
 
 
 class ResponseMessageSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+class ErrorMessageSerializer(serializers.Serializer):
     detail = serializers.CharField()

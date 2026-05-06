@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, OpenApiExample
-
+from django_api_admin.serializers import ErrorMessageSerializer
 
 form_fields = {
     "fields": [
@@ -49,14 +49,13 @@ class CommonAPIResponses:
     def permission_denied():
         return OpenApiResponse(
             description=_("Permission denied"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Permission Denied"),
                     summary=_("Permission denied response"),
-                    value={
-                        "detail": _("You do not have permission to perform this action.")
-                    },
+                    value={"detail": _(
+                        "You do not have permission to perform this action.")},
                     status_codes=["403"]
                 )
             ]
@@ -100,7 +99,7 @@ class CommonAPIResponses:
     def unauthorized():
         return OpenApiResponse(
             description=_("Authentication required"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Unauthorized"),

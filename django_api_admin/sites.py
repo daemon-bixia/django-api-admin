@@ -48,7 +48,7 @@ class APIAdminSite():
     admin_class = APIModelAdmin
 
     # Optional views
-    include_swagger_ui_view = True
+    include_openapi_specification_view = True
 
     # Pagination
     paginator = Paginator
@@ -298,11 +298,11 @@ class APIAdminSite():
                  wrap(self.get_view_on_site_view()), name='view_on_site',),
         ]
 
-        # Add the swagger-ui view
-        if self.include_swagger_ui_view:
-            urlpatterns.append(path('schema/swagger-ui/',
+        # Add the openapi-specification view
+        if self.include_openapi_specification_view:
+            urlpatterns.append(path("openapi-specification/",
                                     self.get_docs_view(),
-                                    name="swagger-ui"))
+                                    name="openapi-specification"))
 
         # Save these urls under site_urls for schema tagging
         self.site_urls = copy(urlpatterns)
@@ -327,8 +327,8 @@ class APIAdminSite():
             self.site_urls += [app_index_path]
 
         # Add the OpenAPI schema url and update the site_urls
-        schema_path = path('schema/', self.get_schema_view(
-            [path(f"{self.url_prefix}/", include(urlpatterns))]), name='schema')
+        schema_path = path("openapi-specification-schema/", self.get_schema_view(
+            [path(f"{self.url_prefix}/", include(urlpatterns))]), name="openapi-specification-schema")
         urlpatterns.append(schema_path)
         self.site_urls.append(schema_path)
 
@@ -367,35 +367,11 @@ class APIAdminSite():
             if True not in perms.values():
                 continue
 
-            info = (app_label, model._meta.model_name)
             model_dict = {
                 "name": capfirst(model._meta.verbose_name_plural),
                 "object_name": model._meta.object_name,
                 "perms": perms,
-                "list_url": None,
-                "changelist_url": None,
-                "add_url": None,
-                "perform_action_url": None,
             }
-
-            if perms.get("change") or perms.get("view"):
-                model_dict["view_only"] = not perms.get("change")
-                try:
-                    model_dict["list_url"] = request.build_absolute_uri(
-                        reverse("api_admin:%s_%s_list" % info, current_app=self.name))
-                    model_dict["changelist_url"] = request.build_absolute_uri(
-                        reverse("api_admin:%s_%s_changelist" % info, current_app=self.name))
-                    model_dict["perform_action_url"] = request.build_absolute_uri(
-                        reverse("api_admin:%s_%s_perform_action" % info, current_app=self.name))
-                except NoReverseMatch:
-                    pass
-
-            if perms.get("add"):
-                try:
-                    model_dict["add_url"] = request.build_absolute_uri(
-                        reverse("api_admin:%s_%s_add" % info, current_app=self.name))
-                except NoReverseMatch:
-                    pass
 
             if app_label in app_dict:
                 app_dict[app_label]["models"].append(model_dict)
@@ -414,6 +390,7 @@ class APIAdminSite():
 
         if label:
             return app_dict.get(label)
+
         return app_dict
 
     def get_app_list(self, request, app_label=None):
@@ -583,9 +560,9 @@ class APIAdminSite():
         return SpectacularAPIView.as_view(urlconf=urlconf)
 
     def get_docs_view(self):
-        from drf_spectacular.views import SpectacularSwaggerView
+        from drf_spectacular.views import SpectacularRedocView
 
-        return SpectacularSwaggerView.as_view(url_name=f"{self.name}:schema")
+        return SpectacularRedocView.as_view(url_name=f"{self.name}:openapi-specification-schema")
 
 
 class DefaultAdminSite(LazyObject):
