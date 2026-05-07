@@ -26,6 +26,33 @@ class LogEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = LogEntry
         fields = "__all__"
+        extra_kwargs = {
+            "action_time": {"help_text": _("The date and time of the action.")},
+            "user": {"help_text": _("The user who performed the action.")},
+            "content_type": {"help_text": _("The content type of the object being acted upon.")},
+            "object_id": {"help_text": _("The ID of the object being acted upon.")},
+            "object_repr": {"help_text": _("The textual representation of the object.")},
+            "action_flag": {"help_text": _("The type of action (1 for Addition, 2 for Change, 3 for Deletion).")},
+            "change_message": {"help_text": _("A description of the changes made.")},
+        }
+
+
+class PaginationSerializer(serializers.Serializer):
+    num_pages = serializers.IntegerField(
+        required=True, help_text=_("The total number of pages."))
+    count = serializers.IntegerField(
+        required=True, help_text=_("The total number of items."))
+    has_next = serializers.BooleanField(
+        required=True, help_text=_("Whether there is a next page."))
+    has_previous = serializers.BooleanField(
+        required=True, help_text=_("Whether there is a previous page."))
+
+
+class HistoryViewResponseSerializer(serializers.Serializer):
+    pagination = PaginationSerializer(
+        required=True, help_text=_("Pagination information."))
+    results = LogEntrySerializer(
+        many=True, required=True, help_text=_("the list of log entries."))
 
 
 class HistoryViewRequestSerializer(serializers.Serializer):
@@ -37,9 +64,13 @@ class HistoryViewRequestSerializer(serializers.Serializer):
             ("action_time", "Action Time (Ascending)"),
             ("-action_time", "Action Time (Descending)")
         ],
-        required=False
+        required=False,
+        help_text=_("The field to use for ordering the log entries.")
     )
-    object_id = serializers.IntegerField(required=False)
+    object_id = serializers.IntegerField(
+        required=False,
+        help_text=_("The ID of the specific object to filter logs for.")
+    )
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -134,29 +165,40 @@ class AppIndexSerializer(serializers.Serializer):
 
 
 class PermissionsSerializer(serializers.Serializer):
-    add = serializers.BooleanField()
-    change = serializers.BooleanField()
-    delete = serializers.BooleanField()
-    view = serializers.BooleanField()
+    add = serializers.BooleanField(
+        help_text=_("Whether the user can add objects."))
+    change = serializers.BooleanField(
+        help_text=_("Whether the user can change objects."))
+    delete = serializers.BooleanField(
+        help_text=_("Whether the user can delete objects."))
+    view = serializers.BooleanField(
+        help_text=_("Whether the user can view objects."))
 
 
 class ModelSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    object_name = serializers.CharField()
-    perms = PermissionsSerializer()
-    view_only = serializers.BooleanField()
+    name = serializers.CharField(help_text=_("The name of the model."))
+    object_name = serializers.CharField(
+        help_text=_("The name of instances of that model."))
+    perms = PermissionsSerializer(
+        help_text=_("The permissions for the model."))
+    view_only = serializers.BooleanField(
+        help_text=_("Whether the model is view-only."))
 
 
 class AppSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    app_label = serializers.CharField()
-    app_url = serializers.CharField()
-    has_module_perms = serializers.BooleanField()
-    models = ModelSerializer(many=True)
+    name = serializers.CharField(help_text=_("The name of the application."))
+    app_label = serializers.CharField(
+        help_text=_("The label of the application."))
+    app_url = serializers.CharField(help_text=_("The URL of the application."))
+    has_module_perms = serializers.BooleanField(
+        help_text=_("Whether the user has permissions for this application."))
+    models = ModelSerializer(
+        many=True, help_text=_("The list of models in this application."))
 
 
 class AppListSerializer(serializers.Serializer):
-    app_list = AppSerializer(many=True,)
+    app_list = AppSerializer(
+        many=True, help_text=_("The list of registered applications."))
 
 
 class AutoCompleteSerializer(serializers.Serializer):
@@ -294,12 +336,17 @@ class ObtainTokenResponseSerializer(serializers.Serializer):
 
 
 class SiteContextSerializer(serializers.Serializer):
-    site_title = serializers.CharField()
-    site_header = serializers.CharField()
-    site_url = serializers.CharField()
-    has_permission = serializers.BooleanField()
-    available_apps = AppSerializer(many=True)
-    is_nav_siderbar_enabled = serializers.BooleanField()
+    site_title = serializers.CharField(
+        help_text=_("The title of the admin site."))
+    site_header = serializers.CharField(
+        help_text=_("The header of the admin site."))
+    site_url = serializers.CharField(help_text=_("The URL of the admin site."))
+    has_permission = serializers.BooleanField(
+        help_text=_("Whether the user has permission to access the site."))
+    available_apps = AppSerializer(
+        many=True, help_text=_("The list of applications available to the user."))
+    is_nav_siderbar_enabled = serializers.BooleanField(
+        help_text=_("Whether the navigation sidebar is enabled."))
 
 
 class ActionChoiceSerializer(serializers.Serializer):

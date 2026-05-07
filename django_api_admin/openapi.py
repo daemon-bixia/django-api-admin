@@ -1,5 +1,5 @@
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import OpenApiResponse, OpenApiExample, OpenApiParameter
 from django_api_admin.serializers import ErrorMessageSerializer
 
 form_fields = {
@@ -38,6 +38,148 @@ class APIResponseExamples:
             description=_(
                 "Retrieve form field attributes for the password change endpoint"),
             value=form_fields,
+            status_codes=["200"],
+        )
+
+    @staticmethod
+    def history_view_200():
+        return OpenApiExample(
+            name=_("Success Response"),
+            value={
+                "pagination": {
+                    "num_pages": 1,
+                    "count": 1,
+                    "has_next": False,
+                    "has_previous": False
+                },
+                "results": [
+                    {
+                        "id": 1,
+                        "user": {
+                            "id": 1,
+                            "permissions": [
+                                "django_api_admin.add_logentry",
+                                "test_django_api_admin.change_person",
+                                "auth.delete_user",
+                                "socialaccount.view_socialaccount",
+                                "test_django_api_admin.delete_publisher",
+                                "contenttypes.change_contenttype",
+                                "contenttypes.view_contenttype",
+                                "test_django_api_admin.delete_category",
+                                "admin.add_logentry",
+                                "test_django_api_admin.delete_job",
+                                "socialaccount.add_socialtoken",
+                                "account.view_emailconfirmation",
+                                "test_django_api_admin.change_author",
+                                "account.change_emailconfirmation",
+                                "socialaccount.view_socialapp",
+                                "socialaccount.change_socialapp",
+                                "test_django_api_admin.delete_person",
+                                "test_django_api_admin.view_person",
+                                "test_django_api_admin.add_article",
+                                "mfa.change_authenticator",
+                                "auth.add_permission",
+                                "test_django_api_admin.change_guestentry",
+                                "contenttypes.add_contenttype",
+                                "socialaccount.add_socialaccount",
+                                "socialaccount.change_socialtoken",
+                                "sessions.view_session",
+                                "admin.view_logentry",
+                                "test_django_api_admin.view_publisher",
+                                "account.change_emailaddress",
+                                "test_django_api_admin.view_guestentry",
+                                "test_django_api_admin.change_revision",
+                                "account.delete_emailaddress",
+                                "socialaccount.change_socialaccount",
+                                "django_api_admin.view_logentry",
+                                "test_django_api_admin.change_category",
+                                "test_django_api_admin.delete_book",
+                                "account.add_emailaddress",
+                                "django_api_admin.change_logentry",
+                                "socialaccount.delete_socialtoken",
+                                "test_django_api_admin.view_product",
+                                "sessions.add_session",
+                                "account.view_emailaddress",
+                                "sessions.change_session",
+                                "auth.view_permission",
+                                "socialaccount.delete_socialapp",
+                                "auth.delete_group",
+                                "test_django_api_admin.change_article",
+                                "test_django_api_admin.view_revision",
+                                "test_django_api_admin.delete_product",
+                                "account.add_emailconfirmation",
+                                "test_django_api_admin.delete_author",
+                                "test_django_api_admin.add_person",
+                                "test_django_api_admin.add_publisher",
+                                "socialaccount.view_socialtoken",
+                                "auth.view_user",
+                                "test_django_api_admin.add_job",
+                                "account.delete_emailconfirmation",
+                                "test_django_api_admin.add_product",
+                                "django_api_admin.delete_logentry",
+                                "test_django_api_admin.delete_article",
+                                "auth.delete_permission",
+                                "auth.add_user",
+                                "test_django_api_admin.add_book",
+                                "test_django_api_admin.delete_revision",
+                                "test_django_api_admin.view_job",
+                                "test_django_api_admin.add_author",
+                                "socialaccount.delete_socialaccount",
+                                "admin.change_logentry",
+                                "test_django_api_admin.change_publisher",
+                                "mfa.delete_authenticator",
+                                "auth.change_user",
+                                "test_django_api_admin.delete_guestentry",
+                                "test_django_api_admin.view_article",
+                                "test_django_api_admin.change_book",
+                                "mfa.view_authenticator",
+                                "admin.delete_logentry",
+                                "test_django_api_admin.add_revision",
+                                "contenttypes.delete_contenttype",
+                                "auth.change_group",
+                                "auth.change_permission",
+                                "test_django_api_admin.view_author",
+                                "test_django_api_admin.change_job",
+                                "auth.view_group",
+                                "test_django_api_admin.change_product",
+                                "test_django_api_admin.view_book",
+                                "auth.add_group",
+                                "test_django_api_admin.add_category",
+                                "socialaccount.add_socialapp",
+                                "test_django_api_admin.add_guestentry",
+                                "sessions.delete_session",
+                                "mfa.add_authenticator",
+                                "test_django_api_admin.view_category"
+                            ],
+                            "last_login": "2026-05-06T13:20:22.418291Z",
+                            "is_superuser": True,
+                            "username": "ms",
+                            "first_name": "",
+                            "last_name": "",
+                            "email": "ms@email.com",
+                            "is_staff": True,
+                            "is_active": True,
+                            "date_joined": "2026-01-27T21:01:04Z",
+                            "groups": [],
+                            "user_permissions": []
+                        },
+                        "action_time": "2026-04-24T10:32:53.511990Z",
+                        "object_id": "1",
+                        "object_repr": "Muhammad Salah",
+                        "action_flag": 2,
+                        "change_message": [
+                            {
+                                "changed": {
+                                    "fields": [
+                                        "Age"
+                                    ]
+                                }
+                            }
+                        ],
+                        "content_type": 8
+                    }
+                ]
+            },
             status_codes=["200"],
         )
 
@@ -159,6 +301,18 @@ class CommonAPIResponses:
                 )
             ]
         )
+
+
+class CommonAPIQueryParams:
+    @property
+    def page(self):
+        return OpenApiParameter(
+            name="page",
+            type=int,
+            default=1,
+            location=OpenApiParameter.QUERY,
+            description=_("A page number within the paginated result set.")
+        ),
 
 
 User = {

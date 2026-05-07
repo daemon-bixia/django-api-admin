@@ -11,13 +11,20 @@ from rest_framework.exceptions import PermissionDenied
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.models import LogEntry
-from django_api_admin.openapi import CommonAPIResponses
-from django_api_admin.serializers import LogEntrySerializer, HistoryViewRequestSerializer
+from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams, APIResponseExamples
+from django_api_admin.serializers import HistoryViewResponseSerializer, HistoryViewRequestSerializer
 from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
 
 
 class HistoryView(APIView):
-    "The 'history' admin view for the entire site."
+    """
+    Retrieve a paginated history of administrative actions.
+
+    This endpoint provides a detailed log of actions performed within the admin 
+    interface, such as object creation, modification, and deletion. It supports 
+    filtering by application, model, and object ID, and allows for sorting 
+    by action time.
+    """
     serializer_class = None
     permission_classes = []
     ordering_fields = ["action_time", "-action_time"]
@@ -29,17 +36,23 @@ class HistoryView(APIView):
     paginate_by = 20
 
     @extend_schema(
+        operation_id="Retrieve admin log entries",
         methods=["GET"],
-        parameters=[HistoryViewRequestSerializer],
+        parameters=[
+            HistoryViewRequestSerializer,
+            CommonAPIQueryParams.page
+        ],
         responses={
             200: OpenApiResponse(
-                response=LogEntrySerializer(many=True),
-                description=_("Successfully retrieved admin log entries")
+                description=_("List of log entry objects"),
+                response=HistoryViewResponseSerializer(),
+                examples=[
+                    APIResponseExamples.history_view_200()
+                ],
             ),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
         },
-        description=_("Retrieve a list of admin log entries"),
         tags=["admin-log"]
     )
     def get(self, request):
@@ -86,11 +99,13 @@ class HistoryView(APIView):
         serializer = self.serializer_class(queryset, many=True)
 
         return Response({
-            "num_pages": paginator.num_pages,
-            "count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
-            "object_list": self.serialize_messages(serializer.data),
+            "pagination": {
+                "num_pages": paginator.num_pages,
+                "count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "results": self.serialize_messages(serializer.data),
         }, status=status.HTTP_200_OK)
 
     def serialize_messages(self, data):

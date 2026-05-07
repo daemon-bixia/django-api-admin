@@ -19,15 +19,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 from django_api_admin.serializers import AutoCompleteSerializer, AutocompleteResponseSerializer
-from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams
 
 
 class AutoCompleteView(APIView):
     """
-    API view for handling the "search-as-you-type" functionality.
+    Handles the "search-as-you-type" functionality.
     It extracts search parameters, validates user permissions, 
     retrieves the relevant queryset, paginates the results, 
     and returns them as a JSON response.
@@ -44,13 +44,7 @@ class AutoCompleteView(APIView):
         operation_id="Retrieve autocomplete results",
         parameters=[
             AutoCompleteSerializer,
-            OpenApiParameter(
-                name="page",
-                type=int,
-                default=1,
-                location=OpenApiParameter.QUERY,
-                description=_("A page number within the paginated result set.")
-            ),
+            CommonAPIQueryParams.page
         ],
         responses={
             200: OpenApiResponse(
