@@ -286,8 +286,6 @@ class APIAdminSite():
                  name="password_change"),
             path("autocomplete/", wrap(self.autocomplete_view()),
                  name="autocomplete"),
-            path("jsoni18n/", wrap(self.get_i18n_javascript_view()),
-                 name="language_catalog"),
             path("site_context/", wrap(self.get_site_context_view()),
                  name="site_context"),
             path("history/", wrap(self.get_history_view()),
@@ -498,15 +496,6 @@ class APIAdminSite():
             "admin_site": self,
         }
         return PasswordChangeView.as_view(**defaults)
-
-    def get_i18n_javascript_view(self):
-        from django_api_admin.admin_views.admin_site_views.language_catalog import LanguageCatalogView
-
-        defaults = {
-            "authentication_classes": self.get_authentication_classes(),
-            "admin_site": self,
-        }
-        return LanguageCatalogView.as_view(**defaults)
 
     def autocomplete_view(self):
         from django_api_admin.admin_views.admin_site_views.autocomplete import AutoCompleteView

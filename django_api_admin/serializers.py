@@ -263,16 +263,6 @@ class FormatsSerializer(serializers.Serializer):
     )
 
 
-class CatalogSerializer(serializers.Serializer):
-    catalog = serializers.DictField(child=serializers.CharField())
-
-
-class LanguageCatalogSerializer(serializers.Serializer):
-    catalog = CatalogSerializer()
-    formats = FormatsSerializer()
-    plural = serializers.CharField(allow_null=True, required=False)
-
-
 class FieldAttributesSerializer(serializers.Serializer):
     read_only = serializers.BooleanField(default=False)
     write_only = serializers.BooleanField(default=False)
