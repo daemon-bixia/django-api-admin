@@ -37,7 +37,6 @@ class HistoryView(APIView):
 
     @extend_schema(
         operation_id="Retrieve admin log entries",
-        methods=["GET"],
         parameters=[
             HistoryViewRequestSerializer,
             CommonAPIQueryParams.page

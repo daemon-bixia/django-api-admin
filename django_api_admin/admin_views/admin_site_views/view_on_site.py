@@ -9,30 +9,46 @@ from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
 
 from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.serializers import ViewOnsiteViewResponseSerializer
 
 
 class ViewOnSiteView(APIView):
     """
-    Handles GET requests to retrieve an object's view URL on the site.
+    Retrieve the site-specific absolute URL for a registered model instance.
+
+    This endpoint resolves a model object by its content type and ID, retrieves
+    its absolute URL, and constructs the full URL (including schema and domain)
+    based on the associated Site configuration.
     """
     permission_classes = []
     admin_site = None
 
     @extend_schema(
+        operation_id="Get object site URL",
+        parameters=[
+            OpenApiParameter(
+                name="content_type_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description=_("The ID of the content type.")
+            ),
+            OpenApiParameter(
+                name="object_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description=_("The ID of the object.")
+            ),
+        ],
         responses={
             200: OpenApiResponse(
-                description=_(
-                    "Successful retrieval of the object's view on site"),
-                response=dict,
+                response=ViewOnsiteViewResponseSerializer,
+                description=_("The object's site-specific absolute URL"),
                 examples=[
                     OpenApiExample(
                         name=_("Success Response"),
-                        summary="Example of a successful view on site response",
-                        description=_(
-                            "Returns a URL where the object can be viewed on the site"),
                         value={"url": "http://localhost:8000/api/author/1/"},
                         status_codes=["200"]
                     )

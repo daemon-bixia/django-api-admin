@@ -206,11 +206,10 @@ class CommonAPIResponses:
     def not_found():
         return OpenApiResponse(
             description=_("Resource not found"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Not Found"),
-                    summary=_("Resource not found response"),
                     value={
                         "detail": _("The requested resource was not found.")
                     },
@@ -223,11 +222,10 @@ class CommonAPIResponses:
     def bad_request():
         return OpenApiResponse(
             description=_("Bad request"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Bad Request"),
-                    summary=_("Invalid request parameters or data"),
                     value={
                         "detail": _("The request contains invalid parameters or data.")
                     },
@@ -255,11 +253,10 @@ class CommonAPIResponses:
     def method_not_allowed():
         return OpenApiResponse(
             description=_("Method not allowed"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Method Not Allowed"),
-                    summary=_("HTTP method not supported"),
                     value={
                         "detail": _("Method not allowed for this endpoint.")
                     },
@@ -272,11 +269,10 @@ class CommonAPIResponses:
     def conflict():
         return OpenApiResponse(
             description=_("Resource conflict"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Conflict"),
-                    summary=_("Resource conflict detected"),
                     value={
                         "detail": _("The request conflicts with the current state of the target resource.")
                     },
@@ -289,11 +285,10 @@ class CommonAPIResponses:
     def server_error():
         return OpenApiResponse(
             description=_("Internal server error"),
-            response=dict,
+            response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Server Error"),
-                    summary=_("Internal server error occurred"),
                     value={
                         "detail": _("An unexpected error occurred while processing the request.")
                     },
@@ -304,15 +299,13 @@ class CommonAPIResponses:
 
 
 class CommonAPIQueryParams:
-    @property
-    def page(self):
-        return OpenApiParameter(
-            name="page",
-            type=int,
-            default=1,
-            location=OpenApiParameter.QUERY,
-            description=_("A page number within the paginated result set.")
-        ),
+    page = OpenApiParameter(
+        name="page",
+        type=int,
+        default=1,
+        location=OpenApiParameter.QUERY,
+        description=_("A page number within the paginated result set.")
+    )
 
 
 User = {

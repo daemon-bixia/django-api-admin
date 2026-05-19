@@ -73,6 +73,13 @@ class HistoryViewRequestSerializer(serializers.Serializer):
     )
 
 
+class ViewOnsiteViewResponseSerializer(serializers.Serializer):
+    url = serializers.CharField(
+        required=True,
+        help_text=_("The site-specific absolute URL of the object.")
+    )
+
+
 class PasswordChangeSerializer(serializers.Serializer):
     """
     Allow changing password by entering the old_password and a new one.
@@ -420,8 +427,12 @@ class BulkUpdatesResponseSerializer(serializers.Serializer):
 
 
 class ResponseMessageSerializer(serializers.Serializer):
-    detail = serializers.CharField()
+    detail = serializers.CharField(
+        help_text=_("A detailed description of the response message.")
+    )
 
 
 class ErrorMessageSerializer(serializers.Serializer):
-    detail = serializers.CharField()
+    detail = serializers.CharField(
+        help_text=_("A detailed description of the error or response.")
+    )
