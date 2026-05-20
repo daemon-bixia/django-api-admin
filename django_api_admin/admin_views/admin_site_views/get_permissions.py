@@ -5,15 +5,42 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
+
+from django_api_admin.openapi import CommonAPIResponses
+
 
 class PermissionsView(APIView):
     """
-    Returns the permissions required by the user to access the admin panel
+    Retrieve the permissions of the requesting user required to access the admin site.
+
+    This endpoint dynamically evaluates the permission classes configured for the
+    admin site against the current request and user context. It returns a mapping
+    of each permission class name to a boolean value indicating whether the user
+    satisfies the respective permission.
     """
     admin_site = None
 
+    @extend_schema(
+        operation_id="Retrieve user permissions",
+        responses={
+            200: OpenApiResponse(
+                # response=ViewOnsiteViewResponseSerializer,
+                description=_(""),
+                examples=[
+                    OpenApiExample(
+                        name=_("Success Response"),
+                        value={},
+                        status_codes=["200"]
+                    )
+                ],
+            ),
+            403: CommonAPIResponses.permission_denied(),
+            401: CommonAPIResponses.unauthorized()
+        }
+    )
     def get(self, request):
-        permission_classes = self.admin_site.get_permission_classes()
+        permission_classes = self.admin_site.get_permission_classes(request)
 
         user_permissions = {}
         for permission_class in permission_classes:
@@ -29,16 +56,13 @@ class PermissionsView(APIView):
 
             user_permissions[permission_name] = has_permission
 
-        serializer = self.get_serializer_class()(instance=user_permissions)
+        serializer = self.get_serializer_class(
+            permission_classes)(instance=user_permissions)
         return Response({"status": 200, "data": serializer.data}, status=200)
 
-    def get_serializer_class(self):
-        """
-        Not required used only for OpenAPI schema generation
-        """
-        permission_classes = self.admin_site.get_permission_classes()
+    def get_serializer_class(self, permission_classes):
         fields = {
             permission_class.__name__: serializers.BooleanField(read_only=True)
             for permission_class in permission_classes
         }
-        return type('SitePermissionsSerializer', (serializers.Serializer,), fields)
+        return type("SitePermissionsSerializer", (serializers.Serializer,), fields)

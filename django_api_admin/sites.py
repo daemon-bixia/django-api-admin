@@ -36,6 +36,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.exceptions import NotFound
 from rest_framework.renderers import JSONRenderer
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 all_sites = WeakSet()
 
@@ -213,12 +214,22 @@ class APIAdminSite():
         """
         return self._global_actions[name]
 
+    def get_permission_classes(self, request):
+        return [
+            IsAuthenticated,
+            IsAdminUser,
+        ]
+
     def has_permission(self, request):
         """
         Return True if the given HttpRequest has permission to view
         *at least one* page in the admin site.
         """
-        return request.user.is_active and request.user.is_staff
+        permission_classes = self.get_permission_classes(request)
+        permissions = [permission_class()
+                       for permission_class in permission_classes]
+        return all(permission.has_permission(request, None)
+                   for permission in permissions)
 
     def admin_view(self, view, cacheable=False):
         """
