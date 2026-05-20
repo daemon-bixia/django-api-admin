@@ -36,7 +36,7 @@ class APIResponseExamples:
             name=_("Success Response"),
             summary=_("Example of a successful field attribute response"),
             description=_(
-                "Retrieve form field attributes for the password change endpoint"),
+                "Retrieve form field attributes for the endpoint"),
             value=form_fields,
             status_codes=["200"],
         )

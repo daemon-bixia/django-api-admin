@@ -137,11 +137,6 @@ class APIAdminSiteTestCase(APITestCase, URLPatternsTestCase):
         url = reverse('api_admin:index')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        # Test if password change denies permission
-        url = reverse('api_admin:password_change')
-        response = self.client.post(url, {'old_password': 'new_password', 'new_password1': 'new_password',
-                                          'new_password2': 'new_password'})
-        self.assertEqual(response.status_code, 403)
 
     def test_view_on_site_view(self):
         # create an author

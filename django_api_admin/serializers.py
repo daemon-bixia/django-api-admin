@@ -80,67 +80,6 @@ class ViewOnsiteViewResponseSerializer(serializers.Serializer):
     )
 
 
-class PasswordChangeSerializer(serializers.Serializer):
-    """
-    Allow changing password by entering the old_password and a new one.
-    """
-    old_password = serializers.CharField(
-        label=_("Old password"),
-        write_only=True,
-        required=True,
-        style={"input_type": "password"}
-    )
-    new_password1 = serializers.CharField(
-        label=_("New Password"),
-        write_only=True,
-        required=True,
-        style={"input_type": "password"}
-    )
-    new_password2 = serializers.CharField(
-        label=_("New password confirmation"),
-        write_only=True,
-        required=True,
-        style={"input_type": "password"}
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.error_messages.update({
-            "password_mismatch": _("The two password fields didn’t match."),
-            "password_incorrect": _("Your old password was entered incorrectly. Please enter it again."),
-        })
-
-    def validate(self, data):
-        user = self.context["user"]
-
-        old_password = data["old_password"]
-        if not user.check_password(old_password):
-            raise serializers.ValidationError(
-                self.error_messages["password_incorrect"],
-                code="password_incorrect",
-            )
-
-        password1 = data.get("new_password1")
-        password2 = data.get("new_password2")
-
-        if password1 and password2 and password1 != password2:
-            raise serializers.ValidationError(
-                self.error_messages["password_mismatch"],
-                code="password_mismatch"
-            )
-
-        return data
-
-    def save(self, commit=True):
-        password = self.validated_data["new_password1"]
-        user = self.context["user"]
-        user.set_password(password)
-        if commit:
-            user.save()
-        return user
-
-
 class ActionSerializer(serializers.Serializer):
     """
     checks that a valid action is selected

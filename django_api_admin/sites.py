@@ -55,7 +55,6 @@ class APIAdminSite():
     paginator = Paginator
 
     # Default serializers
-    password_change_serializer = None
     log_entry_serializer = None
     user_serializer = None
 
@@ -95,7 +94,6 @@ class APIAdminSite():
         self.url_prefix = self.url_prefix or f'/{name}'
 
         # Set default serializers
-        self.password_change_serializer = api_serializers.PasswordChangeSerializer
         self.log_entry_serializer = api_serializers.LogEntrySerializer
         self.user_serializer = api_serializers.UserSerializer
 
@@ -293,8 +291,6 @@ class APIAdminSite():
 
         urlpatterns = [
             path("", wrap(self.get_app_list_view()), name="index"),
-            path("password_change/", wrap(self.get_password_change_view()),
-                 name="password_change"),
             path("autocomplete/", wrap(self.autocomplete_view()),
                  name="autocomplete"),
             path("site_context/", wrap(self.get_site_context_view()),
@@ -497,16 +493,6 @@ class APIAdminSite():
             "admin_site": self
         }
         return AppIndexView.as_view(**defaults)
-
-    def get_password_change_view(self):
-        from django_api_admin.admin_views.admin_site_views.password_change import PasswordChangeView
-
-        defaults = {
-            "serializer_class": self.password_change_serializer,
-            "authentication_classes": self.get_authentication_classes(),
-            "admin_site": self,
-        }
-        return PasswordChangeView.as_view(**defaults)
 
     def autocomplete_view(self):
         from django_api_admin.admin_views.admin_site_views.autocomplete import AutoCompleteView
