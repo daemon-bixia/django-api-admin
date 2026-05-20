@@ -547,11 +547,11 @@ class APIAdminSite():
 
     def get_permissions_view(self):
         from django_api_admin.admin_views.admin_site_views.get_permissions import PermissionsView
-
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
             "admin_site": self,
         }
+
         return PermissionsView.as_view(**defaults)
 
     def get_schema_view(self, urlconf):

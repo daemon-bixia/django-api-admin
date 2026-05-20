@@ -166,9 +166,9 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "POSTPROCESSING_HOOKS": [
-        'drf_spectacular.hooks.postprocess_schema_enums',
-        'django_api_admin.hooks.modify_schema'
-    ]
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "django_api_admin.hooks.modify_schema"
+    ],
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

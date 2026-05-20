@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.openapi import CommonAPIResponses
 
@@ -19,21 +19,14 @@ class PermissionsView(APIView):
     of each permission class name to a boolean value indicating whether the user
     satisfies the respective permission.
     """
+
     admin_site = None
 
     @extend_schema(
         operation_id="Retrieve user permissions",
         responses={
             200: OpenApiResponse(
-                # response=ViewOnsiteViewResponseSerializer,
-                description=_(""),
-                examples=[
-                    OpenApiExample(
-                        name=_("Success Response"),
-                        value={},
-                        status_codes=["200"]
-                    )
-                ],
+                description=_("Map of user permission check results"),
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized()
@@ -53,16 +46,16 @@ class PermissionsView(APIView):
             except Exception:
                 # In case a permission class raises an unexpected error
                 has_permission = False
-
             user_permissions[permission_name] = has_permission
 
-        serializer = self.get_serializer_class(
-            permission_classes)(instance=user_permissions)
+        serializer = self.get_serializer_class()(instance=user_permissions)
         return Response({"status": 200, "data": serializer.data}, status=200)
 
-    def get_serializer_class(self, permission_classes):
+    def get_serializer_class(self):
+        permission_classes = self.admin_site.get_permission_classes(None)
         fields = {
             permission_class.__name__: serializers.BooleanField(read_only=True)
             for permission_class in permission_classes
         }
-        return type("SitePermissionsSerializer", (serializers.Serializer,), fields)
+        return type(
+            "SitePermissionsSerializer", (serializers.Serializer,), fields)
