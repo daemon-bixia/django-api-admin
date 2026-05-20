@@ -50,9 +50,6 @@ def tag_result_paths(urlpatterns, endpoints, site, result, tag_name):
 # Site Views Dynamic Schema
 
 def add_permissions_view_response_schema(result, site, request):
-    """
-    Dynamically add permissions schemas and update paths for the AdminSite.
-    """
     permission_classes = site.get_permission_classes(request)
     schema_name = f"{site.name.title()}SitePermissions"
 
@@ -126,11 +123,22 @@ def add_permissions_view_response_schema(result, site, request):
     return result
 
 
+def add_operation_id_to_schema_view(result, site, request):
+    permissions_path = f"{site.url_prefix}/openapi-specification-schema/"
+    if permissions_path in result.get("paths", {}):
+        path_item = result["paths"][permissions_path]
+        if "get" in path_item:
+            get = path_item["get"]
+            get["operationId"] = "Retrieve openapi schema"
+    return result
+
+
 def add_site_views_dynamic_schema(result, site, request):
     """
     Dynamically add schemas and update paths for the AdminSite.
     """
     result = add_permissions_view_response_schema(result, site, request)
+    result = add_operation_id_to_schema_view(result, site, request)
     return result
 
 
