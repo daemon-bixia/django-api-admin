@@ -87,7 +87,7 @@ class APIAdminSite():
     # The renderer classes used by the site's views
     renderer_classes = [JSONRenderer]
 
-    def __init__(self, include_auth=True, name="api_admin"):
+    def __init__(self, include_auth=True, name="admin"):
         from django.contrib.auth.models import Group
         from django_api_admin import serializers as api_serializers
 

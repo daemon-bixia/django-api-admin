@@ -2,25 +2,128 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, OpenApiExample, OpenApiParameter
 from django_api_admin.serializers import ErrorMessageSerializer
 
-form_fields = {
-    "fields": [
-        {
-            "type": "CharField",
-            "name": "field_name",
-            "attrs": {
-                "read_only": False,
-                "write_only": True,
-                "required": True,
-                "default": None,
-                "allow_blank": False,
-                "allow_null": False,
-                "label": "Field name",
-                "help_text": None,
-                "initial": "",
-                "max_length": None,
-                "min_length": None,
-                "trim_whitespace": True
+form_description = {
+    "form": {
+        "model": "test_django_api_admin.author",
+        "readonly_fields": [
+            "date_joined",
+            "is_old_enough"
+        ],
+        "fields": [
+            {
+                "type": "CharField",
+                "name": "name",
+                "attrs": {
+                    "read_only": False,
+                    "write_only": False,
+                    "required": True,
+                    "default": None,
+                    "allow_null": False,
+                    "label": "Name",
+                    "help_text": "This is a custom help text for all CharFields",
+                    "initial": "",
+                    "style": {},
+                    "max_length": 100,
+                    "min_length": None,
+                    "allow_blank": False,
+                    "trim_whitespace": True,
+                    "current_value": "Muhammad Salah"
+                }
             }
+        ],
+        "fieldsets": [
+            [
+                "Information",
+                {
+                    "fields": [
+                        ["name", "age"],
+                        "is_vip",
+                        "user",
+                        "publisher",
+                        "is_old_enough",
+                        "date_joined",
+                        "location"
+                    ]
+                }
+            ]
+        ],
+        "prepopulated": {},
+        "permissions": {
+            "has_add_permission": True,
+            "has_change_permission": True,
+            "has_delete_permission": True,
+            "has_view_permission": True
+        },
+        "save_as": False,
+        "save_as_continue": True,
+        "save_on_top": False,
+        "filter_horizontal": [],
+        "filter_vertical": [],
+        "raw_id_fields": [
+            "publisher"
+        ],
+        "radio_fields": {},
+        "view_on_site": True,
+        "autocomplete_fields": [
+            "publisher"
+        ]
+    },
+    "inlines": [
+        {
+            "model": "test_django_api_admin.book",
+            "readonly_fields": [],
+            "fieldsets": [
+                [
+                    None,
+                    {
+                        "fields": [
+                            "id",
+                            "title",
+                            "author",
+                            "credits"
+                        ]
+                    }
+                ]
+            ],
+            "prepopulated": {},
+            "permissions": {
+                "has_add_permission": True,
+                "has_change_permission": True,
+                "has_delete_permission": True,
+                "has_view_permission": True
+            },
+            "extra": 3,
+            "min_num": 1,
+            "max_num": 4,
+            "verbose_name": "book",
+            "verbose_name_plural": "books",
+            "can_delete": True,
+            "show_change_link": False,
+            "admin_style": "tabular",
+            "formset": [
+                [
+                    {
+                        "type": "CharField",
+                        "name": "title",
+                        "attrs": {
+                            "read_only": False,
+                            "write_only": False,
+                            "required": True,
+                            "default": None,
+                            "allow_null": False,
+                            "label": "Title",
+                            "help_text": None,
+                            "initial": "",
+                            "style": {},
+                            "max_length": 100,
+                            "min_length": None,
+                            "allow_blank": False,
+                            "trim_whitespace": True,
+                            "current_value": "How to do something"
+                        }
+                    }
+                ]
+            ]
         }
     ]
 }
@@ -31,13 +134,13 @@ class APIResponseExamples:
     Provides an example of a successful API response for retrieving form field
     """
     @staticmethod
-    def field_attributes():
+    def form_description():
         return OpenApiExample(
             name=_("Success Response"),
             summary=_("Example of a successful field attribute response"),
             description=_(
                 "Retrieve form field attributes for the endpoint"),
-            value=form_fields,
+            value=form_description,
             status_codes=["200"],
         )
 
@@ -324,7 +427,7 @@ User = {
 }
 
 ChangeList = {
-    'action_form': form_fields,
+    'action_form': form_description,
     'config': {
         'actions_on_top': True,
         'actions_on_bottom': False,

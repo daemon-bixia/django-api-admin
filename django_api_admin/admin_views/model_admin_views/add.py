@@ -28,9 +28,7 @@ class AddView(APIView):
                 description=_(
                     "Successfully returned the field attributes list"),
                 response=FormFieldsSerializer,
-                examples=[
-                    APIResponseExamples.field_attributes()
-                ]
+                examples=[APIResponseExamples.form_description()]
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized()
