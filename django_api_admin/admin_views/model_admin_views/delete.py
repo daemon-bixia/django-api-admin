@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
-from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams
 from django_api_admin.serializers import ResponseMessageSerializer
 from django_api_admin.exceptions import DisallowedModelAdminToField
 
@@ -24,22 +24,10 @@ class DeleteView(APIView):
     model_admin = None
 
     @extend_schema(
+        parameters=[CommonAPIPathParams.object_id],
         responses={
-            200: OpenApiResponse(
+            204: OpenApiResponse(
                 description=_("Successfully deleted the selected objects"),
-                response=dict,
-                examples=[
-                    OpenApiExample(
-                        name=_("Delete Success Response"),
-                        summary=_("Example of a successful delete operation"),
-                        description=_(
-                            "Returns a success message after deleting the selected objects"),
-                        value={
-                            "detail": "The object was deleted successfully."
-                        },
-                        status_codes=["200"]
-                    )
-                ]
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized()
@@ -93,28 +81,3 @@ class DeleteView(APIView):
             return Response({"detail": _("Cannot delete %(name)s")
                              % {"name": str(opts.verbose_name)}},
                             status=status.HTTP_400_BAD_REQUEST)
-
-    @extend_schema(
-        responses={
-            200: OpenApiResponse(
-                description=_("Successfully deleted the selected objects"),
-                response=dict,
-                examples=[
-                    OpenApiExample(
-                        name=_("Delete Success Response"),
-                        summary=_("Example of a successful delete operation"),
-                        description=_(
-                            "Returns a success message after deleting the selected objects"),
-                        value={
-                            "detail": "The object was deleted successfully."
-                        },
-                        status_codes=["200"]
-                    )
-                ]
-            ),
-            403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
-        }
-    )
-    def post(self, *args, **kwargs):
-        return self.delete(*args, **kwargs)

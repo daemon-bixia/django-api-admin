@@ -27,7 +27,6 @@ from django_api_admin.openapi import (
 )
 from django_api_admin.serializers import (
     FormFieldsSerializer,
-    BulkUpdatesResponseSerializer,
 )
 from django_api_admin.bulk import InlineBulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data

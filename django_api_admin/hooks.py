@@ -163,7 +163,7 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
             change_path = result.setdefault("paths", {}).setdefault(
                 f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/change/", {})
             if change_path:
-                # Add operation id to change view
+                # Add `operationId` to change view
                 change_path.setdefault("get", {})[
                     "operationId"] = f"Get change form for {app_label}.{model_name}"
                 patch = change_path.setdefault("patch", {})
@@ -248,6 +248,13 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
                             }
                         }
                     }
+        elif url.name == f"{app_label}_{model_name}_delete":
+            delete_path = result.setdefault("paths", {}).setdefault(
+                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/delete/", {})
+            if delete_path:
+                # Add `operationId` to delete view
+                delete = delete_path.setdefault("delete", {})
+                delete["operationId"] = f"Delete {app_label}.{model_name}"
 
     return result
 

@@ -628,11 +628,6 @@ class ChangelistResponseSerializer(serializers.Serializer):
     rows = RowSerializer(many=True)
 
 
-class BulkUpdatesResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField(help_text=_(
-        "A detail message about the bulk update operation."))
-
-
 class ResponseMessageSerializer(serializers.Serializer):
     detail = serializers.CharField(
         help_text=_("A detailed description of the response message.")
