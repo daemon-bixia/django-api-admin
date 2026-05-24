@@ -293,6 +293,13 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     result, inspector, serializer_class, json_content
                 )
                 json_content["schema"] = resolved_ref
+        elif url.name == f"{app_label}_{model_name}_add":
+            add_path = result.setdefault("paths", {}).setdefault(
+                f"{site.url_prefix}/{app_label}/{model_name}/add/", {})
+            if add_path:
+                # Add `operationId` to AddView
+                get = add_path.setdefault("get", {})
+                get["operationId"] = f"Get add form for {app_label}.{model_name}"
 
     return result
 

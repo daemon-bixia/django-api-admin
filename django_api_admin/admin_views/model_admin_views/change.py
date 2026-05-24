@@ -14,7 +14,6 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
-    OpenApiExample,
 )
 
 from django_api_admin.utils.quote import unquote

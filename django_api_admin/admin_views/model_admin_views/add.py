@@ -15,8 +15,11 @@ from django_api_admin.bulk import InlineBulkOperation
 
 class AddView(APIView):
     """
-    Add new instances of this model. if this model has inline models associated with it 
-    you can also add inline instances to this model.
+    Create a new instance of this model.
+
+    This endpoint supports creating the main model instance along with its
+    related child instances simultaneously, provided their models are configured
+    as Inlines in the ModelAdmin.
     """
     serializer_class = None
     permission_classes = []
@@ -26,7 +29,7 @@ class AddView(APIView):
         responses={
             200: OpenApiResponse(
                 description=_(
-                    "Successfully returned the field attributes list"),
+                    "Configurations and a list of fields representing the add form"),
                 response=FormFieldsSerializer,
                 examples=[APIResponseExamples.form_description()]
             ),
@@ -36,8 +39,12 @@ class AddView(APIView):
     )
     def get(self, request):
         """
-        Handle GET requests to retrieve form field attributes and configuration
-        for the model admin. 
+        Retrieve the configurations required to construct the add form and inline forms
+        on the client.
+
+        This includes serializer field attributes, permissions, form styles, the location
+        of the save button, names of fields utilizing custom widgets (e.g., `filter_horizontal`),
+        and any custom values added by overriding `ModelAdmin.get_form_description()`
         """
         if not self.model_admin.has_add_permission(request):
             raise PermissionDenied
@@ -45,9 +52,6 @@ class AddView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        """
-        Handle POST requests to add a new instance of the model.
-        """
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
             # If the user doesn't have add_permission respond with permission denied
             if not self.model_admin.has_add_permission(request):
