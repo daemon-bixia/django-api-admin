@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
@@ -17,7 +17,8 @@ from django_api_admin.exceptions import DisallowedModelAdminToField
 
 class DeleteView(APIView):
     """
-    Delete a single object from this model
+    Deletes a single instance of the model identified by the provided object ID, 
+    performing permission checks and handling related object cleanup.
     """
     serializer_class = ResponseMessageSerializer
     permission_classes = []

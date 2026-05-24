@@ -144,8 +144,81 @@ def add_site_views_dynamic_schema(result, site, request):
     return result
 
 
-def add_model_views_dynamic_schema(result, site, model_urls, model, request, generator):
+def build_serializer_schema(result, inspector, serializer_class, json_content):
+    """
+    Resolve a serializer into an OpenAPI component
+    """
+    resolved = inspector.resolve_serializer(
+        serializer_class, direction="response")
+    # Include the component in `schema/components` if not already included
+    if resolved.name not in result["components"]["schemas"]:
+        result.setdefault("components", {}).setdefault("schemas", {})[
+            resolved.name] = resolved.schema
+    return resolved.ref
+
+
+def build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content):
+    """
+    Add model's serializer schema along with inlines schema representation.
+
+    Resolves the model admin's serializer and each of its inline serializers,
+    registers the resulting components into ``result["components"]["schemas"]``,
+    and populates the ``data`` and ``inlines`` properties on ``json_content["schema"]``.
+    """
+    # Add the serializer auto schema reference as `data`
+    serializer_class = model_admin.get_serializer_class(request)
+    resolved_ref = build_serializer_schema(
+        result, inspector, serializer_class, json_content)
+    json_content["schema"]["properties"]["data"]["allOf"] = [resolved_ref]
+    # Add a list of auto schema references for every inline model
+    inlines = model_admin.inlines
+    for inline in inlines:
+        inline_instance = inline(model_admin.model, model_admin.admin_site)
+        serializer_class = inline_instance.get_serializer_class(request)
+        resolved = inspector.resolve_serializer(
+            serializer_class,
+            direction="response"
+        )
+        # Include the component in `schema/components` if not already included
+        if resolved.name not in result["components"]["schemas"]:
+            result.setdefault("components", {}).setdefault("schemas", {})[
+                resolved.name] = resolved.schema
+
+        # Add a schema for inline model representing every inline operation.
+        inline_app_label = inline.model._meta.app_label
+        inline_model_name = inline.model._meta.verbose_name
+        json_content["schema"]["properties"]["inlines"]["properties"][f"{inline_app_label}.{inline_model_name}"] = {
+            "type": "object",
+            "description": f"Operations for inline model {inline_app_label}.{inline_model_name}",
+            "properties": {
+                "add": {
+                    "type": "array",
+                    "description": "List of added inline objects",
+                    "items": {
+                        "$ref": f"#/components/schemas/{resolved.name}"
+                    }
+                },
+                "change": {
+                    "type": "array",
+                    "description": "List of changed inline objects",
+                    "items": {
+                        "$ref": f"#/components/schemas/{resolved.name}"
+                    }
+                },
+                "delete": {
+                    "type": "array",
+                    "description": "List of deleted inline objects",
+                    "items": {
+                        "$ref": f"#/components/schemas/{resolved.name}"
+                    }
+                }
+            }
+        }
+
+
+def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
     app_label, model_name = model._meta.app_label, model._meta.verbose_name
+    model_admin = site.get_model_admin(model)
 
     inspector = AutoSchema()
     inspector.registry = generator.registry
@@ -168,7 +241,6 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
                     "operationId"] = f"Get change form for {app_label}.{model_name}"
                 patch = change_path.setdefault("patch", {})
                 patch["operationId"] = f"Update {app_label}.{model_name}"
-
                 # Add dynamic response schema to change view
                 response_200 = patch.setdefault(
                     "responses", {}).setdefault("200", {})
@@ -181,6 +253,9 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
                             "type": "string",
                             "description": "A detail message about the bulk update operation",
                         },
+                        "data": {
+                            "description": "The updated model instance",
+                        },
                         "inlines": {
                             "type": "object",
                             "properties": {},
@@ -190,64 +265,10 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
                     "required": ["detail", "data", "inlines"]
                 }
 
-                # Add the serializer auto schema reference as `data`
-                model_admin = site.get_model_admin(model)
-                serializer_class = model_admin.get_serializer_class(request)
-                resolved = inspector.resolve_serializer(
-                    serializer_class,
-                    direction="response"
+                # Populate `data` and `inlines` schema properties
+                build_serializer_with_inlines_schema(
+                    result, inspector, model_admin, request, json_content
                 )
-                if resolved.name not in result["components"]["schemas"]:
-                    result.setdefault("components", {}).setdefault("schemas", {})[
-                        resolved.name] = resolved.schema
-                json_content["schema"]["properties"]["data"] = {
-                    "allOf": [resolved.ref],
-                    "description": "The updated model instance",
-                }
-
-                # Add a list of auto schema references for every inline model
-                inlines = model_admin.inlines
-                for inline in inlines:
-                    inline_instance = inline(
-                        model_admin.model, model_admin.admin_site)
-                    serializer_class = inline_instance.get_serializer_class(
-                        request)
-                    resolved = inspector.resolve_serializer(
-                        serializer_class,
-                        direction="response"
-                    )
-                    if resolved.name not in result["components"]["schemas"]:
-                        result.setdefault("components", {}).setdefault("schemas", {})[
-                            resolved.name] = resolved.schema
-
-                    app_label, model_name = inline.model._meta.app_label, inline.model._meta.verbose_name
-                    json_content["schema"]["properties"]["inlines"]["properties"][f"{app_label}.{model_name}"] = {
-                        "type": "object",
-                        "description": f"Operations for inline model {app_label}.{model_name}",
-                        "properties": {
-                            "add": {
-                                "type": "array",
-                                "description": "List of added inline objects",
-                                "items": {
-                                    "$ref": f"#/components/schemas/{resolved.name}"
-                                }
-                            },
-                            "change": {
-                                "type": "array",
-                                "description": "List of changed inline objects",
-                                "items": {
-                                    "$ref": f"#/components/schemas/{resolved.name}"
-                                }
-                            },
-                            "delete": {
-                                "type": "array",
-                                "description": "List of deleted inline objects",
-                                "items": {
-                                    "$ref": f"#/components/schemas/{resolved.name}"
-                                }
-                            }
-                        }
-                    }
         elif url.name == f"{app_label}_{model_name}_delete":
             delete_path = result.setdefault("paths", {}).setdefault(
                 f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/delete/", {})
@@ -255,6 +276,23 @@ def add_model_views_dynamic_schema(result, site, model_urls, model, request, gen
                 # Add `operationId` to delete view
                 delete = delete_path.setdefault("delete", {})
                 delete["operationId"] = f"Delete {app_label}.{model_name}"
+        elif url.name == f"{app_label}_{model_name}_detail":
+            detail_path = result.setdefault("paths", {}).setdefault(
+                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/detail/", {})
+            if detail_path:
+                # Add `operationId` to detail view
+                get = detail_path.setdefault("get", {})
+                get["operationId"] = f"Retrieve {app_label}.{model_name}"
+                # Add dynamic response schema to change view
+                response_200 = get.setdefault(
+                    "responses", {}).setdefault("200", {})
+                content = response_200.setdefault("content", {})
+                json_content = content.setdefault("application/json", {})
+                serializer_class = model_admin.get_serializer_class(request)
+                resolved_ref = build_serializer_schema(
+                    result, inspector, serializer_class, json_content
+                )
+                json_content["schema"] = resolved_ref
 
     return result
 
@@ -313,7 +351,7 @@ def modify_schema(result, generator, request, public):
                     result,
                     model._meta.verbose_name,
                 )
-                result = add_model_views_dynamic_schema(
+                result = add_model_admin_views_dynamic_schema(
                     result,
                     site,
                     model_urls,

@@ -23,7 +23,6 @@ from django_api_admin.openapi import (
     CommonAPIResponses,
     CommonAPIPathParams,
     APIResponseExamples,
-    BulkUpdates,
 )
 from django_api_admin.serializers import (
     FormFieldsSerializer,
@@ -90,15 +89,6 @@ class ChangeView(APIView):
             200: OpenApiResponse(
                 description=_(
                     "The serialized instance, and inlines that were affected"),
-                examples=[
-                    OpenApiExample(
-                        name=_("Update Success Response"),
-                        summary=_(
-                            "Example of a successful Update operation response"),
-                        value=BulkUpdates,
-                        status_codes=["200"],
-                    )
-                ],
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),

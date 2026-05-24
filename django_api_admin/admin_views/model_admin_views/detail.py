@@ -7,18 +7,49 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiResponse,
+    OpenApiExample,
+    OpenApiParameter,
+)
+
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
+from django_api_admin.openapi import (
+    CommonAPIResponses,
+    CommonAPIPathParams,
+)
 
 
 class DetailView(APIView):
     """
-    GET one instance of this model using pk and to_fields.
+    Retrieves a single instance of the model identified by the provided `object_id`,
+    supporting optional reverse lookups via the `to_field` query parameter, and 
+    performing permission checks.
     """
     serializer_class = None
     permission_classes = []
     model_admin = None
 
+    @extend_schema(
+        parameters=[
+            CommonAPIPathParams.object_id,
+            OpenApiParameter(
+                name="to_field",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description=_("Reverse to field. Default is primary key")
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description=_("Serialized instance of the model"),
+            ),
+            403: CommonAPIResponses.permission_denied(),
+            401: CommonAPIResponses.unauthorized(),
+        },
+    )
     def get(self, request, object_id):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
@@ -36,24 +67,7 @@ class DetailView(APIView):
             }
             return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = self.serializer_class(obj)
+        serializer = self.serializer_class(obj, context={"request": request})
         data = copy.deepcopy(serializer.data)
-
-        pattern = "api_admin:%s_%s_"
-        info = (
-            self.model_admin.model._meta.app_label,
-            self.model_admin.model._meta.model_name,
-        )
-
-        # Add admin urls.
-        data["list_url"] = reverse(
-            (pattern + "list") % info, request=request)
-        data["delete_url"] = reverse(
-            (pattern + "delete") % info, kwargs={"object_id": data["pk"]}, request=request)
-        data["change_url"] = reverse(
-            (pattern + "change") % info, kwargs={"object_id": data["pk"]}, request=request)
-        if self.model_admin.view_on_site:
-            data["view_on_site_url"] = self.model_admin.get_view_on_site_url(
-                obj)
 
         return Response(data, status=status.HTTP_200_OK)
