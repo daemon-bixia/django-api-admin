@@ -1,8 +1,13 @@
 from django.urls import URLResolver
 from django.utils.translation import gettext as _
 from django_api_admin.sites import all_sites
-from drf_spectacular.settings import spectacular_settings
+from django.test import RequestFactory
 
+from rest_framework.views import APIView
+from rest_framework.request import Request
+
+from drf_spectacular.settings import spectacular_settings
+from drf_spectacular.openapi import AutoSchema
 
 # Tagging Endpoints
 
@@ -139,14 +144,110 @@ def add_site_views_dynamic_schema(result, site, request):
     return result
 
 
-def add_model_views_dynamic_schema(result, site, model_urls, app_label, model_name):
+def add_model_views_dynamic_schema(result, site, model_urls, model, request, generator):
+    app_label, model_name = model._meta.app_label, model._meta.verbose_name
+
+    inspector = AutoSchema()
+    inspector.registry = generator.registry
+
+    _view = APIView()
+    if request and hasattr(request, "parser_context"):
+        _view.request = request
+    else:
+        django_request = RequestFactory().get("/fake-path/")
+        _view.request = Request(django_request)
+    inspector.view = _view
+
     for url in model_urls:
         if url.name == f"{app_label}_{model_name}_change":
             change_path = result.setdefault("paths", {}).setdefault(
                 f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/change/", {})
             if change_path:
+                # Add operation id to change view
                 change_path.setdefault("get", {})[
                     "operationId"] = f"Get change form for {app_label}.{model_name}"
+                patch = change_path.setdefault("patch", {})
+                patch["operationId"] = f"Update {app_label}.{model_name}"
+
+                # Add dynamic response schema to change view
+                response_200 = patch.setdefault(
+                    "responses", {}).setdefault("200", {})
+                content = response_200.setdefault("content", {})
+                json_content = content.setdefault("application/json", {})
+                json_content["schema"] = {
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "description": "A detail message about the bulk update operation",
+                        },
+                        "inlines": {
+                            "type": "object",
+                            "properties": {},
+                            "description": "The modified inlines instances",
+                        }
+                    },
+                    "required": ["detail", "data", "inlines"]
+                }
+
+                # Add the serializer auto schema reference as `data`
+                model_admin = site.get_model_admin(model)
+                serializer_class = model_admin.get_serializer_class(request)
+                resolved = inspector.resolve_serializer(
+                    serializer_class,
+                    direction="response"
+                )
+                if resolved.name not in result["components"]["schemas"]:
+                    result.setdefault("components", {}).setdefault("schemas", {})[
+                        resolved.name] = resolved.schema
+                json_content["schema"]["properties"]["data"] = {
+                    "allOf": [resolved.ref],
+                    "description": "The updated model instance",
+                }
+
+                # Add a list of auto schema references for every inline model
+                inlines = model_admin.inlines
+                for inline in inlines:
+                    inline_instance = inline(
+                        model_admin.model, model_admin.admin_site)
+                    serializer_class = inline_instance.get_serializer_class(
+                        request)
+                    resolved = inspector.resolve_serializer(
+                        serializer_class,
+                        direction="response"
+                    )
+                    if resolved.name not in result["components"]["schemas"]:
+                        result.setdefault("components", {}).setdefault("schemas", {})[
+                            resolved.name] = resolved.schema
+
+                    app_label, model_name = inline.model._meta.app_label, inline.model._meta.verbose_name
+                    json_content["schema"]["properties"]["inlines"]["properties"][f"{app_label}.{model_name}"] = {
+                        "type": "object",
+                        "description": f"Operations for inline model {app_label}.{model_name}",
+                        "properties": {
+                            "add": {
+                                "type": "array",
+                                "description": "List of added inline objects",
+                                "items": {
+                                    "$ref": f"#/components/schemas/{resolved.name}"
+                                }
+                            },
+                            "change": {
+                                "type": "array",
+                                "description": "List of changed inline objects",
+                                "items": {
+                                    "$ref": f"#/components/schemas/{resolved.name}"
+                                }
+                            },
+                            "delete": {
+                                "type": "array",
+                                "description": "List of deleted inline objects",
+                                "items": {
+                                    "$ref": f"#/components/schemas/{resolved.name}"
+                                }
+                            }
+                        }
+                    }
 
     return result
 
@@ -209,8 +310,9 @@ def modify_schema(result, generator, request, public):
                     result,
                     site,
                     model_urls,
-                    model._meta.app_label,
-                    model._meta.verbose_name,
+                    model,
+                    request,
+                    generator
                 )
 
     return result

@@ -507,7 +507,7 @@ class InlineSerializer(serializers.Serializer):
         child=serializers.ListField(child=FieldSerializer()),
         required=True,
         help_text=_(
-            "The formset configuration for the model – a list of lists of field definitions."),
+            "The formset configuration for the model a list of lists of field definitions."),
     )
 
 
@@ -629,9 +629,8 @@ class ChangelistResponseSerializer(serializers.Serializer):
 
 
 class BulkUpdatesResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    updated_inlines = serializers.ListField(child=serializers.DictField())
-    deleted_inlines = serializers.ListField(child=serializers.DictField())
+    detail = serializers.CharField(help_text=_(
+        "A detail message about the bulk update operation."))
 
 
 class ResponseMessageSerializer(serializers.Serializer):

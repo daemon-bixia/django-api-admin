@@ -114,7 +114,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             if request:
                 if not (
                     inline.has_view_or_change_permission(request)
-                    or inline.has_add_permission(request)
+                    or inline.has_add_permission(request, obj)
                     or inline.has_delete_permission(request)
                 ):
                     continue

@@ -15,13 +15,13 @@ from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
     OpenApiExample,
-    OpenApiParameter,
 )
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
 from django_api_admin.openapi import (
     CommonAPIResponses,
+    CommonAPIPathParams,
     APIResponseExamples,
     BulkUpdates,
 )
@@ -38,7 +38,7 @@ class ChangeView(APIView):
     """
     Update an instance of this model identified by its object_id.
 
-    This endpoint supports partial updates (PATCH). It also allows you to update
+    This endpoint supports partial updates. It also allows you to update
     related child instances simultaneously, provided their models are configured
     as Inlines in the ModelAdmin.
     """
@@ -48,16 +48,7 @@ class ChangeView(APIView):
     model_admin = None
 
     @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="object_id",
-                type=str,
-                location=OpenApiParameter.PATH,
-                description=_(
-                    "The primary key value of the instance to be updated"),
-                required=True,
-            )
-        ],
+        parameters=[CommonAPIPathParams.object_id],
         responses={
             200: OpenApiResponse(
                 description=_(
@@ -95,34 +86,11 @@ class ChangeView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(
+        parameters=[CommonAPIPathParams.object_id],
         responses={
             200: OpenApiResponse(
                 description=_(
-                    "Successfully returned the field attributes list"),
-                response=BulkUpdatesResponseSerializer,
-                examples=[
-                    OpenApiExample(
-                        name=_("Update Success Response"),
-                        summary=_(
-                            "Example of a successful Update operation response"),
-                        value=BulkUpdates,
-                        status_codes=["200"],
-                    )
-                ],
-            ),
-            403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized(),
-        },
-    )
-    def put(self, request, object_id):
-        return self.update(request, object_id)
-
-    @extend_schema(
-        responses={
-            200: OpenApiResponse(
-                description=_(
-                    "Successfully returned the field attributes list"),
-                response=BulkUpdatesResponseSerializer,
+                    "The serialized instance, and inlines that were affected"),
                 examples=[
                     OpenApiExample(
                         name=_("Update Success Response"),

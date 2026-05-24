@@ -411,6 +411,17 @@ class CommonAPIQueryParams:
     )
 
 
+class CommonAPIPathParams:
+    object_id = OpenApiParameter(
+        name="object_id",
+        type=str,
+        location=OpenApiParameter.PATH,
+        description=_(
+            "The primary key value of the instance to be updated"),
+        required=True,
+    )
+
+
 User = {
     "id": 1,
     "last_login": "2025-01-25T13:00:49.925221Z",
@@ -427,97 +438,97 @@ User = {
 }
 
 ChangeList = {
-    'action_form': form_description,
-    'config': {
-        'actions_on_top': True,
-        'actions_on_bottom': False,
-        'actions_selection_counter': True,
-        'empty_value_display': '-',
-        'list_display': [
-            'name', 'age', 'user', 'is_old_enough', 'title', 'gender'
+    "action_form": form_description,
+    "config": {
+        "actions_on_top": True,
+        "actions_on_bottom": False,
+        "actions_selection_counter": True,
+        "empty_value_display": "-",
+        "list_display": [
+            "name", "age", "user", "is_old_enough", "title", "gender"
         ],
-        'list_display_links': ['name'],
-        'list_editable': ['title'],
-        'exclude': ['gender'],
-        'show_full_result_count': True,
-        'list_per_page': 6,
-        'list_max_show_all': 200,
-        'date_hierarchy': 'date_joined',
-        'search_help_text': None,
-        'sortable_by': None,
-        'search_fields': ['name', 'publisher__name'],
-        'preserve_filters': True,
-        'full_count': 1,
-        'result_count': 1,
-        'action_choices': [
-            ['delete_selected', 'Delete selected authors'],
-            ['make_old', 'make all authors old'],
-            ['make_young', 'make all authors young']
+        "list_display_links": ["name"],
+        "list_editable": ["title"],
+        "exclude": ["gender"],
+        "show_full_result_count": True,
+        "list_per_page": 6,
+        "list_max_show_all": 200,
+        "date_hierarchy": "date_joined",
+        "search_help_text": None,
+        "sortable_by": None,
+        "search_fields": ["name", "publisher__name"],
+        "preserve_filters": True,
+        "full_count": 1,
+        "result_count": 1,
+        "action_choices": [
+            ["delete_selected", "Delete selected authors"],
+            ["make_old", "make all authors old"],
+            ["make_young", "make all authors young"]
         ],
-        'filters': [
+        "filters": [
             {
-                'title': 'is vip',
-                'choices': [
-                    {'selected': True, 'query_string': '?', 'display': 'All'},
-                    {'selected': False, 'query_string': '?is_vip__exact=1',
-                        'display': 'Yes'},
-                    {'selected': False, 'query_string': '?is_vip__exact=0',
-                        'display': 'No'}
+                "title": "is vip",
+                "choices": [
+                    {"selected": True, "query_string": "?", "display": "All"},
+                    {"selected": False, "query_string": "?is_vip__exact=1",
+                        "display": "Yes"},
+                    {"selected": False, "query_string": "?is_vip__exact=0",
+                        "display": "No"}
                 ]
             },
             {
-                'title': 'age',
-                'choices': [
-                    {'selected': True, 'query_string': '?', 'display': 'All'},
-                    {'selected': False, 'query_string': '?age__exact=60',
-                        'display': 'senior'},
-                    {'selected': False, 'query_string': '?age__exact=1',
-                        'display': 'baby'},
-                    {'selected': False, 'query_string': '?age__exact=2',
-                        'display': 'also a baby'}
+                "title": "age",
+                "choices": [
+                    {"selected": True, "query_string": "?", "display": "All"},
+                    {"selected": False, "query_string": "?age__exact=60",
+                        "display": "senior"},
+                    {"selected": False, "query_string": "?age__exact=1",
+                        "display": "baby"},
+                    {"selected": False, "query_string": "?age__exact=2",
+                        "display": "also a baby"}
                 ]
             }
         ],
-        'list_display_fields': ['name', 'age', 'user', 'title'],
-        'editing_fields': [
+        "list_display_fields": ["name", "age", "user", "title"],
+        "editing_fields": [
             {
-                'type': 'CharField',
-                'name': 'title',
-                'attrs': {
-                    'read_only': False,
-                    'write_only': False,
-                    'required': False,
-                    'default': None,
-                    'allow_blank': False,
-                    'allow_null': True,
-                    'style': {},
-                    'label': 'Title',
-                    'help_text': None,
-                    'initial': '',
-                    'max_length': 20,
-                    'min_length': None,
-                    'trim_whitespace': True
+                "type": "CharField",
+                "name": "title",
+                "attrs": {
+                    "read_only": False,
+                    "write_only": False,
+                    "required": False,
+                    "default": None,
+                    "allow_blank": False,
+                    "allow_null": True,
+                    "style": {},
+                    "label": "Title",
+                    "help_text": None,
+                    "initial": "",
+                    "max_length": 20,
+                    "min_length": None,
+                    "trim_whitespace": True
                 }
             }
         ],
     },
-    'columns': [
-        {'field': 'name', 'headerName': 'name'},
-        {'field': 'age', 'headerName': 'age'},
-        {'field': 'user', 'headerName': 'user'},
-        {'field': 'is_old_enough', 'headerName': 'is this author old enough'},
-        {'field': 'title', 'headerName': 'title'}
+    "columns": [
+        {"field": "name", "headerName": "name"},
+        {"field": "age", "headerName": "age"},
+        {"field": "user", "headerName": "user"},
+        {"field": "is_old_enough", "headerName": "is this author old enough"},
+        {"field": "title", "headerName": "title"}
     ],
-    'rows': [
+    "rows": [
         {
-            'change_url': 'http://localhost:8000/api_admin/test_django_api_admin/author/1/change/',
-            'id': 1,
-            'cells': {
-                'name': 'Muhammad',
-                'age': '60',
-                'user': 'ms',
-                'is_old_enough': True,
-                'title': '-'
+            "change_url": "http://localhost:8000/api_admin/test_django_api_admin/author/1/change/",
+            "id": 1,
+            "cells": {
+                "name": "Muhammad",
+                "age": "60",
+                "user": "ms",
+                "is_old_enough": True,
+                "title": "-"
             }
         }
     ]
@@ -539,15 +550,56 @@ CrudOperation = {
 }
 
 BulkUpdates = {
-    **CrudOperation,
-    "updated_inlines": [
-        {
-            'id': 1,
-            'title': 'The book of nine secrets',
-            'author': 1,
-            'credits': [2], 'pk': 1},
-        {'id': 2, 'title': 'purple thunder lightning technique',
-         'author': 1, 'credits': [2], 'pk': 2}
-    ],
-    "deleted_inlines": [{'id': 3, 'title': 'Pro git', 'author': 1, 'credits': [], 'pk': 3}]
+    "detail": "The author “René Descartes” was changed successfully.",
+    "data": {
+        "name": "René Descartes",
+        "age": 60,
+        "is_vip": True,
+        "user": 1,
+        "publisher": [
+            "http://localhost:8080/api/publisher/1/"
+        ],
+        "is_old_enough": True,
+        "date_joined": "2025-09-04T10:34:16.969071Z",
+        "location": {
+            "lat": None,
+            "lng": None
+        },
+        "pk": 1
+    },
+    "inlines": {
+        "test_django_api_admin.book": {
+            "add": [
+                {
+                    "id": 4,
+                    "title": "The book of nine secrets",
+                    "author": 1,
+                    "credits": [
+                        1
+                    ],
+                    "pk": 4
+                }
+            ],
+            "change": [
+                {
+                    "id": 1,
+                    "title": "Imperial Tyrant Body Art",
+                    "author": 1,
+                    "credits": [
+                        1
+                    ],
+                    "pk": 1
+                }
+            ],
+            "delete": [
+                {
+                    "id": None,
+                    "title": "The book of nine secrets",
+                    "author": 1,
+                    "credits": [],
+                    "pk": None
+                }
+            ]
+        }
+    }
 }

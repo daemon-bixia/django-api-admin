@@ -455,7 +455,7 @@ class BaseAPIModelAdmin:
         Can be overridden by the user in subclasses.
         """
         opts = self.opts
-        codename = get_permission_codename('add', opts)
+        codename = get_permission_codename("add", opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
     def has_change_permission(self, request, obj=None):
