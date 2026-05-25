@@ -11,7 +11,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 from django_api_admin.exceptions import IncorrectLookupParameters
-from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
+from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer, ResponseMessageSerializer
 from django_api_admin.openapi import CommonAPIResponses, ChangeList
 from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
@@ -74,15 +74,13 @@ class ChangeListView(APIView):
     @extend_schema(
         responses={
             200: OpenApiResponse(
-                description=_(
-                    "Action executed successfully on selected objects"),
-                response=dict,
+                description=_("Action was executed on selected objects"),
+                response=ResponseMessageSerializer,
                 examples=[
                     OpenApiExample(
                         name=_("Success Response"),
-                        summary=_("Example of a successful action execution"),
                         description=_(
-                            "Returns a success message after performing the selected action on chosen objects"),
+                            "Example of a successful action execution"),
                         value={"detail": "action was performed successfully"},
                         status_codes=["200"]
                     )

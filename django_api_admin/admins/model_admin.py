@@ -136,8 +136,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
         info = f"{self.model._meta.app_label}_{self.model._meta.model_name}"
         prefix = f"{self.model._meta.app_label}/{self.model._meta.model_name}"
         urlpatterns = [
-            path(f"{prefix}/list/", wrap(self.get_list_view()),
-                 name=f"{info}_list"),
             path(f"{prefix}/changelist/",
                  wrap(self.get_changelist_view()), name=f"{info}_changelist"),
             path(f"{prefix}/add/", wrap(self.get_add_view()), name=f"{info}_add"),
@@ -878,16 +876,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
             instance=obj, context={"request": request})
         return get_form_fields_description(
             serializer, self, True)
-
-    def get_list_view(self):
-        from django_api_admin.admin_views.model_admin_views.list import ListView
-
-        defaults = {
-            "serializer_class": self.get_serializer_class(None),
-            "authentication_classes": self.admin_site.get_authentication_classes(),
-            "model_admin": self,
-        }
-        return ListView.as_view(**defaults)
 
     def get_detail_view(self):
         from django_api_admin.admin_views.model_admin_views.detail import DetailView

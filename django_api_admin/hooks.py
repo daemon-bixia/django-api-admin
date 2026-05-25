@@ -144,12 +144,12 @@ def add_site_views_dynamic_schema(result, site, request):
     return result
 
 
-def build_serializer_schema(result, inspector, serializer_class, json_content):
+def build_serializer_schema(result, inspector, serializer_class, json_content, direction="response"):
     """
     Resolve a serializer into an OpenAPI component
     """
     resolved = inspector.resolve_serializer(
-        serializer_class, direction="response")
+        serializer_class, direction=direction)
     # Include the component in `schema/components` if not already included
     if resolved.name not in result["components"]["schemas"]:
         result.setdefault("components", {}).setdefault("schemas", {})[
@@ -220,6 +220,20 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
             del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["delete"]
 
 
+def build_changelist_action_request_schema(result, inspector, model_admin, request, json_content):
+    """
+    Build the request schema for changelist actions.
+    """
+    try:
+        model_admin.get_changelist_instance(request)
+    except Exception:
+        pass
+
+    serializer_class = model_admin.get_action_serializer_class(request)
+
+    return build_serializer_schema(result, inspector, serializer_class, json_content, direction="request")
+
+
 def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
     app_label, model_name = model._meta.app_label, model._meta.verbose_name
     model_admin = site.get_model_admin(model)
@@ -240,12 +254,12 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
             change_path = result.setdefault("paths", {}).setdefault(
                 f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/change/", {})
             if change_path:
-                # Add `operationId` to change view
+                # Add `operationId` to ChangeView
                 change_path.setdefault("get", {})[
                     "operationId"] = f"Get change form for {app_label}.{model_name}"
                 patch = change_path.setdefault("patch", {})
                 patch["operationId"] = f"Update {app_label}.{model_name}"
-                # Add dynamic response schema to change view
+                # Add dynamic response schema to ChangeView
                 response_200 = patch.setdefault(
                     "responses", {}).setdefault("200", {})
                 content = response_200.setdefault("content", {})
@@ -286,7 +300,7 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 # Add `operationId` to detail view
                 get = detail_path.setdefault("get", {})
                 get["operationId"] = f"Retrieve {app_label}.{model_name}"
-                # Add dynamic response schema to change view
+                # Add dynamic response schema to ChangeView
                 response_200 = get.setdefault(
                     "responses", {}).setdefault("200", {})
                 content = response_200.setdefault("content", {})
@@ -339,6 +353,16 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 # Add `operationId` to ChangeListView
                 get = changelist_path.setdefault("get", {})
                 get["operationId"] = f"Get {app_label}.{model_name} changelist"
+                post = changelist_path.setdefault("post", {})
+                post["operationId"] = f"Perform action on {app_label}.{model_name}"
+                # Add dynamic request schema to ChangelistView.post
+                request_body = post.setdefault("requestBody", {})
+                content = request_body.setdefault("content", {})
+                json_content = content.setdefault("application/json", {})
+                resolved_ref = build_changelist_action_request_schema(
+                    result, inspector, model_admin, request, json_content)
+                json_content["schema"] = resolved_ref
+
     return result
 
 
