@@ -33,7 +33,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.user.set_password("password")
         self.user.save()
 
-        # Verify the user's email
+        # Verify the user"s email
         EmailAddress.objects.create(
             user=self.user,
             email="admin@email.com",
@@ -54,30 +54,30 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.author_info = (Author._meta.app_label, Author._meta.model_name)
 
         # Create a valid publisher
-        Publisher.objects.create(name='rock')
+        Publisher.objects.create(name="rock")
 
         # Create some valid Books
         self.a1_b1 = Book.objects.create(
-            title='High performance django', author=self.a1)
+            title="High performance django", author=self.a1)
         self.a1_b2 = Book.objects.create(
-            title='Clean architecture', author=self.a1)
-        self.a1_b3 = Book.objects.create(title='Pro git', author=self.a1)
+            title="Clean architecture", author=self.a1)
+        self.a1_b3 = Book.objects.create(title="Pro git", author=self.a1)
         self.a2_b1 = Book.objects.create(
-            title='A devils chaplain', author=self.a2)
+            title="A devils chaplain", author=self.a2)
         self.a3_b1 = Book.objects.create(
-            title='Easy way to stop smoking', author=self.a3)
+            title="Easy way to stop smoking", author=self.a3)
         self.book_info = (*self.author_info,
                           Book._meta.app_label, Book._meta.model_name)
 
     def test_inline_bulk_additions(self):
-        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        url = reverse("api_admin:%s_%s_add" % self.author_info)
         data = {
             "data": {
                 "name": "Sergei Brin",
                 "age": 60,
                 "user": self.user.pk,
                 "is_vip": False,
-                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
                 "test_django_api_admin.book": {
@@ -104,15 +104,15 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             response.data["inlines"]["test_django_api_admin.book"]["add"][0]["title"], "The freedom model")
 
     def test_inline_bulk_updates(self):
-        url = reverse('api_admin:%s_%s_change' %
-                      self.author_info, kwargs={'object_id': self.a1.pk})
+        url = reverse("api_admin:%s_%s_change" %
+                      self.author_info, kwargs={"object_id": self.a1.pk})
         data = {
             "data": {
                 "name": "René Descartes",
                 "age": 60,
                 "user": self.user.pk,
                 "is_vip": True,
-                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
                 "test_django_api_admin.book": {
@@ -137,25 +137,25 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         response = self.client.put(url, data=data, format="json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNotNone(response.data.get('inlines'))
+        self.assertIsNotNone(response.data.get("inlines"))
         self.assertEqual(
             len(response.data["inlines"]["test_django_api_admin.book"]["change"]), 2)
         self.assertEqual(response.data["inlines"]["test_django_api_admin.book"]
-                         ["change"][0]['title'], "The book of nine secrets")
+                         ["change"][0]["title"], "The book of nine secrets")
         self.assertEqual(
             len(response.data["inlines"]["test_django_api_admin.book"]["delete"]), 1)
         self.assertEqual(
-            response.data["inlines"]["test_django_api_admin.book"]["delete"][0]['title'], "Pro git")
+            response.data["inlines"]["test_django_api_admin.book"]["delete"][0]["title"], "Pro git")
 
     def test_updating_unrelated_inlines(self):
-        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        url = reverse("api_admin:%s_%s_add" % self.author_info)
         data = {
             "data": {
                 "name": "Nine Serenities Sovereign",
                 "age": 60,
                 "user": self.user.pk,
                 "is_vip": True,
-                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
                 "test_django_api_admin.technique": {
@@ -172,14 +172,14 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             response.data["errors"]["test_django_api_admin.technique"]["non_field_errors"], list))
 
     def test_invalid_inline_data(self):
-        url = reverse('api_admin:%s_%s_add' % self.author_info)
+        url = reverse("api_admin:%s_%s_add" % self.author_info)
         data = {
             "data": {
                 "name": "Nine Serenities Sovereign",
                 "age": 60,
                 "user": self.user.pk,
                 "is_vip": True,
-                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})],
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})],
             },
             "inlines": {
                 "test_django_api_admin.book": {
@@ -230,15 +230,15 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             name="Nine Serenities Sovereign")), 0)
 
     def test_changing_unrelated_instance(self):
-        url = reverse('api_admin:%s_%s_change' %
-                      self.author_info, kwargs={'object_id': self.a1.pk})
+        url = reverse("api_admin:%s_%s_change" %
+                      self.author_info, kwargs={"object_id": self.a1.pk})
         data = {
             "data": {
                 "name": "Nine Serenities Sovereign",
                 "age": 60,
                 "user": self.user.pk,
                 "is_vip": True,
-                'publisher': [reverse("publisher-detail", kwargs={"pk": 1})]
+                "publisher": [reverse("publisher-detail", kwargs={"pk": 1})]
             },
             "inlines": {
                 "test_django_api_admin.book": {
@@ -258,8 +258,8 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
             response.data["errors"]["test_django_api_admin.book"]["abcsd"], list))
 
     def test_constructing_change_messages(self):
-        url = reverse('api_admin:%s_%s_change' %
-                      self.author_info, kwargs={'object_id': self.a1.pk})
+        url = reverse("api_admin:%s_%s_change" %
+                      self.author_info, kwargs={"object_id": self.a1.pk})
         data = {
             "data": {
                 "name": "René Descartes",
@@ -333,7 +333,7 @@ class InlineModelAdminTestCase(APITestCase, URLPatternsTestCase):
         )
         category_info = (Category._meta.app_label, Category._meta.model_name)
         url = reverse("api_admin:%s_%s_change" %
-                      category_info, kwargs={'object_id': category.pk})
+                      category_info, kwargs={"object_id": category.pk})
         data = {
             "data": {
                 "name": "Animation",

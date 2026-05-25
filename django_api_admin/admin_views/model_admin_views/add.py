@@ -51,6 +51,16 @@ class AddView(APIView):
         data = self.model_admin.get_form_description(request, obj=None)
         return Response(data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                description=_(
+                    "The serialized instance, and inlines that were affected")
+            ),
+            403: CommonAPIResponses.permission_denied(),
+            401: CommonAPIResponses.unauthorized(),
+        },
+    )
     def post(self, request):
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
             # If the user doesn't have add_permission respond with permission denied
@@ -58,7 +68,7 @@ class AddView(APIView):
                 raise PermissionDenied
 
             # Initiate the serializer
-            serializer = self.serializer_class(data=request.data.get('data', {}),
+            serializer = self.serializer_class(data=request.data.get("data", {}),
                                                context={"request": request})
 
             # Validate the new_object data

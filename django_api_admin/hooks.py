@@ -157,7 +157,7 @@ def build_serializer_schema(result, inspector, serializer_class, json_content):
     return resolved.ref
 
 
-def build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content):
+def build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content, add=False):
     """
     Add model's serializer schema along with inlines schema representation.
 
@@ -187,7 +187,8 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
         # Add a schema for inline model representing every inline operation.
         inline_app_label = inline.model._meta.app_label
         inline_model_name = inline.model._meta.verbose_name
-        json_content["schema"]["properties"]["inlines"]["properties"][f"{inline_app_label}.{inline_model_name}"] = {
+        model_id = f"{inline_app_label}.{inline_model_name}"
+        json_content["schema"]["properties"]["inlines"]["properties"][model_id] = {
             "type": "object",
             "description": f"Operations for inline model {inline_app_label}.{inline_model_name}",
             "properties": {
@@ -214,6 +215,9 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
                 }
             }
         }
+        if add:
+            del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["change"]
+            del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["delete"]
 
 
 def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
@@ -264,7 +268,6 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     },
                     "required": ["detail", "data", "inlines"]
                 }
-
                 # Populate `data` and `inlines` schema properties
                 build_serializer_with_inlines_schema(
                     result, inspector, model_admin, request, json_content
@@ -300,7 +303,35 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 # Add `operationId` to AddView
                 get = add_path.setdefault("get", {})
                 get["operationId"] = f"Get add form for {app_label}.{model_name}"
-
+                post = add_path.setdefault("post", {})
+                post["operationId"] = f"Create {app_label}.{model_name}"
+                # Add dynamic response schema to add view
+                response_200 = post.setdefault(
+                    "responses", {}).setdefault("200", {})
+                content = response_200.setdefault("content", {})
+                json_content = content.setdefault("application/json", {})
+                json_content["schema"] = {
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "description": "A detail message about the bulk update operation",
+                        },
+                        "data": {
+                            "description": "The updated model instance",
+                        },
+                        "inlines": {
+                            "type": "object",
+                            "properties": {},
+                            "description": "The modified inlines instances",
+                        }
+                    },
+                    "required": ["detail", "data", "inlines"]
+                }
+                # Populate `data` and `inlines` schema properties
+                build_serializer_with_inlines_schema(
+                    result, inspector, model_admin, request, json_content, add=True
+                )
     return result
 
 
