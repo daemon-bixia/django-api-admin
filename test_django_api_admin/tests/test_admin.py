@@ -364,7 +364,6 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         data = {
             "data": [{
                 "pk": 1,
-                "name": "Zhuo Fan",
                 "age": 2,
             }]
         }

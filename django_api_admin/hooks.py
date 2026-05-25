@@ -144,6 +144,17 @@ def add_site_views_dynamic_schema(result, site, request):
     return result
 
 
+def filter_changelist_paths(result, site):
+    """
+    Remove the ChangeListView.put endpoint when there is no model_admin.list_editable
+    """
+    for model_admin in site._registry.values():
+        app_label, model_name = model_admin.model._meta.app_label, model_admin.model._meta.verbose_name
+        path = f"{site.url_prefix}/{app_label}/{model_name}/changelist/"
+        if not model_admin.list_editable and path in result.get("paths", {}):
+            result["paths"][path].pop("put", None)
+
+
 def build_serializer_schema(result, inspector, serializer_class, json_content, direction="response"):
     """
     Resolve a serializer into an OpenAPI component
@@ -232,6 +243,62 @@ def build_changelist_action_request_schema(result, inspector, model_admin, reque
     serializer_class = model_admin.get_action_serializer_class(request)
 
     return build_serializer_schema(result, inspector, serializer_class, json_content, direction="request")
+
+
+def build_changelist_put_request_schema(result, inspector, model_admin, request, json_content):
+    """
+    Build the request schema for changelist bulk updates (PUT).
+    """
+    serializer_class = model_admin.get_changelist_serializer_class(request)
+    resolved_ref = build_serializer_schema(
+        result, inspector, serializer_class, json_content, direction="request")
+    json_content["schema"] = {
+        "type": "object",
+        "properties": {
+            "data": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "pk": {
+                            "type": "integer",
+                            "description": "The primary key of the record to update."
+                        },
+                    },
+                    "allOf": [resolved_ref],
+                    "required": ["pk"]
+                },
+                "description": "A list of objects to update."
+            }
+        },
+        "required": ["data"]
+    }
+    return json_content["schema"]
+
+
+def build_changelist_put_response_schema(result, inspector, model_admin, request, json_content):
+    """
+    Build the response schema for changelist bulk updates (PUT).
+    """
+    serializer_class = model_admin.get_changelist_serializer_class(request)
+    resolved_ref = build_serializer_schema(
+        result, inspector, serializer_class, json_content, direction="response")
+    json_content["schema"] = {
+        "type": "object",
+        "properties": {
+            "detail": {
+                "type": "string",
+                "description": "A detail message about the bulk update operation",
+            },
+            "data": {
+                "type": "object",
+                "additionalProperties": resolved_ref,
+                "description": "A mapping of object IDs to their updated data.",
+            }
+        },
+        "required": ["detail", "data"]
+    }
+    return json_content["schema"]
 
 
 def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
@@ -353,15 +420,36 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 # Add `operationId` to ChangeListView
                 get = changelist_path.setdefault("get", {})
                 get["operationId"] = f"Get {app_label}.{model_name} changelist"
+
+                # Add dynamic request schema to ChangelistView.post (Actions)
                 post = changelist_path.setdefault("post", {})
                 post["operationId"] = f"Perform action on {app_label}.{model_name}"
-                # Add dynamic request schema to ChangelistView.post
-                request_body = post.setdefault("requestBody", {})
-                content = request_body.setdefault("content", {})
-                json_content = content.setdefault("application/json", {})
-                resolved_ref = build_changelist_action_request_schema(
-                    result, inspector, model_admin, request, json_content)
-                json_content["schema"] = resolved_ref
+                post_request_body = post.setdefault("requestBody", {})
+                post_content = post_request_body.setdefault("content", {})
+                post_json_content = post_content.setdefault(
+                    "application/json", {})
+                post_json_content["schema"] = build_changelist_action_request_schema(
+                    result, inspector, model_admin, request, post_json_content)
+
+                # Add dynamic request schema to ChangelistView.put (Bulk Editing)
+                if model_admin.list_editable:
+                    put = changelist_path.setdefault("put", {})
+                    put["operationId"] = f"Edit {app_label}.{model_name} changelist records"
+                    put_request_body = put.setdefault("requestBody", {})
+                    put_content = put_request_body.setdefault("content", {})
+                    put_json_content = put_content.setdefault(
+                        "application/json", {})
+                    build_changelist_put_request_schema(
+                        result, inspector, model_admin, request, put_json_content)
+
+                    # Add dynamic response schema to ChangelistView.put
+                    put_responses = put.setdefault("responses", {})
+                    put_response_200 = put_responses.setdefault("200", {})
+                    put_response_content = put_response_200.setdefault("content", {})
+                    put_response_json_content = put_response_content.setdefault(
+                        "application/json", {})
+                    build_changelist_put_response_schema(
+                        result, inspector, model_admin, request, put_response_json_content)
 
     return result
 
@@ -402,7 +490,10 @@ def modify_schema(result, generator, request, public):
         result = tag_result_paths(
             site.site_urls, site_generator.endpoints, site, result, site.name
         )
-        result = add_site_views_dynamic_schema(result, site, request)
+        add_site_views_dynamic_schema(result, site, request)
+
+        # Remove the changelist put methods where list_editable is falsy
+        filter_changelist_paths(result, site)
 
         # Update the urls for each registered model
         for model in site._registry.keys():

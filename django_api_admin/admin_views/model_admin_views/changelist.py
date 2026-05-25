@@ -100,6 +100,15 @@ class ChangeListView(APIView):
         queryset = cl.get_queryset(request)
         return self.model_admin.response_action(request, queryset)
 
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                description=_("The records that were updated"),
+            ),
+            403: CommonAPIResponses.permission_denied(),
+            401: CommonAPIResponses.unauthorized()
+        }
+    )
     def put(self, request):
         """
         Perform bulk updates on changelist records.

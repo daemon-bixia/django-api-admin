@@ -929,7 +929,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_changelist_view(self):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
-
         defaults = {
             "serializer_class": self.get_changelist_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
