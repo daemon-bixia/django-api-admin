@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.urls import URLResolver
 from django.utils.translation import gettext as _
 from django_api_admin.sites import all_sites
@@ -445,7 +447,8 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     # Add dynamic response schema to ChangelistView.put
                     put_responses = put.setdefault("responses", {})
                     put_response_200 = put_responses.setdefault("200", {})
-                    put_response_content = put_response_200.setdefault("content", {})
+                    put_response_content = put_response_200.setdefault(
+                        "content", {})
                     put_response_json_content = put_response_content.setdefault(
                         "application/json", {})
                     build_changelist_put_response_schema(
@@ -464,14 +467,18 @@ def modify_schema(result, generator, request, public):
     It also tags every AdminSite route by the site's name, and every ModelAdmin
     route by model_admin's model._meta.verbose_name.
     """
+
+    # Add markdown documentation
+    current_dir = Path(__file__).resolve().parent
+    markdown_path = current_dir / "API_DOCS.md"
+    if markdown_path.exists():
+        with open(markdown_path, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
+
     # Change the api info
     result["info"] = {
         "title": _("Django API Admin"),
-        "description": _(
-            "A rewrite of django.contrib.admin as a Restful API, intended for use\t"
-            "in the process of creating custom admin panels using frontend frameworks like"
-            "react, and vue while maintaining an API similar to django.contrib.admin."
-        ),
+        "description": markdown_content,
         "contact": "msbizzacc0unt@gmail.com",
         "license": {
             "name": "MIT License",
