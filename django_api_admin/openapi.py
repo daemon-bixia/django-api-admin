@@ -2,7 +2,8 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, OpenApiExample, OpenApiParameter
 from django_api_admin.serializers import ErrorMessageSerializer
 
-form_description = {
+
+form_with_inlines_description = {
     "form": {
         "model": "test_django_api_admin.author",
         "readonly_fields": [
@@ -140,7 +141,7 @@ class APIResponseExamples:
             summary=_("Example of a successful field attribute response"),
             description=_(
                 "Retrieve form field attributes for the endpoint"),
-            value=form_description,
+            value=form_with_inlines_description,
             status_codes=["200"],
         )
 
@@ -438,7 +439,33 @@ User = {
 }
 
 ChangeList = {
-    "action_form": form_description,
+    "action_form": {
+        "fields": [
+            {
+                "type": "ChoiceField",
+                "name": "action",
+                "attrs": {
+                        "read_only": False,
+                        "write_only": False,
+                        "required": True,
+                        "default": None,
+                        "allow_null": False,
+                        "label": "Action",
+                        "help_text": None,
+                        "initial": None,
+                        "style": {},
+                        "choices": {
+                            "": "---------",
+                            "delete_selected": "Delete selected authors",
+                            "make_old": "make all authors old",
+                            "make_young": "make all authors young"
+                        },
+                    "allow_blank": False,
+                    "html_cutoff": None,
+                    "html_cutoff_text": "More than {count} items..."
+                }
+            },]
+    },
     "config": {
         "actions_on_top": True,
         "actions_on_bottom": False,

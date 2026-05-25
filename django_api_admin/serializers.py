@@ -112,12 +112,20 @@ class ChangeListSerializer(serializers.Serializer):
     """
     Validates the changelist querystring
     """
-
-    q = serializers.CharField(required=False, trim_whitespace=False)
-    p = serializers.IntegerField(required=False, min_value=1)
-    all = serializers.BooleanField(required=False)
-    o = serializers.CharField(required=False)
-    _to_field = serializers.CharField(required=False)
+    q = serializers.CharField(
+        required=False, trim_whitespace=False, help_text=_("Search query.")
+    )
+    p = serializers.IntegerField(
+        required=False, min_value=1, help_text=_("Page number.")
+    )
+    all = serializers.BooleanField(
+        required=False, help_text=_("Show all results."))
+    o = serializers.CharField(
+        required=False, help_text=_("The field(s) to use for ordering.")
+    )
+    _to_field = serializers.CharField(
+        required=False, help_text=_("The field to match for lookups.")
+    )
 
 
 class AppIndexSerializer(serializers.Serializer):
@@ -555,77 +563,112 @@ class SiteContextSerializer(serializers.Serializer):
 
 
 class ActionChoiceSerializer(serializers.Serializer):
-    action = serializers.CharField()
-    description = serializers.CharField()
+    action = serializers.CharField(
+        help_text=_("The internal name of the action."))
+    description = serializers.CharField(help_text=_(
+        "The human-readable description of the action."))
 
 
 class FilterChoiceSerializer(serializers.Serializer):
-    selected = serializers.BooleanField()
-    query_string = serializers.CharField()
-    display = serializers.CharField()
+    selected = serializers.BooleanField(help_text=_(
+        "Whether this filter choice is currently selected."))
+    query_string = serializers.CharField(help_text=_(
+        "The query string to apply this filter choice."))
+    display = serializers.CharField(help_text=_(
+        "The human-readable label for this filter choice."))
 
 
 class FilterSerializer(serializers.Serializer):
-    title = serializers.CharField()
-    choices = FilterChoiceSerializer(many=True)
+    title = serializers.CharField(help_text=_("The title of the filter."))
+    choices = FilterChoiceSerializer(many=True, help_text=_(
+        "The list of available choices for this filter."))
 
 
 class EditingFieldSerializer(serializers.Serializer):
-    type = serializers.CharField()
-    name = serializers.CharField()
-    attrs = serializers.DictField()
+    type = serializers.CharField(help_text=_("The field type for editing."))
+    name = serializers.CharField(help_text=_("The name of the field."))
+    attrs = serializers.DictField(help_text=_(
+        "The attributes and configuration for the editing field."))
 
 
 class ConfigSerializer(serializers.Serializer):
-    actions_on_top = serializers.BooleanField()
-    actions_on_bottom = serializers.BooleanField()
-    actions_selection_counter = serializers.BooleanField()
-    empty_value_display = serializers.CharField()
-    list_display = serializers.ListField(child=serializers.CharField())
-    list_display_links = serializers.ListField(child=serializers.CharField())
-    list_editable = serializers.ListField(child=serializers.CharField())
-    exclude = serializers.ListField(child=serializers.CharField())
-    show_full_result_count = serializers.BooleanField()
-    list_per_page = serializers.IntegerField()
-    list_max_show_all = serializers.IntegerField()
-    date_hierarchy = serializers.CharField()
-    search_help_text = serializers.CharField(allow_null=True)
+    actions_on_top = serializers.BooleanField(help_text=_(
+        "Whether to display actions at the top of the list."))
+    actions_on_bottom = serializers.BooleanField(help_text=_(
+        "Whether to display actions at the bottom of the list."))
+    actions_selection_counter = serializers.BooleanField(
+        help_text=_("Whether to show a counter for selected items."))
+    empty_value_display = serializers.CharField(
+        help_text=_("The string to display for empty values."))
+    list_display = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The fields to display in the list."))
+    list_display_links = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The fields that should link to the change view."))
+    list_editable = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The fields that are editable directly in the list."))
+    exclude = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The fields to exclude from the list."))
+    show_full_result_count = serializers.BooleanField(
+        help_text=_("Whether to show the total count of results."))
+    list_per_page = serializers.IntegerField(
+        help_text=_("The number of items to show per page."))
+    list_max_show_all = serializers.IntegerField(help_text=_(
+        "The maximum number of items to show when 'Show all' is clicked."))
+    date_hierarchy = serializers.CharField(help_text=_(
+        "The field to use for date-based navigation."))
+    search_help_text = serializers.CharField(allow_null=True, help_text=_(
+        "The help text to display for the search box."))
     sortable_by = serializers.ListField(
-        child=serializers.CharField(), allow_null=True)
-    search_fields = serializers.ListField(child=serializers.CharField())
-    preserve_filters = serializers.BooleanField()
-    full_count = serializers.IntegerField()
-    result_count = serializers.IntegerField()
-    action_choices = ActionChoiceSerializer(many=True)
-    filters = FilterSerializer(many=True)
-    list_display_fields = serializers.ListField(child=serializers.CharField())
-    editing_fields = serializers.ListField(child=EditingFieldSerializer())
+        child=serializers.CharField(), allow_null=True, help_text=_("The fields that the user can sort by."))
+    search_fields = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The fields to include in the search."))
+    preserve_filters = serializers.BooleanField(help_text=_(
+        "Whether to preserve filters after saving an object."))
+    full_count = serializers.IntegerField(help_text=_(
+        "The total number of objects in the database."))
+    result_count = serializers.IntegerField(help_text=_(
+        "The number of objects matching the current filters."))
+    action_choices = ActionChoiceSerializer(
+        many=True, help_text=_("The list of available actions."))
+    filters = FilterSerializer(many=True, help_text=_(
+        "The list of available filters."))
+    list_display_fields = serializers.ListField(child=serializers.CharField(
+    ), help_text=_("The list of fields available for list display."))
+    editing_fields = serializers.ListField(child=EditingFieldSerializer(
+    ), help_text=_("Metadata for list-editable fields."))
 
 
 class ColumnSerializer(serializers.Serializer):
-    field = serializers.CharField()
-    headerName = serializers.CharField()
-
-
-class CellSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    age = serializers.CharField()
-    user = serializers.CharField()
-    is_old_enough = serializers.BooleanField()
-    title = serializers.CharField()
+    field = serializers.CharField(help_text=_(
+        "The field name associated with this column."))
+    headerName = serializers.CharField(help_text=_(
+        "The human-readable header name for this column."))
 
 
 class RowSerializer(serializers.Serializer):
-    change_url = serializers.URLField()
-    id = serializers.IntegerField()
-    cells = CellSerializer()
+    change_url = serializers.URLField(help_text=_(
+        "The URL to the change view for this object."))
+    id = serializers.IntegerField(
+        help_text=_("The primary key of the object."))
+    cells = serializers.DictField(
+        child=serializers.CharField(),
+        help_text=_("The data cells for this row, mapped by field name."))
 
 
 class ChangelistResponseSerializer(serializers.Serializer):
-    action_form = FormFieldsSerializer()
-    config = ConfigSerializer()
-    columns = ColumnSerializer(many=True)
-    rows = RowSerializer(many=True)
+    action_form = FormFieldsSerializer(
+        help_text=_(
+            "Configuration for the action form, including fields and inlines.")
+    )
+    config = ConfigSerializer(
+        help_text=_("Configuration metadata for the changelist.")
+    )
+    columns = ColumnSerializer(
+        many=True, help_text=_("A list of column definitions for the table.")
+    )
+    rows = RowSerializer(
+        many=True, help_text=_("The actual data rows to be displayed.")
+    )
 
 
 class ResponseMessageSerializer(serializers.Serializer):

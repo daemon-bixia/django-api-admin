@@ -332,6 +332,13 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 build_serializer_with_inlines_schema(
                     result, inspector, model_admin, request, json_content, add=True
                 )
+        elif url.name == f"{app_label}_{model_name}_changelist":
+            changelist_path = result.setdefault("paths", {}).setdefault(
+                f"{site.url_prefix}/{app_label}/{model_name}/changelist/", {})
+            if changelist_path:
+                # Add `operationId` to ChangeListView
+                get = changelist_path.setdefault("get", {})
+                get["operationId"] = f"Get {app_label}.{model_name} changelist"
     return result
 
 

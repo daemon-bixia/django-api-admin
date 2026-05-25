@@ -21,10 +21,6 @@ from django_api_admin.utils.lookup_field import lookup_field
 
 
 class ChangeListView(APIView):
-    """
-    Return a JSON object representing the django admin changelist table.
-    supports querystring filtering, pagination and search also changes based on list display.
-    """
     serializer_class = None
     permission_classes = []
     model_admin = None
@@ -34,13 +30,11 @@ class ChangeListView(APIView):
         responses={
             200: OpenApiResponse(
                 description=_(
-                    "Retrieve a list of records with optional filtering and pagination"),
+                    "Column definitions, and row data"),
                 response=ChangelistResponseSerializer,
                 examples=[OpenApiExample(
                     name=_("Success Response"),
-                    summary=_("Example of a successful changelist retrieval"),
-                    description=_(
-                        "Returns a paginated list of records with optional filters applied."),
+                    description=_("Example of a success response"),
                     value=ChangeList,
                     status_codes=["200"],
                 )]
@@ -50,6 +44,12 @@ class ChangeListView(APIView):
         }
     )
     def get(self, request):
+        """
+        Retrieve the changelist data.
+
+        Returns a JSON response containing column definitions, row data,
+        and configuration for filters and actions.
+        """
         if not self.model_admin.has_view_or_change_permission(request):
             raise PermissionDenied
 
@@ -93,11 +93,21 @@ class ChangeListView(APIView):
         }
     )
     def post(self, request):
+        """
+        Execute administrative actions on changelist records.
+
+        Performs the selected action on the chosen set of records.
+        """
         cl = self.get_changelist_instance(request)
         queryset = cl.get_queryset(request)
         return self.model_admin.response_action(request, queryset)
 
     def put(self, request):
+        """
+        Perform bulk updates on changelist records.
+
+        Updates multiple records at once for fields marked as 'list_editable'.
+        """
         cl = self.get_changelist_instance(request)
         if not self.model_admin.has_change_permission(request):
             raise PermissionDenied
