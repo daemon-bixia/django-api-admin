@@ -108,6 +108,25 @@ class ActionSerializer(serializers.Serializer):
     select_across = serializers.BooleanField(required=False, default=0)
 
 
+class PermissionsSerializer(serializers.Serializer):
+    has_add_permission = serializers.BooleanField(
+        required=True,
+        help_text="Whether the user has permission to add new instances of the model.",
+    )
+    has_change_permission = serializers.BooleanField(
+        required=True,
+        help_text="Whether the user has permission to change existing instances of the model.",
+    )
+    has_delete_permission = serializers.BooleanField(
+        required=True,
+        help_text="Whether the user has permission to delete instances of the model.",
+    )
+    has_view_permission = serializers.BooleanField(
+        required=True,
+        help_text="Whether the user has permission to view instances of the model.",
+    )
+
+
 class ChangeListSerializer(serializers.Serializer):
     """
     Validates the changelist querystring
@@ -136,19 +155,6 @@ class AppIndexSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 _("finish must occur after start"))
         return super().validate(attrs)
-
-
-class PermissionsSerializer(serializers.Serializer):
-    add = serializers.BooleanField(
-        help_text=_("Whether the user can add objects."))
-    change = serializers.BooleanField(
-        help_text=_("Whether the user can change objects.")
-    )
-    delete = serializers.BooleanField(
-        help_text=_("Whether the user can delete objects.")
-    )
-    view = serializers.BooleanField(
-        help_text=_("Whether the user can view objects."))
 
 
 class ModelSerializer(serializers.Serializer):
@@ -382,25 +388,6 @@ class PrepopulatedFieldsSerializer(serializers.Serializer):
     )
 
 
-class PermissionsSerializer(serializers.Serializer):
-    has_add_permission = serializers.BooleanField(
-        required=True,
-        help_text="Whether the user has permission to add new instances of the model.",
-    )
-    has_change_permission = serializers.BooleanField(
-        required=True,
-        help_text="Whether the user has permission to change existing instances of the model.",
-    )
-    has_delete_permission = serializers.BooleanField(
-        required=True,
-        help_text="Whether the user has permission to delete instances of the model.",
-    )
-    has_view_permission = serializers.BooleanField(
-        required=True,
-        help_text="Whether the user has permission to view instances of the model.",
-    )
-
-
 class FormSerializer(serializers.Serializer):
     model = serializers.CharField(
         help_text="A string made up of the app_label and model._meta.verbose_name separated by a dot.",
@@ -537,12 +524,6 @@ class APIRootSerializer(serializers.Serializer):
 class TokensSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     access = serializers.CharField()
-
-
-class ObtainTokenResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    user = UserSerializer()
-    tokens = TokensSerializer()
 
 
 class SiteContextSerializer(serializers.Serializer):

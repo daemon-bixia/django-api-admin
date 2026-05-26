@@ -46,15 +46,15 @@ class AppIndexView(APIView):
         app_dict = self.admin_site._build_app_dict(request, app_label)
 
         if not app_dict:
-            return Response({'detail': _('The requested admin page does not exist.')},
+            return Response({"detail": _("The requested admin page does not exist.")},
                             status=status.HTTP_404_NOT_FOUND)
 
         # Sort the models alphabetically within each app.
-        app_dict['models'].sort(key=lambda x: x['name'])
+        app_dict["models"].sort(key=lambda x: x["name"])
 
         data = {
-            'app_label': app_label,
-            'app': app_dict,
+            "app_label": app_label,
+            "app": app_dict,
         }
         return Response(data, status=status.HTTP_200_OK)
 
@@ -64,5 +64,5 @@ class AppIndexView(APIView):
         }
         return self.serializer_class(
             data={"app_label": app_label},
-            context={'registered_app_labels': registered_app_labels}
+            context={"registered_app_labels": registered_app_labels}
         )

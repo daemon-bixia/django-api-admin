@@ -104,7 +104,7 @@ class APIAdminSite():
         self._global_actions = self._actions.copy()
         self.admin_class = self.admin_class or APIModelAdmin
 
-        # If include_auth is set to True then include default UserModel and Groups
+        # If `include_auth` is set to True then include default `UserModel` and `Groups`
         UserModel = get_user_model()
         if include_auth:
             self.register([UserModel, Group])
@@ -424,8 +424,8 @@ class APIAdminSite():
         }
 
     def get_log_entry_serializer(self):
-        return type('LogEntrySerializer', (self.log_entry_serializer,), {
-            'user': self.user_serializer(read_only=True),
+        return type("LogEntrySerializer", (self.log_entry_serializer,), {
+            "user": self.user_serializer(read_only=True),
         })
 
     def get_authentication_classes(self):

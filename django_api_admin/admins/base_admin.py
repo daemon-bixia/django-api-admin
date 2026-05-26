@@ -72,6 +72,8 @@ class BaseAPIModelAdmin:
         for k, v in self.serializer_field_attributes.items():
             field_attributes[k] = v if v else []
         self.serializer_field_attributes = field_attributes
+        # Ensure that the same serializer_class is returned for the same request
+        self._serializer_cache = {}
 
     def serializer_field_for_dbfield(self, db_field, request, **kwargs):
         """
@@ -260,7 +262,8 @@ class BaseAPIModelAdmin:
             **kwargs,
         }
 
-        return model_serializer_factory(self.model, **defaults)
+        return model_serializer_factory(
+            self.model, **defaults)
 
     def get_empty_value_display(self):
         """
