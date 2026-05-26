@@ -105,7 +105,7 @@ class AuthorAPIAdmin(APIModelAdmin):
     show_facets = ShowFacets.ALWAYS
 
     @display(description="is this author old enough")
-    def is_old_enough(self, obj, context=None):
+    def is_old_enough(self, obj, context=None) -> bool:
         return obj.age > 10
 
 

@@ -8,8 +8,8 @@ REGEX_TYPE = type(re.compile(''))
 class MethodField(Field):
     def __init__(self, method, **kwargs):
         self.method = method
-        kwargs['source'] = '*'
-        kwargs['read_only'] = True
+        kwargs["source"] = "*"
+        kwargs["read_only"] = True
         super().__init__(**kwargs)
 
     def to_representation(self, value):
@@ -23,7 +23,7 @@ class MethodField(Field):
         ]
         kwargs = {
             key: (copy.deepcopy(value, memo) if (
-                key not in ('validators', 'regex') and value is not self.method) else value)
+                key not in ("validators", "regex") and value is not self.method) else value)
             for key, value in self._kwargs.items()
         }
         return self.__class__(*args, **kwargs)

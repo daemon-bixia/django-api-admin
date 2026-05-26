@@ -15,10 +15,7 @@ class DjangoApiAdminConfig(AppConfig):
     def ready(self):
         checks.register(check_dependencies, checks.Tags.admin)
         checks.register(check_admin_app, checks.Tags.admin)
-        try:
-            import django_api_admin.extensions  # noqa: F401
-        except ImportError:
-            pass
+        import django_api_admin.extensions  # noqa: F401
 
 
 class DjangoApiAdminConfig(DjangoApiAdminConfig):
