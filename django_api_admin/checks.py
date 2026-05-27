@@ -14,7 +14,6 @@ import collections
 from itertools import chain
 
 from django.apps import apps
-from django.conf import settings
 from django.core import checks
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
@@ -27,7 +26,7 @@ from rest_framework.serializers import ModelSerializer
 
 from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.flatten import flatten
-from django_api_admin.exceptions import NotRelationField
+from django_api_admin.exceptions import NotRelationField, NotRegistered
 
 
 def _issubclass(cls, classinfo):
@@ -76,7 +75,6 @@ def check_dependencies(**kwargs):
     errors = []
     app_dependencies = (
         ("django.contrib.contenttypes", 401),
-        ("django.contrib.auth", 402),
         ("rest_framework", 403),
         ("drf_spectacular", 404)
     )
@@ -86,19 +84,9 @@ def check_dependencies(**kwargs):
                 checks.Error(
                     "'%s' must be in INSTALLED_APPS in order to use the admin "
                     "application." % app_name,
-                    id="admin.E%d" % error_code,
+                    id="api_admin.E%d" % error_code,
                 )
             )
-    if not _contains_subclass(
-        "django.contrib.auth.middleware.AuthenticationMiddleware", settings.MIDDLEWARE
-    ):
-        errors.append(
-            checks.Error(
-                "'django.contrib.auth.middleware.AuthenticationMiddleware' must "
-                "be in MIDDLEWARE in order to use the admin application.",
-                id="admin.E405",
-            )
-        )
     return errors
 
 
@@ -110,7 +98,7 @@ class BaseAPIModelAdminChecks:
             *self._check_fields(admin_obj),
             *self._check_fieldsets(admin_obj),
             *self._check_exclude(admin_obj),
-            *self._check_serializer(admin_obj),
+            *self._check_serializer_class(admin_obj),
             *self._check_filter_vertical(admin_obj),
             *self._check_filter_horizontal(admin_obj),
             *self._check_radio_fields(admin_obj),
@@ -129,7 +117,7 @@ class BaseAPIModelAdminChecks:
                 "a list or tuple",
                 option="autocomplete_fields",
                 obj=obj,
-                id="admin.E036",
+                id="api_admin.E036",
             )
         else:
             return list(
@@ -153,7 +141,7 @@ class BaseAPIModelAdminChecks:
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E037"
+                field=field_name, option=label, obj=obj, id="api_admin.E037"
             )
         else:
             if not field.many_to_many and not isinstance(field, models.ForeignKey):
@@ -163,9 +151,10 @@ class BaseAPIModelAdminChecks:
                     obj=obj,
                     id="admin.E038",
                 )
-            related_admin = obj.admin_site._registry.get(
-                field.remote_field.model)
-            if related_admin is None:
+            try:
+                related_admin = obj.admin_site.get_model_admin(
+                    field.remote_field.model)
+            except NotRegistered:
                 return [
                     checks.Error(
                         'An admin for model "%s" has to be registered '
@@ -175,22 +164,23 @@ class BaseAPIModelAdminChecks:
                             type(obj).__name__,
                         ),
                         obj=obj.__class__,
-                        id="admin.E039",
+                        id="api_admin.E039",
                     )
                 ]
-            elif not related_admin.search_fields:
-                return [
-                    checks.Error(
-                        '%s must define "search_fields", because it\'s '
-                        "referenced by %s.autocomplete_fields."
-                        % (
-                            related_admin.__class__.__name__,
-                            type(obj).__name__,
-                        ),
-                        obj=obj.__class__,
-                        id="admin.E040",
-                    )
-                ]
+            else:
+                if not related_admin.search_fields:
+                    return [
+                        checks.Error(
+                            '%s must define "search_fields", because it\'s '
+                            "referenced by %s.autocomplete_fields."
+                            % (
+                                related_admin.__class__.__name__,
+                                type(obj).__name__,
+                            ),
+                            obj=obj.__class__,
+                            id="api_admin.E040",
+                        )
+                    ]
             return []
 
     def _check_raw_id_fields(self, obj):
@@ -199,7 +189,7 @@ class BaseAPIModelAdminChecks:
 
         if not isinstance(obj.raw_id_fields, (list, tuple)):
             return must_be(
-                "a list or tuple", option="raw_id_fields", obj=obj, id="admin.E001"
+                "a list or tuple", option="raw_id_fields", obj=obj, id="api_admin.E001"
             )
         else:
             return list(
@@ -220,7 +210,7 @@ class BaseAPIModelAdminChecks:
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E002"
+                field=field_name, option=label, obj=obj, id="api_admin.E002"
             )
         else:
             # Using attname is not supported.
@@ -229,14 +219,14 @@ class BaseAPIModelAdminChecks:
                     field=field_name,
                     option=label,
                     obj=obj,
-                    id="admin.E002",
+                    id="api_admin.E002",
                 )
             if not field.many_to_many and not isinstance(field, models.ForeignKey):
                 return must_be(
                     "a foreign key or a many-to-many field",
                     option=label,
                     obj=obj,
-                    id="admin.E003",
+                    id="api_admin.E003",
                 )
             else:
                 return []
@@ -249,13 +239,13 @@ class BaseAPIModelAdminChecks:
         if obj.fields is None:
             return []
         elif not isinstance(obj.fields, (list, tuple)):
-            return must_be("a list or tuple", option="fields", obj=obj, id="admin.E004")
+            return must_be("a list or tuple", option="fields", obj=obj, id="api_admin.E004")
         elif obj.fieldsets:
             return [
                 checks.Error(
                     "Both 'fieldsets' and 'fields' are specified.",
                     obj=obj.__class__,
-                    id="admin.E005",
+                    id="api_admin.E005",
                 )
             ]
         fields = flatten(obj.fields)
@@ -264,7 +254,7 @@ class BaseAPIModelAdminChecks:
                 checks.Error(
                     "The value of 'fields' contains duplicate field(s).",
                     obj=obj.__class__,
-                    id="admin.E006",
+                    id="api_admin.E006",
                 )
             ]
 
@@ -283,7 +273,7 @@ class BaseAPIModelAdminChecks:
             return []
         elif not isinstance(obj.fieldsets, (list, tuple)):
             return must_be(
-                "a list or tuple", option="fieldsets", obj=obj, id="admin.E007"
+                "a list or tuple", option="fieldsets", obj=obj, id="api_admin.E007"
             )
         else:
             seen_fields = []
@@ -301,19 +291,19 @@ class BaseAPIModelAdminChecks:
         set name and a dictionary containing "fields" key."""
 
         if not isinstance(fieldset, (list, tuple)):
-            return must_be("a list or tuple", option=label, obj=obj, id="admin.E008")
+            return must_be("a list or tuple", option=label, obj=obj, id="api_admin.E008")
         elif len(fieldset) != 2:
-            return must_be("of length 2", option=label, obj=obj, id="admin.E009")
+            return must_be("of length 2", option=label, obj=obj, id="api_admin.E009")
         elif not isinstance(fieldset[1], dict):
             return must_be(
-                "a dictionary", option="%s[1]" % label, obj=obj, id="admin.E010"
+                "a dictionary", option="%s[1]" % label, obj=obj, id="api_admin.E010"
             )
         elif "fields" not in fieldset[1]:
             return [
                 checks.Error(
                     "The value of '%s[1]' must contain the key 'fields'." % label,
                     obj=obj.__class__,
-                    id="admin.E011",
+                    id="api_admin.E011",
                 )
             ]
         elif not isinstance(fieldset[1]["fields"], (list, tuple)):
@@ -321,7 +311,7 @@ class BaseAPIModelAdminChecks:
                 "a list or tuple",
                 option="%s[1]['fields']" % label,
                 obj=obj,
-                id="admin.E008",
+                id="api_admin.E008",
             )
 
         seen_fields.extend(flatten(fieldset[1]["fields"]))
@@ -330,7 +320,7 @@ class BaseAPIModelAdminChecks:
                 checks.Error(
                     "There are duplicate field(s) in '%s[1]'." % label,
                     obj=obj.__class__,
-                    id="admin.E012",
+                    id="api_admin.E012",
                 )
             ]
         return list(
@@ -382,7 +372,7 @@ class BaseAPIModelAdminChecks:
                             "'%s', because that field manually specifies a "
                             "relationship model." % (label, field_name),
                             obj=obj.__class__,
-                            id="admin.E013",
+                            id="api_admin.E013",
                         )
                     ]
                 else:
@@ -395,24 +385,24 @@ class BaseAPIModelAdminChecks:
             return []
         elif not isinstance(obj.exclude, (list, tuple)):
             return must_be(
-                "a list or tuple", option="exclude", obj=obj, id="admin.E014"
+                "a list or tuple", option="exclude", obj=obj, id="api_admin.E014"
             )
         elif len(obj.exclude) > len(set(obj.exclude)):
             return [
                 checks.Error(
                     "The value of 'exclude' contains duplicate field(s).",
                     obj=obj.__class__,
-                    id="admin.E015",
+                    id="api_admin.E015",
                 )
             ]
         else:
             return []
 
-    def _check_serializer(self, obj):
+    def _check_serializer_class(self, obj):
         """Check that serializer_class subclasses ModelSerializer."""
         if not _issubclass(obj.serializer_class, ModelSerializer):
             return must_inherit_from(
-                parent="ModelSerializer", option="serializer", obj=obj, id="admin.E016"
+                parent="ModelSerializer", option="serializer_class", obj=obj, id="api_admin.E016"
             )
         else:
             return []
@@ -421,7 +411,7 @@ class BaseAPIModelAdminChecks:
         """Check that filter_vertical is a sequence of field names."""
         if not isinstance(obj.filter_vertical, (list, tuple)):
             return must_be(
-                "a list or tuple", option="filter_vertical", obj=obj, id="admin.E017"
+                "a list or tuple", option="filter_vertical", obj=obj, id="api_admin.E017"
             )
         else:
             return list(
@@ -437,7 +427,7 @@ class BaseAPIModelAdminChecks:
         """Check that filter_horizontal is a sequence of field names."""
         if not isinstance(obj.filter_horizontal, (list, tuple)):
             return must_be(
-                "a list or tuple", option="filter_horizontal", obj=obj, id="admin.E018"
+                "a list or tuple", option="filter_horizontal", obj=obj, id="api_admin.E018"
             )
         else:
             return list(
@@ -457,13 +447,23 @@ class BaseAPIModelAdminChecks:
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E019"
+                field=field_name, option=label, obj=obj, id="api_admin.E019"
             )
         else:
-            if not field.many_to_many:
+            if not field.many_to_many or isinstance(field, models.ManyToManyRel):
                 return must_be(
-                    "a many-to-many field", option=label, obj=obj, id="admin.E020"
+                    "a many-to-many field", option=label, obj=obj, id="api_admin.E020"
                 )
+            elif not field.remote_field.through._meta.auto_created:
+                return [
+                    checks.Error(
+                        f"The value of '{label}' cannot include the ManyToManyField "
+                        f"'{field_name}', because that field manually specifies a "
+                        f"relationship model.",
+                        obj=obj.__class__,
+                        id="api_admin.E013",
+                    )
+                ]
             else:
                 return []
 
@@ -471,7 +471,7 @@ class BaseAPIModelAdminChecks:
         """Check that `radio_fields` is a dictionary."""
         if not isinstance(obj.radio_fields, dict):
             return must_be(
-                "a dictionary", option="radio_fields", obj=obj, id="admin.E021"
+                "a dictionary", option="radio_fields", obj=obj, id="api_admin.E021"
             )
         else:
             return list(
@@ -512,15 +512,15 @@ class BaseAPIModelAdminChecks:
     def _check_radio_fields_value(self, obj, val, label):
         """Check type of a value of `radio_fields` dictionary."""
 
-        from django_api_admin.admins.base_admin import HORIZONTAL, VERTICAL
+        from django_api_admin.admins.model_admin import HORIZONTAL, VERTICAL
 
         if val not in (HORIZONTAL, VERTICAL):
             return [
                 checks.Error(
-                    "The value of '%s' must be either admin.HORIZONTAL or "
-                    "admin.VERTICAL." % label,
+                    "The value of '%s' must be either model_admin.HORIZONTAL or "
+                    "model_admin.VERTICAL." % label,
                     obj=obj.__class__,
-                    id="admin.E024",
+                    id="api_admin.E024",
                 )
             ]
         else:
@@ -533,7 +533,7 @@ class BaseAPIModelAdminChecks:
                     "The value of 'view_on_site' must be a callable or a boolean "
                     "value.",
                     obj=obj.__class__,
-                    id="admin.E025",
+                    id="api_admin.E025",
                 )
             ]
         else:
@@ -544,7 +544,7 @@ class BaseAPIModelAdminChecks:
         field types."""
         if not isinstance(obj.prepopulated_fields, dict):
             return must_be(
-                "a dictionary", option="prepopulated_fields", obj=obj, id="admin.E026"
+                "a dictionary", option="prepopulated_fields", obj=obj, id="api_admin.E026"
             )
         else:
             return list(
@@ -568,7 +568,7 @@ class BaseAPIModelAdminChecks:
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E027"
+                field=field_name, option=label, obj=obj, id="api_admin.E027"
             )
         else:
             if isinstance(
@@ -581,7 +581,7 @@ class BaseAPIModelAdminChecks:
                         "DateTimeField, a ForeignKey, a OneToOneField, or a "
                         "ManyToManyField." % (label, field_name),
                         obj=obj.__class__,
-                        id="admin.E028",
+                        id="api_admin.E028",
                     )
                 ]
             else:
