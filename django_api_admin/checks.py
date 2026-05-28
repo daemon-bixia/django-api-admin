@@ -1138,7 +1138,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                                 func.__name__,
                             ),
                             obj=obj.__class__,
-                            id="admin.E129",
+                            id="api_admin.E129",
                         )
                     )
         # Names need to be unique.
@@ -1154,7 +1154,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                             name,
                         ),
                         obj=obj.__class__,
-                        id="admin.E130",
+                        id="api_admin.E130",
                     )
                 )
         return errors
@@ -1197,7 +1197,7 @@ class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
                         parent_model._meta.label,
                     ),
                     obj=obj.__class__,
-                    id="admin.E201",
+                    id="api_admin.E201",
                 )
             ]
         else:
@@ -1207,7 +1207,7 @@ class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
         try:
             _get_foreign_key(parent_model, obj.model, fk_name=obj.fk_name)
         except ValueError as e:
-            return [checks.Error(e.args[0], obj=obj.__class__, id="admin.E202")]
+            return [checks.Error(e.args[0], obj=obj.__class__, id="api_admin.E202")]
         else:
             return []
 
@@ -1215,7 +1215,7 @@ class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
         """Check that extra is an integer."""
 
         if not isinstance(obj.extra, int):
-            return must_be("an integer", option="extra", obj=obj, id="admin.E203")
+            return must_be("an integer", option="extra", obj=obj, id="api_admin.E203")
         else:
             return []
 
@@ -1225,7 +1225,7 @@ class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
         if obj.max_num is None:
             return []
         elif not isinstance(obj.max_num, int):
-            return must_be("an integer", option="max_num", obj=obj, id="admin.E204")
+            return must_be("an integer", option="max_num", obj=obj, id="api_admin.E204")
         else:
             return []
 
@@ -1235,7 +1235,7 @@ class InlineAPIModelAdminChecks(BaseAPIModelAdminChecks):
         if obj.min_num is None:
             return []
         elif not isinstance(obj.min_num, int):
-            return must_be("an integer", option="min_num", obj=obj, id="admin.E205")
+            return must_be("an integer", option="min_num", obj=obj, id="api_admin.E205")
         else:
             return []
 
