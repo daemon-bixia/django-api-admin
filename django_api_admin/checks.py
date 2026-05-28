@@ -149,7 +149,7 @@ class BaseAPIModelAdminChecks:
                     "a foreign key or a many-to-many field",
                     option=label,
                     obj=obj,
-                    id="admin.E038",
+                    id="api_admin.E038",
                 )
             try:
                 related_admin = obj.admin_site.get_model_admin(
@@ -493,7 +493,7 @@ class BaseAPIModelAdminChecks:
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E022"
+                field=field_name, option=label, obj=obj, id="api_admin.E022"
             )
         else:
             if not (isinstance(field, models.ForeignKey) or field.choices):
@@ -503,7 +503,7 @@ class BaseAPIModelAdminChecks:
                         "instance of ForeignKey, and does not have a 'choices' "
                         "definition." % (label, field_name),
                         obj=obj.__class__,
-                        id="admin.E023",
+                        id="api_admin.E023",
                     )
                 ]
             else:
@@ -592,7 +592,7 @@ class BaseAPIModelAdminChecks:
         iterable of existing fields."""
 
         if not isinstance(val, (list, tuple)):
-            return must_be("a list or tuple", option=label, obj=obj, id="admin.E029")
+            return must_be("a list or tuple", option=label, obj=obj, id="api_admin.E029")
         else:
             return list(
                 chain.from_iterable(
@@ -611,7 +611,7 @@ class BaseAPIModelAdminChecks:
             obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E030"
+                field=field_name, option=label, obj=obj, id="api_admin.E030"
             )
         else:
             return []
@@ -624,7 +624,7 @@ class BaseAPIModelAdminChecks:
             return []
         elif not isinstance(obj.ordering, (list, tuple)):
             return must_be(
-                "a list or tuple", option="ordering", obj=obj, id="admin.E031"
+                "a list or tuple", option="ordering", obj=obj, id="api_admin.E031"
             )
         else:
             return list(
@@ -651,7 +651,7 @@ class BaseAPIModelAdminChecks:
                     "but contains other fields as well.",
                     hint='Either remove the "?", or remove the other fields.',
                     obj=obj.__class__,
-                    id="admin.E032",
+                    id="api_admin.E032",
                 )
             ]
         elif field_name == "?":
@@ -661,15 +661,14 @@ class BaseAPIModelAdminChecks:
             # this format would be nice, but it's a little fiddly).
             return []
         else:
-            if field_name.startswith("-"):
-                field_name = field_name[1:]
+            field_name = field_name.removeprefix("-")
             if field_name == "pk":
                 return []
             try:
                 obj.model._meta.get_field(field_name)
             except FieldDoesNotExist:
                 return refer_to_missing_field(
-                    field=field_name, option=label, obj=obj, id="admin.E033"
+                    field=field_name, option=label, obj=obj, id="api_admin.E033"
                 )
             else:
                 return []
@@ -681,7 +680,7 @@ class BaseAPIModelAdminChecks:
             return []
         elif not isinstance(obj.readonly_fields, (list, tuple)):
             return must_be(
-                "a list or tuple", option="readonly_fields", obj=obj, id="admin.E034"
+                "a list or tuple", option="readonly_fields", obj=obj, id="api_admin.E034"
             )
         else:
             return list(
@@ -706,15 +705,16 @@ class BaseAPIModelAdminChecks:
             except FieldDoesNotExist:
                 return [
                     checks.Error(
-                        "The value of '%s' is not a callable, an attribute of "
-                        "'%s', or an attribute of '%s'."
+                        "The value of '%s' refers to '%s', which is not a callable, "
+                        "an attribute of '%s', or an attribute of '%s'."
                         % (
                             label,
+                            field_name,
                             obj.__class__.__name__,
                             obj.model._meta.label,
                         ),
                         obj=obj.__class__,
-                        id="admin.E035",
+                        id="api_admin.E035",
                     )
                 ]
             else:
@@ -737,15 +737,14 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
             *self._check_list_editable(admin_obj),
             *self._check_search_fields(admin_obj),
             *self._check_date_hierarchy(admin_obj),
-            *self._check_action_permission_methods(admin_obj),
-            *self._check_actions_uniqueness(admin_obj),
+            *self._check_actions(admin_obj),
         ]
 
     def _check_save_as(self, obj):
         """Check save_as is a boolean."""
 
         if not isinstance(obj.save_as, bool):
-            return must_be("a boolean", option="save_as", obj=obj, id="admin.E101")
+            return must_be("a boolean", option="save_as", obj=obj, id="api_admin.E101")
         else:
             return []
 
@@ -753,7 +752,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
         """Check save_on_top is a boolean."""
 
         if not isinstance(obj.save_on_top, bool):
-            return must_be("a boolean", option="save_on_top", obj=obj, id="admin.E102")
+            return must_be("a boolean", option="save_on_top", obj=obj, id="api_admin.E102")
         else:
             return []
 
@@ -762,7 +761,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
         if not isinstance(obj.inlines, (list, tuple)):
             return must_be(
-                "a list or tuple", option="inlines", obj=obj, id="admin.E103"
+                "a list or tuple", option="inlines", obj=obj, id="api_admin.E103"
             )
         else:
             return list(
@@ -774,25 +773,25 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
     def _check_inlines_item(self, obj, inline, label):
         """Check one inline model admin."""
-        from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
-
         try:
             inline_label = inline.__module__ + "." + inline.__name__
         except AttributeError:
             return [
                 checks.Error(
-                    "'%s' must inherit from 'APIInlineModelAdmin'." % obj,
+                    "'%s' must inherit from 'InlineAPIModelAdmin'." % obj,
                     obj=obj.__class__,
-                    id="admin.E104",
+                    id="api_admin.E104",
                 )
             ]
+
+        from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
 
         if not _issubclass(inline, InlineAPIModelAdmin):
             return [
                 checks.Error(
                     "'%s' must inherit from 'InlineAPIModelAdmin'." % inline_label,
                     obj=obj.__class__,
-                    id="admin.E104",
+                    id="api_admin.E104",
                 )
             ]
         elif not inline.model:
@@ -800,22 +799,22 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                 checks.Error(
                     "'%s' must have a 'model' attribute." % inline_label,
                     obj=obj.__class__,
-                    id="admin.E105",
+                    id="api_admin.E105",
                 )
             ]
         elif not _issubclass(inline.model, models.Model):
             return must_be(
-                "a Model", option="%s.model" % inline_label, obj=obj, id="admin.E106"
+                "a Model", option="%s.model" % inline_label, obj=obj, id="api_admin.E106"
             )
         else:
             return inline(obj.model, obj.admin_site).check()
 
     def _check_list_display(self, obj):
-        """Check list_display only contains fields or usable attributes."""
+        """Check that list_display only contains fields or usable attributes."""
 
         if not isinstance(obj.list_display, (list, tuple)):
             return must_be(
-                "a list or tuple", option="list_display", obj=obj, id="admin.E107"
+                "a list or tuple", option="list_display", obj=obj, id="api_admin.E107"
             )
         else:
             return list(
@@ -837,27 +836,29 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
             try:
                 field = getattr(obj.model, item)
             except AttributeError:
-                return [
-                    checks.Error(
-                        "The value of '%s' refers to '%s', which is not a "
-                        "callable, an attribute of '%s', or an attribute or "
-                        "method on '%s'."
-                        % (
-                            label,
-                            item,
-                            obj.__class__.__name__,
-                            obj.model._meta.label,
-                        ),
-                        obj=obj.__class__,
-                        id="admin.E108",
-                    )
-                ]
-        if isinstance(field, models.ManyToManyField):
+                try:
+                    field = get_fields_from_path(obj.model, item)[-1]
+                except (FieldDoesNotExist, NotRelationField):
+                    return [
+                        checks.Error(
+                            f"The value of '{label}' refers to '{item}', which is not "
+                            f"a callable or attribute of '{obj.__class__.__name__}', "
+                            "or an attribute, method, or field on "
+                            f"'{obj.model._meta.label}'.",
+                            obj=obj.__class__,
+                            id="api_admin.E108",
+                        )
+                    ]
+        if (
+            getattr(field, "is_relation", False)
+            and (field.many_to_many or field.one_to_many)
+        ) or (getattr(field, "rel", None) and field.rel.field.many_to_one):
             return [
                 checks.Error(
-                    "The value of '%s' must not be a ManyToManyField." % label,
+                    f"The value of '{label}' must not be a many-to-many field or a "
+                    f"reverse foreign key.",
                     obj=obj.__class__,
-                    id="admin.E109",
+                    id="api_admin.E109",
                 )
             ]
         return []
@@ -873,7 +874,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                 "a list, a tuple, or None",
                 option="list_display_links",
                 obj=obj,
-                id="admin.E110",
+                id="api_admin.E110",
             )
         # Check only if APIModelAdmin.get_list_display() isn't overridden.
         elif obj.get_list_display.__func__ is APIModelAdmin.get_list_display:
@@ -894,7 +895,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                     "The value of '%s' refers to '%s', which is not defined in "
                     "'list_display'." % (label, field_name),
                     obj=obj.__class__,
-                    id="admin.E111",
+                    id="api_admin.E111",
                 )
             ]
         else:
@@ -928,7 +929,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
             # If item is option 3, it should be a ListFilter...
             if not _issubclass(item, ListFilter):
                 return must_inherit_from(
-                    parent="ListFilter", option=label, obj=obj, id="admin.E113"
+                    parent="ListFilter", option=label, obj=obj, id="api_admin.E113"
                 )
             # ...  but not a FieldListFilter.
             elif issubclass(item, FieldListFilter):
@@ -937,7 +938,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of '%s' must not inherit from 'FieldListFilter'."
                         % label,
                         obj=obj.__class__,
-                        id="admin.E114",
+                        id="api_admin.E114",
                     )
                 ]
             else:
@@ -950,7 +951,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                     parent="FieldListFilter",
                     option="%s[1]" % label,
                     obj=obj,
-                    id="admin.E115",
+                    id="api_admin.E115",
                 )
             else:
                 return []
@@ -967,7 +968,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of '%s' refers to '%s', which does not refer to a "
                         "Field." % (label, field),
                         obj=obj.__class__,
-                        id="admin.E116",
+                        id="api_admin.E116",
                     )
                 ]
             else:
@@ -981,7 +982,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                 "a boolean, tuple or list",
                 option="list_select_related",
                 obj=obj,
-                id="admin.E117",
+                id="api_admin.E117",
             )
         else:
             return []
@@ -991,7 +992,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
         if not isinstance(obj.list_per_page, int):
             return must_be(
-                "an integer", option="list_per_page", obj=obj, id="admin.E118"
+                "an integer", option="list_per_page", obj=obj, id="api_admin.E118"
             )
         else:
             return []
@@ -1001,7 +1002,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
         if not isinstance(obj.list_max_show_all, int):
             return must_be(
-                "an integer", option="list_max_show_all", obj=obj, id="admin.E119"
+                "an integer", option="list_max_show_all", obj=obj, id="api_admin.E119"
             )
         else:
             return []
@@ -1012,7 +1013,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
         if not isinstance(obj.list_editable, (list, tuple)):
             return must_be(
-                "a list or tuple", option="list_editable", obj=obj, id="admin.E120"
+                "a list or tuple", option="list_editable", obj=obj, id="api_admin.E120"
             )
         else:
             return list(
@@ -1029,7 +1030,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
             field = obj.model._meta.get_field(field_name)
         except FieldDoesNotExist:
             return refer_to_missing_field(
-                field=field_name, option=label, obj=obj, id="admin.E121"
+                field=field_name, option=label, obj=obj, id="api_admin.E121"
             )
         else:
             if field_name not in obj.list_display:
@@ -1038,7 +1039,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of '%s' refers to '%s', which is not "
                         "contained in 'list_display'." % (label, field_name),
                         obj=obj.__class__,
-                        id="admin.E122",
+                        id="api_admin.E122",
                     )
                 ]
             elif obj.list_display_links and field_name in obj.list_display_links:
@@ -1047,7 +1048,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of '%s' cannot be in both 'list_editable' and "
                         "'list_display_links'." % field_name,
                         obj=obj.__class__,
-                        id="admin.E123",
+                        id="api_admin.E123",
                     )
                 ]
             # If list_display[0] is in list_editable, check that
@@ -1063,7 +1064,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "('%s'), which cannot be used unless 'list_display_links' is "
                         "set." % (label, obj.list_display[0]),
                         obj=obj.__class__,
-                        id="admin.E124",
+                        id="api_admin.E124",
                     )
                 ]
             elif not field.editable or field.primary_key:
@@ -1072,7 +1073,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of '%s' refers to '%s', which is not editable "
                         "through the admin." % (label, field_name),
                         obj=obj.__class__,
-                        id="admin.E125",
+                        id="api_admin.E125",
                     )
                 ]
             else:
@@ -1083,7 +1084,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
 
         if not isinstance(obj.search_fields, (list, tuple)):
             return must_be(
-                "a list or tuple", option="search_fields", obj=obj, id="admin.E126"
+                "a list or tuple", option="search_fields", obj=obj, id="api_admin.E126"
             )
         else:
             return []
@@ -1102,7 +1103,7 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "The value of 'date_hierarchy' refers to '%s', which "
                         "does not refer to a Field." % obj.date_hierarchy,
                         obj=obj.__class__,
-                        id="admin.E127",
+                        id="api_admin.E127",
                     )
                 ]
             else:
@@ -1111,18 +1112,17 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                         "a DateField or DateTimeField",
                         option="date_hierarchy",
                         obj=obj,
-                        id="admin.E128",
+                        id="api_admin.E128",
                     )
                 else:
                     return []
 
-    def _check_action_permission_methods(self, obj):
-        """
-        Actions with an allowed_permission attribute require the APIModelAdmin to
-        implement a has_<perm>_permission() method for each permission.
-        """
-        actions = obj._get_base_actions()
+    def _check_actions(self, obj):
         errors = []
+        actions = obj._get_base_actions()
+
+        # Actions with an allowed_permission attribute require the ModelAdmin
+        # to implement a has_<perm>_permission() method for each permission.
         for func, name, _ in actions:
             if not hasattr(func, "allowed_permissions"):
                 continue
@@ -1141,13 +1141,8 @@ class APIModelAdminChecks(BaseAPIModelAdminChecks):
                             id="admin.E129",
                         )
                     )
-        return errors
-
-    def _check_actions_uniqueness(self, obj):
-        """Check that every action has a unique __name__."""
-        errors = []
-        names = collections.Counter(
-            name for _, name, _ in obj._get_base_actions())
+        # Names need to be unique.
+        names = collections.Counter(name for _, name, _ in actions)
         for name, count in names.items():
             if count > 1:
                 errors.append(
