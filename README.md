@@ -306,7 +306,6 @@ This section is dedicated to recognizing the valuable resources and contribution
 * [Simple JWT](https://github.com/jazzband/djangorestframework-simplejwt/tree/master)
 * [Django Cors Headers](https://github.com/adamchainz/django-cors-headers)
 * [DRF Spectacular](https://github.com/tfranzel/drf-spectacular)
-* [Django Restful Admin](https://github.com/amirasaran/django-restful-admin)
 * [Best README Template](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
