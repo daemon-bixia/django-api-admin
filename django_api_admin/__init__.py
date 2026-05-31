@@ -1,5 +1,16 @@
-from django.utils.module_loading import autodiscover_modules
+# -----------------------------------------------------------------------------
+# Portions of this file are from Django (https://www.djangoproject.com/)
+# Copyright (c) Django Software Foundation and individual contributors.
+# All rights reserved.
+# Licensed under the BSD 3-Clause License.
+#
+# Additional code copyright (c) 2021 Muhammad Salah
+# Licensed under the MIT License
+#
+# This file includes both Django code and your my own contributions.
+# -----------------------------------------------------------------------------
 
+from django_api_admin.utils.module_loading import autodiscover_modules
 from django_api_admin.decorators import action, display, register
 from django_api_admin.filters import (
     AllValuesFieldListFilter,

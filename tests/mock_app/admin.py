@@ -28,13 +28,6 @@ class ProductImageInline(TabularInlineAPI):
     max_num = 1
 
 
-class RelatedProductInline(TabularInlineAPI):
-    model = Product.related_products.through
-    min_num = 0
-    max_num = 5
-    filter_horizontal = ("related_products",)
-
-
 class ProductFeatureInline(TabularInlineAPI):
     model = ProductFeature
     min_num = 0
@@ -65,7 +58,7 @@ class ProductAdmin(APIModelAdmin):
     search_fields = ("name", "description", "trademark",)
     ordering = ("-date_created",)
 
-    # filter_horizontal = ("related_products",)
+    filter_horizontal = ("related_products",)
     # raw_id_fields = ("category", )
     autocomplete_fields = ("related_products",)
     date_hierarchy = "date_created"
@@ -91,8 +84,8 @@ class ProductAdmin(APIModelAdmin):
     exclude = ("date_created",)
     readonly_fields = ("date_created", "average_rating")
 
-    inlines = [ProductImageInline, RelatedProductInline,
-               CatalogInline, ReviewInline, MetaDataInline,]
+    inlines = [ProductImageInline, CatalogInline,
+               ReviewInline, MetaDataInline,]
 
     show_facets = ShowFacets.ALWAYS
 

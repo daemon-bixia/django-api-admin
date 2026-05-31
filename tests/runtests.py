@@ -16,6 +16,10 @@ import os
 import sys
 from pathlib import Path
 
+# Add the project root to sys.path to allow importing django_api_admin.
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")))
+
 try:
     import django
 except ImportError as e:
@@ -28,7 +32,7 @@ else:
     from django.db import connections
     from django.test import TestCase, TransactionTestCase
     from django.test.runner import get_max_test_processes, parallel_type
-    from django.test.utils import NullTimeKeeper, TimeKeeper
+    from django.test.utils import NullTimeKeeper, TimeKeeper, get_runner
     from django.utils.log import DEFAULT_LOGGING
     from django.utils.functional import classproperty
     from django.utils.version import PY312
@@ -144,6 +148,7 @@ def setup_collect_tests(start_at, start_after, test_labels=None):
         "auth": None,
         "contenttypes": None,
         "sessions": None,
+        "django_api_admin": None,
     }
     log_config = copy.deepcopy(DEFAULT_LOGGING)
     # Filter out non-error logging so we don't have to capture it in lots of
@@ -211,7 +216,7 @@ def setup_run_tests(verbosity, start_at, start_after, test_labels=None):
     return test_labels
 
 
-def teardown_run_tests(state):
+def teardown_run_tests():
     del os.environ["RUNNING_DJANGOS_TEST_SUITE"]
 
 
@@ -249,7 +254,7 @@ def django_tests(
         print(msg)
 
     process_setup_args = (verbosity, start_at, start_after, test_labels)
-    test_labels, state = setup_run_tests(*process_setup_args)
+    test_labels = setup_run_tests(*process_setup_args)
     # Run the test suite, including the extra validation tests.
     if not hasattr(settings, "TEST_RUNNER"):
         settings.TEST_RUNNER = "django.test.runner.DiscoverRunner"
@@ -260,6 +265,30 @@ def django_tests(
             parallel = max_parallel
         else:
             parallel = 1
+
+    TestRunner = get_runner(settings)
+    TestRunner.parallel_test_suite.process_setup = setup_run_tests
+    TestRunner.parallel_test_suite.process_setup_args = process_setup_args
+    test_runner = TestRunner(
+        verbosity=verbosity,
+        interactive=interactive,
+        failfast=failfast,
+        keepdb=keepdb,
+        reverse=reverse,
+        debug_sql=debug_sql,
+        parallel=parallel,
+        tags=tags,
+        exclude_tags=exclude_tags,
+        test_name_patterns=test_name_patterns,
+        pdb=pdb,
+        buffer=buffer,
+        timing=timing,
+        shuffle=shuffle,
+        durations=durations,
+    )
+    failures = test_runner.run_tests(test_labels)
+    teardown_run_tests()
+    return failures
 
 
 if __name__ == "__main__":
