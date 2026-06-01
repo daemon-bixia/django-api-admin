@@ -5,7 +5,7 @@ from .fields import StockDetailField
 
 class ProductSerializer(serializers.ModelSerializer):
     stock_info = StockDetailField(source="*", required=False)
-    read_only_fields = ("stock_status",)
+    read_only_fields = ("stock_status", "date_created")
 
     class Meta:
         model = Product
@@ -21,4 +21,5 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "related_products",
             "stock_info",
+            "date_created",
         ]

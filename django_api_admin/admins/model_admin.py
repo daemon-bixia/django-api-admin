@@ -798,8 +798,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 fk = _get_foreign_key(inline.parent_model,
                                       inline.model, fk_name=inline.fk_name)
                 related_name = fk.remote_field.accessor_name
-                reverse_field = getattr(obj, related_name)
-                related_instances = reverse_field.all()
+                try:
+                    reverse_field = getattr(obj, related_name)
+                    related_instances = reverse_field.all()
+                except AttributeError:
+                    related_instances = []
 
                 for instance in related_instances:
                     formset.append(
@@ -851,8 +854,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
                     fk = _get_foreign_key(
                         inline.parent_model, inline.model, fk_name=inline.fk_name)
                     related_name = fk.remote_field.accessor_name
-                    reverse_field = getattr(obj, related_name)
-                    related_instances = reverse_field.all()
+                    try:
+                        reverse_field = getattr(obj, related_name)
+                        related_instances = reverse_field.all()
+                    except AttributeError:
+                        related_instances = []
 
                     for instance in related_instances:
                         serializer_class = inline.get_serializer_class(

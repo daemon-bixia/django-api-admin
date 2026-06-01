@@ -248,9 +248,9 @@ class BaseAPIModelAdmin:
             exclude = None
 
             # Always add the primary key to `readonly_fields` and `fields` to identity the object
-            if 'pk' not in fields:
+            if "pk" not in fields:
                 fields.append('pk')
-            if 'pk' not in readonly_fields:
+            if "pk" not in readonly_fields:
                 readonly_fields.append('pk')
 
         defaults = {

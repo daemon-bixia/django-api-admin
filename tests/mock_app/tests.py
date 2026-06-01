@@ -11,6 +11,7 @@
 # -----------------------------------------------------------------------------
 
 import json
+from datetime import datetime
 
 from django.urls import path
 from django.contrib.auth import get_user_model
@@ -21,12 +22,71 @@ from rest_framework.test import APITestCase, URLPatternsTestCase, APIRequestFact
 from rest_framework.renderers import JSONRenderer
 
 from django_api_admin import APIModelAdmin, site
+from django_api_admin.admins.model_admin import TO_FIELD_VAR
 
-from .models import Product, Trademark, Category
+from .models import Product, Trademark, Category, Review, Customer
 from .views import ProductDetailView
+from .admin import ProductAdmin
 
 UserModel = get_user_model()
 renderer = JSONRenderer()
+
+
+def setup_tests(test_case):
+    test_case.factory = APIRequestFactory()
+
+    # Create a superuser
+    test_case.user = UserModel.objects.create_superuser(username="admin")
+    test_case.user.set_password("password")
+    test_case.user.save()
+
+    # Add model infos
+    test_case.product_info = (Product._meta.app_label,
+                              Product._meta.model_name)
+    test_case.trademark_info = (
+        Trademark._meta.app_label, Trademark._meta.model_name)
+    test_case.category_info = (
+        Category._meta.app_label, Category._meta.model_name)
+
+    # Authenticate the superuser
+    test_case.client.login(username="admin", password="password")
+    test_case.client.force_authenticate(user=test_case.user)
+
+    # Create Some trademarks
+    test_case.nike_trademark = Trademark.objects.create(name="Nike")
+    test_case.adidas_trademark = Trademark.objects.create(name="Adidas")
+    test_case.timberland_trademark = Trademark.objects.create(
+        name="Timberland")
+
+    # Create some categories
+    test_case.footwear_category = Category.objects.create(name="Footwear", slug="footwear",
+                                                          description="footwear products")
+
+    # Create some products
+    test_case.air_max_product = Product.objects.create(name="Air Max", price=100,
+                                                       stock_status="in_stock", trademark=test_case.nike_trademark,
+                                                       category=test_case.footwear_category)
+    test_case.stan_smith_product = Product.objects.create(name="Stan Smith", price=100,
+                                                          stock_status="in_stock", trademark=test_case.adidas_trademark,
+                                                          category=test_case.footwear_category)
+    test_case.air_force_product = Product.objects.create(name="Air Force", price=100,
+                                                         stock_status="out_of_stock", trademark=test_case.nike_trademark,
+                                                         category=test_case.footwear_category)
+    test_case.timberland_product = Product.objects.create(name="Timberland", price=200,
+                                                          stock_status="in_stock", trademark=test_case.timberland_trademark,
+                                                          category=test_case.footwear_category)
+    test_case.jordan_product = Product.objects.create(name="Jordan", price=150,
+                                                      stock_status="in_stock", trademark=test_case.nike_trademark,
+                                                      category=test_case.footwear_category)
+
+    # Add a customer
+    test_case.customer = Customer.objects.create(user=test_case.user)
+
+    # Add some reviews
+    test_case.review_bad_air_max = Review.objects.create(
+        product=test_case.air_max_product, rating=1, review_title="Bad product", review_content="Very bad product", customer=test_case.customer)
+    test_case.review_good_air_max = Review.objects.create(
+        product=test_case.air_max_product, rating=4, review_title="Good product", review_content="Good product", customer=test_case.customer)
 
 
 class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
@@ -37,32 +97,7 @@ class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
     ]
 
     def setUp(self) -> None:
-        self.factory = APIRequestFactory()
-
-        # Create a superuser
-        self.user = UserModel.objects.create_superuser(username="admin")
-        self.user.set_password("password")
-        self.user.save()
-
-        # Authenticate the superuser
-        self.client.login(username="admin", password="password")
-        self.client.force_authenticate(user=self.user)
-
-        # Create Some trademarks
-        self.nike_trademark = Trademark.objects.create(name="Nike")
-        self.adidas_trademark = Trademark.objects.create(name="Adidas")
-
-        # Create some categories
-        self.footwear_category = Category.objects.create(name="Footwear", slug="footwear",
-                                                         description="footwear products")
-
-        # Create some products
-        self.air_max_product = Product.objects.create(name="Air Max", price=100,
-                                                      stock_status="in_stock", trademark=self.nike_trademark,
-                                                      category=self.footwear_category)
-        self.stan_smith_product = Product.objects.create(name="Stan Smith", price=100,
-                                                         stock_status="in_stock", trademark=self.adidas_trademark,
-                                                         category=self.footwear_category)
+        setup_tests(self)
 
     def test_registering_models(self):
         from django.db import models
@@ -174,3 +209,354 @@ class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
         print(response.data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["text"], "Stan Smith")
+
+
+class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
+    urlpatterns = [
+        path("api_admin/", site.urls),
+    ]
+
+    def setUp(self) -> None:
+        setup_tests(self)
+
+    def test_detail_view(self):
+        url = reverse("api_admin:%s_%s_detail" %
+                      self.product_info, kwargs={"object_id": 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["pk"], 1)
+        self.assertEqual(response.data["name"], "Air Max")
+
+    def test_performing_custom_actions(self):
+        action_dict = {
+            "action": "mark_out_of_stock",
+            "selected_ids": [
+                1,
+            ],
+            "select_across": False,
+        }
+
+        url = reverse("api_admin:%s_%s_changelist" % self.product_info)
+        response = self.client.post(url, data=action_dict)
+        self.assertEqual(response.status_code,  200)
+
+    def test_performing_default_action(self):
+        action_dict = {
+            "action": "delete_selected",
+            "selected_ids": [
+                3,
+            ],
+            "select_across": False,
+        }
+        url = reverse("api_admin:%s_%s_changelist" % self.product_info)
+        response = self.client.post(url, data=action_dict)
+        self.assertEqual(response.status_code, 200)
+
+    def test_performing_actions_with_select_across(self):
+        action_dict = {
+            "action": "apply_ten_percent_discount",
+            "selected_ids": [],
+            "select_across": True
+        }
+        url = reverse("api_admin:%s_%s_changelist" % self.product_info)
+        response = self.client.post(url, data=action_dict)
+        self.assertEqual(response.status_code, 200)
+
+    def test_performing_invalid_actions(self):
+        action_dict = {
+            "action": "some_weird_action",
+            "select_across": 5.0,
+        }
+        url = reverse("api_admin:%s_%s_changelist" % self.product_info)
+        response = self.client.post(url, data=action_dict)
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_view(self):
+        url = reverse("api_admin:%s_%s_delete" %
+                      self.product_info, kwargs={"object_id": 4})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=4).exists())
+        self.assertEqual(
+            response.data["detail"], "The product “Timberland” was deleted successfully.")
+
+    def test_delete_view_protected(self):
+        url = reverse("api_admin:%s_%s_delete" %
+                      self.trademark_info,
+                      kwargs={"object_id": 5})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "Cannot delete trademark")
+
+    def test_delete_view_bad_to_field(self):
+        url = reverse("api_admin:%s_%s_delete" % self.product_info, kwargs={
+            "object_id": 1}) + f"?{TO_FIELD_VAR}=name"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(Product.objects.filter(pk=1).exists())
+
+    def _assert_product_form_description(self, data):
+        form = data["form"]
+        self.assertEqual(form["model"], "mock_app.product")
+        self.assertEqual(form["readonly_fields"], [
+                         "date_created", "average_rating"])
+        self.assertEqual(len(form["fields"]), 8)
+
+        # Assert on specific fields
+        field_names = [f["name"] for f in form["fields"]]
+        self.assertEqual(
+            field_names,
+            ["name", "category", "trademark", "price", "discount",
+                "discount_price", "stock_status", "description"]
+        )
+
+        # Name field
+        name_field = form["fields"][0]
+        self.assertEqual(name_field["type"], "CharField")
+        self.assertEqual(name_field["attrs"]["label"], "Name")
+        self.assertEqual(name_field["attrs"]["max_length"], 255)
+
+        # Category field
+        category_field = form["fields"][1]
+        self.assertEqual(category_field["type"], "PrimaryKeyRelatedField")
+        self.assertEqual(category_field["attrs"]["label"], "Category")
+
+        # Price field
+        price_field = form["fields"][3]
+        self.assertEqual(price_field["type"], "DecimalField")
+        self.assertEqual(price_field["attrs"]["max_digits"], 10)
+        self.assertEqual(price_field["attrs"]["decimal_places"], 2)
+
+        # Stock status field
+        stock_status_field = form["fields"][6]
+        self.assertEqual(stock_status_field["type"], "ChoiceField")
+        self.assertEqual(stock_status_field["attrs"]["choices"], {
+            "in_stock": "In Stock",
+            "out_of_stock": "Out of Stock",
+            "pre_order": "Pre-order"
+        })
+
+        # Description field
+        description_field = form["fields"][7]
+        self.assertEqual(description_field["type"], "CharField")
+        self.assertEqual(description_field["attrs"]["style"], {
+                         "base_template": "textarea.html"})
+
+        # Fieldsets
+        self.assertEqual(form["fieldsets"][0][0], "General Information")
+        fields_in_fieldset = form["fieldsets"][0][1]["fields"]
+        self.assertIn("name", fields_in_fieldset)
+        self.assertIn("average_rating", fields_in_fieldset)
+
+        # Misc admin options
+        self.assertEqual(form["autocomplete_fields"], ("related_products",))
+        self.assertEqual(form["filter_horizontal"], ("related_products",))
+
+        # Inlines
+        self.assertEqual(len(data["inlines"]), 4)
+
+        # Product Image Inline
+        image_inline = data["inlines"][0]
+        self.assertEqual(image_inline["model"], "mock_app.productimage")
+        self.assertEqual(image_inline["extra"], 3)
+        self.assertEqual(image_inline["min_num"], 1)
+        self.assertEqual(image_inline["max_num"], 1)
+        self.assertEqual(image_inline["admin_style"], "tabular")
+
+    def test_add_form_description(self):
+        url = reverse("api_admin:%s_%s_add" % self.product_info)
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self._assert_product_form_description(data)
+
+        # Permissions
+        self.assertTrue(data["form"]["permissions"]["has_add_permission"])
+
+        # Inline formset specific
+        image_formset = data["inlines"][0]
+        self.assertEqual(len(image_formset["formset"]), 1)
+        self.assertEqual(image_formset["formset"][0][0]["type"], "ImageField")
+
+    def test_add_view(self):
+        url = reverse("api_admin:%s_%s_add" % self.product_info)
+        data = {
+            "data": {
+                "name": "Duramo SL",
+                "category": 1,
+                "trademark": 2,
+                "price": 199.99,
+                "stock_status": "in_stock",
+                "description": "The adidas Duramo SL Shoes put some snap into your step with LIGHTMOTION"
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["data"]["name"], "Duramo SL")
+
+        product_id = response.data["data"]["pk"]
+        url = reverse("api_admin:history", query={
+            "app_label": "mock_app",
+            "model": "Product", "object_id": product_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        print(response.data)
+        self.assertEqual(response.data["results"]
+                         [0]["object_repr"], "Duramo SL")
+
+    def test_change_form_description(self):
+        url = reverse("api_admin:%s_%s_change" % self.product_info, kwargs={
+            "object_id": 1})
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self._assert_product_form_description(data)
+
+        form = data["form"]
+        # Permissions
+        self.assertTrue(form["permissions"]["has_change_permission"])
+
+        # # Current values
+        self.assertEqual(form["fields"][0]["attrs"]
+                         ["current_value"], self.air_max_product.name)
+        self.assertEqual(form["fields"][1]["attrs"]
+                         ["current_value"], self.air_max_product.category.pk)
+
+        # Inline formsets
+        review_formset = data["inlines"][2]
+        self.assertEqual(len(review_formset["formset"]), 3)
+        self.assertEqual(review_formset["formset"][0]
+                         [2]["attrs"]["current_value"], self.review_bad_air_max.rating)
+        self.assertEqual(review_formset["formset"][1]
+                         [2]["attrs"]["current_value"], self.review_good_air_max.rating)
+        self.assertNotIn(
+            "current_value", review_formset["formset"][2][0]["attrs"])
+
+    def test_change_view(self):
+        url = reverse("api_admin:%s_%s_change" % self.product_info, kwargs={
+            "object_id": 1})
+        data = {
+            "data": {
+                "name": "Air Max 2",
+                "price": 299.99,
+            }
+        }
+        response = self.client.patch(url, data=data, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["name"], "Air Max 2")
+        self.assertEqual(response.data["data"]["price"], '299.99')
+
+        url = reverse("api_admin:history", query={
+            "app_label": Product._meta.app_label,
+            "model": Product._meta.model_name,
+            "object_id": 1,
+            "page": 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(len(response.data["results"]) == 1)
+
+    def test_pagination_class(self):
+        # Perform some actions then paginate them
+        dataset = [
+            {
+                "name": "Adidas Ultraboost",
+                "category": 1,
+                "trademark": 2,
+                "price": 180.00,
+                "stock_status": "in_stock",
+                "description": "Adidas Ultraboost Shoes"
+            },
+            {
+                "name": "Adidas Stan Smith",
+                "category": 1,
+                "trademark": 2,
+                "price": 120.00,
+                "stock_status": "in_stock",
+                "description": "Adidas Stan Smith Shoes"
+            },
+            {
+                "name": "Adidas Gazelle",
+                "category": 1,
+                "trademark": 2,
+                "price": 100.00,
+                "stock_status": "in_stock",
+                "description": "Adidas Gazelle Shoes"
+            },
+        ]
+        for data in dataset:
+            url = reverse("api_admin:%s_%s_add" % self.product_info)
+            self.client.post(url, data={"data": data}, format="json")
+
+        url = reverse("api_admin:history", query={
+            "app_label": Product._meta.app_label,
+            "model": Product._meta.model_name,
+            "page": 1
+        })
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 3)
+
+    def test_changelist_view(self):
+        current_date = datetime.now()
+
+        date_hierarchy = f"date_created__day={current_date.day}"
+        f"&date_created__month={current_date.month}"
+        f"&date_created__year={current_date.year}"
+        ordering = "o=1.-2"
+        search = "q=Stan"
+        filter = "stock_status__exact=in_stock"
+        view_name = f"api_admin:{self.product_info[0]}_{self.product_info[1]}_changelist"
+        url = f"{reverse(view_name)}?{date_hierarchy}&{filter}&{ordering}&{search}"
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["config"]["list_display"], (
+            "name", "category", "price", "stock_status"))
+        self.assertEqual(len(response.data["columns"]), 4)
+        self.assertEqual(response.data["columns"][0]["field"], "name")
+        self.assertEqual(response.data["rows"][0]
+                         ["cells"]["name"], "Stan Smith")
+        self.assertEqual(
+            response.data["rows"][0]["cells"]["category"], "Footwear")
+
+        data = {
+            "data": [{
+                "pk": 1,
+                "stock_status": "out_of_stock",
+            }]
+        }
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["detail"],
+                         "1 product was changed successfully.")
+        self.assertEqual(response.data["data"][1]
+                         ["stock_status"], "out_of_stock")
+
+    def test_get_serializer_class(self):
+        request = self.factory.get('/')
+        request.user = self.user
+        modeladmin = ProductAdmin(Product, site)
+        serializer_class = modeladmin.get_serializer_class(request)
+        product = Product.objects.first()
+        serializer = serializer_class(product)
+        fields = serializer.get_fields()
+
+        self.assertEqual(list(fields.keys()), ["name", "category", "trademark", "price",
+                         "discount", "discount_price", "stock_status", "average_rating", "description", "pk"])
+        self.assertIsNotNone(fields["discount"].help_text)
+        self.assertEqual(serializer.data["category"], 1)
+        self.assertIsNone(serializer.data.get("date_created", None))
+
+    def test_get_changelist_serializer_class(self):
+        request = self.factory.get("/")
+        request.user = self.user
+        modeladmin = ProductAdmin(Product, site)
+        serializer_class = modeladmin.get_changelist_serializer_class(request)
+        products = Product.objects.all()
+        serializer = serializer_class(products, many=True)
+        fields = serializer.child.get_fields()
+        self.assertEqual(list(fields.keys()), ["stock_status"])
+        self.assertEqual(list(fields["stock_status"].choices), [
+                         "in_stock", "out_of_stock", "pre_order"])

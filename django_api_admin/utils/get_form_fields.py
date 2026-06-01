@@ -32,7 +32,7 @@ def get_form_fields_description(serializer, model_admin, change=False):
             form_field = get_field_attributes(
                 name, field, serializer, model_admin, change)
 
-            # Include child field for composite fields i.e ListField, DictField, HStoreField
+            # Include child field for composite fields (i.e ListField, DictField, HStoreField)
             if type(field) in [serializers.ListField, serializers.DictField, serializers.HStoreField] and isinstance(type(form_field["attrs"]["child"]), _UnvalidatedField):
                 form_field["attrs"]["child"] = get_field_attributes(field.child.field_name, field.child,
                                                                     change,

@@ -4,7 +4,7 @@ from django_api_admin import site, APIModelAdmin, display, TabularInlineAPI
 from django_api_admin.constants import CORE_FIELD_ATTRIBUTES
 from django_api_admin.admins.model_admin import ShowFacets
 
-from .models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review
+from .models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review, Trademark
 from .serializers import ProductSerializer
 from .actions import mark_out_of_stock, apply_ten_percent_discount
 
@@ -82,5 +82,15 @@ class ProductAdmin(APIModelAdmin):
         return sum(ratings) / len(ratings) if ratings else None
 
 
+class TrademarkAdmin(APIModelAdmin):
+    list_display = ("name", )
+    list_display_links = ("name",)
+    list_per_page = 6
+    empty_value_display = "-"
+    search_fields = ("name",)
+    ordering = ("-name",)
+
+
 # Register your models here
 site.register(Product, ProductAdmin)
+site.register(Trademark, TrademarkAdmin)

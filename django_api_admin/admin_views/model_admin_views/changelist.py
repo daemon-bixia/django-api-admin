@@ -246,7 +246,7 @@ class ChangeListView(APIView):
         if filter_specs:
             config["filters"] = [{
                 "title": s.title,
-                "choices": s.choices(cl),
+                "choices": list(s.choices(cl)),
             } for s in filter_specs]
         else:
             config["filters"] = []
