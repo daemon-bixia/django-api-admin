@@ -71,6 +71,9 @@ class APIAdminSite():
     # List of authentication classes used by the admin views that require authentication
     authentication_classes = None
 
+    # List of permission classes used by the admin views
+    permission_classes = None
+
     enable_nav_sidebar = True
 
     empty_value_display = "-"
@@ -85,11 +88,11 @@ class APIAdminSite():
     # The renderer classes used by the site's views
     renderer_classes = [JSONRenderer]
 
-    def __init__(self, include_auth=True, name="admin"):
+    def __init__(self, include_auth=True, name="api_admin"):
         from django.contrib.auth.models import Group
         from django_api_admin import serializers as api_serializers
 
-        self.url_prefix = self.url_prefix or f'/{name}'
+        self.url_prefix = self.url_prefix or f"/{name}"
 
         # Set default serializers
         self.log_entry_serializer = api_serializers.LogEntrySerializer
@@ -100,7 +103,7 @@ class APIAdminSite():
         all_sites.add(self)
 
         # Replace default delete selected with a custom delete_selected action
-        self._actions = {'delete_selected': actions.delete_selected}
+        self._actions = {"delete_selected": actions.delete_selected}
         self._global_actions = self._actions.copy()
         self.admin_class = self.admin_class or APIModelAdmin
 
@@ -211,9 +214,15 @@ class APIAdminSite():
         return self._global_actions[name]
 
     def get_permission_classes(self, request):
-        return [
+        return self.permission_classes or [
             IsAuthenticated,
             IsAdminUser,
+        ]
+
+    def get_authentication_classes(self):
+        from rest_framework.authentication import SessionAuthentication
+        return self.authentication_classes or [
+            SessionAuthentication
         ]
 
     def has_permission(self, request):
@@ -428,12 +437,6 @@ class APIAdminSite():
             "user": self.user_serializer(read_only=True),
         })
 
-    def get_authentication_classes(self):
-        """
-        Returns the authentication classes used by the views
-        """
-        return self.authentication_classes
-
     def paginate_queryset(self, request, paginator, page_kwarg, **kwargs):
         """Paginate the queryset, if needed."""
         page = kwargs.get(page_kwarg) or request.GET.get(
@@ -543,7 +546,7 @@ class DefaultAdminSite(LazyObject):
     def _setup(self):
         AdminSiteClass = import_string(
             apps.get_app_config("django_api_admin").default_site)
-        self._wrapped = AdminSiteClass(name='admin')
+        self._wrapped = AdminSiteClass(name="api_admin")
 
     def __repr__(self):
         return repr(self._wrapped)

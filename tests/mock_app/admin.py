@@ -1,25 +1,12 @@
-from django.urls import path
 from django.db import models
 
-from django_api_admin import APIModelAdmin, APIAdminSite, display, TabularInlineAPI
+from django_api_admin import site, APIModelAdmin, display, TabularInlineAPI
 from django_api_admin.constants import CORE_FIELD_ATTRIBUTES
 from django_api_admin.admins.model_admin import ShowFacets
 
 from .models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review
-from .views import DashboardStatsView
 from .serializers import ProductSerializer
 from .actions import mark_out_of_stock, apply_ten_percent_discount
-
-
-class AdminSite(APIAdminSite):
-    def dashboard_stats_view(self, request):
-        return DashboardStatsView.as_view()(request)
-
-    def get_urls(self):
-        urlpatterns = super(AdminSite, self).get_urls()
-        urlpatterns.append(
-            path("dashboard/stats/", self.dashboard_stats_view, name="dashboard-stats"))
-        return urlpatterns
 
 
 class ProductImageInline(TabularInlineAPI):
@@ -55,7 +42,7 @@ class ProductAdmin(APIModelAdmin):
     list_editable = ("stock_status",)
     list_per_page = 6
     empty_value_display = "-"
-    search_fields = ("name", "description", "trademark",)
+    search_fields = ("name", "description", "trademark__name",)
     ordering = ("-date_created",)
 
     filter_horizontal = ("related_products",)
@@ -96,5 +83,4 @@ class ProductAdmin(APIModelAdmin):
 
 
 # Register your models here
-site = AdminSite()
 site.register(Product, ProductAdmin)
