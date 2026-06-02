@@ -484,7 +484,7 @@ def modify_schema(result, generator, request, public):
             "name": "MIT License",
             "url": "https://github.com/demon-bixia/django-api-admin/blob/production/LICENSE",
         },
-        "version": "1.0.0",
+        "version": "1.3.0",
     }
 
     # Edit the tags for each path based on the model_admin or admin_site

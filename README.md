@@ -19,7 +19,7 @@
     <img src="assets/images/logo.png" alt="Logo" width="300" height="300">
   </a>
 
-  <h3 align="center">Django API Admin</h3>
+  <h1 align="center">Django API Admin</h1>
 
   <p align="center">
     A RESTful API implementation of django.contrib.admin, designed for writing custom frontends.
@@ -52,6 +52,8 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#cors">CORS Configuration</a></li>
+        <li><a href="#authentication">Authentication</a></li>
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
@@ -70,12 +72,12 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://github.com/demon-bixia/django-api-admin)
 
-The Django API Admin project is a RESTful API implementation of the `django.contrib.admin` module, designed to facilitate the creation of custom frontends. This project aims to provide developers with a robust and flexible API that mirrors the functionality of Django's built-in admin interface, allowing for seamless integration with modern web applications.
+Django API Admin is a RESTful API implementation of the `django.contrib.admin` application, designed to make it easy to create custom frontends. This project aims to provide developers with a flexible API that mirrors the functionality of Django's built-in admin interface, allowing for seamless integration with modern web client interfaces.
 
 ### Key Features:
 - **RESTful API**: Offers a comprehensive API for managing Django models, enabling developers to build custom administrative interfaces.
 - **Custom Frontends**: Designed to support the development of tailored frontends that meet specific project requirements.
-- **Extensible and Modular**: Build with the same django.contrib.admin API, allowing for easy customization and integration with existing Django projects.
+- **Extensible and Modular**: Build with the same `django.contrib.admin` API, allowing for easy customization and integration with existing Django projects.
 
 The project is continuously evolving, with new features and improvements being added regularly. Contributions from the community are highly encouraged to help expand and enhance the capabilities of this tool.
 
@@ -93,6 +95,8 @@ This section should list any major frameworks/libraries used to bootstrap your p
 
 * [![Django][Django]][Django-url]
 * [![DRF][Django REST framework]][DRF-url]
+* [![DRFSPD][DRF Spectacular]][DRFSPD-url]
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -107,13 +111,9 @@ To set up the project locally, follow these steps:
 
 Before you begin, ensure you have met the following requirements:
 
-- **Python 3.8+**: Make sure Python is installed on your machine. You can download it from [python.org](https://www.python.org/downloads/).
+- **Python 3.12+**: Make sure Python is installed on your machine. You can download it from [python.org](https://www.python.org/downloads/).
 
-- **pip**: Ensure you have pip installed for managing Python packages. It usually comes with Python installations.
-
-- **Virtual Environment**: It's recommended to use a virtual environment to manage dependencies. You can create one using `venv` or `virtualenv`.
-
-- **rest_framework**
+- **Django REST framework**
   ```sh
   pip install djangorestframework
   ```
@@ -121,18 +121,11 @@ Before you begin, ensure you have met the following requirements:
   ```sh
   pip install drf-spectacular
   ```
-- **djangorestframework-simplejwt**
-  ```sh
-  pip install djangorestframework-simplejwt
-  ```
-- **django-cors-headers**
-  ```sh
-  pip install django-cors-headers
-  ```
+
 
 ### Installation
 
-This guide will walk you through the steps to integrate `django-api-admin` into your Django project. Follow these instructions to get started.
+This section will walk you through the steps to install `django-api-admin` in your Django project. Follow these instructions to get started.
 
 1. **Install the Package**
    ```sh
@@ -155,16 +148,7 @@ This guide will walk you through the steps to integrate `django-api-admin` into 
        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
    }
    ```
-4. Add the urls of your client side applications to the `CORS_ORIGIN_WHITELIST`
-   ```py
-   # settings.py
-   CORS_ORIGIN_WHITELIST = (
-       'http://localhost',  # jest-dom test server
-       'http://localhost:3000',  # react developement server
-   )
-   CORS_ALLOW_CREDENTIALS = True
-   ```
-5. **Add the modify_schema hook** used to tag paths in the openapi schema  
+4. **Add the modify_schema hook** to improve the auto generated openAPI schema  
    ```py
    # settings.py
    SPECTACULAR_SETTINGS = {
@@ -176,6 +160,96 @@ This guide will walk you through the steps to integrate `django-api-admin` into 
    ```
 
 Thats it you are now ready to register your models and implement your django admin frontend!
+
+### CORS Configuration
+
+If you plan to build a custom frontend in React.js or Vue.js then you might want to consider adding CORS configuration to your Django project. This will allow your frontend to make requests to your Django backend.
+
+1. Install **django-cors-headers** package
+  ```sh
+  pip install django-cors-headers
+  ```
+
+2. Add `corsheaders` to `INSTALLED_APPS` in your Django project's settings.py file (the order doesn't matter):
+   ```py
+   # settings.py
+   INSTALLED_APPS = [
+      'corsheaders',
+      # ...
+   ]
+   ```
+
+3. Add the urls of your client side applications to the `CORS_ORIGIN_WHITELIST`
+   ```py
+   # settings.py
+   CORS_ORIGIN_WHITELIST = (
+       'http://localhost',  # jest-dom test server
+       'http://localhost:3000',  # react development server
+   )
+   CORS_ALLOW_CREDENTIALS = True
+   ```
+
+Your client side application should now be able to make requests to your django backend!
+
+### Authentication
+
+Unlike `django.contrib.admin` this package doesn't include it's own authentication functionality. You will need implement authentication on your own, however the `django-api-admin` makes it very easy to add support for authentication frameworks that support `rest_framework`. This is how you can add `django-allauth` for instance:
+
+1. Install `django-allauth`
+   
+```sh
+pip install django-allauth
+```
+
+2. Configure `django-allauth` settings for your project
+
+```py
+# settings.py
+
+INSTALLED_APPS = [
+    # ...
+    'allauth',
+]
+
+MIDDLEWARE = [
+    # ...
+    'allauth.account.middleware.AccountMiddleware',
+    # ...
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+```
+
+3. Add the `authentication_classes` to an `APIAdminSite` subclass.
+
+```py
+from django_api_admin import APIAdminSite
+
+class AdminSite(APIAdminSite):
+    def get_authentication_classes(self):
+        from allauth.headless.contrib.rest_framework.authentication import XSessionTokenAuthentication
+
+        return [XSessionTokenAuthentication, authentication.SessionAuthentication]
+
+site = AdminSite()
+```
+
+
+4. include the `django-allauth` headless urls in your `urls.py` file.
+
+```python
+# urls.py
+urlpatterns = [
+    # ...
+    path("_allauth/", include("allauth.headless.urls")),
+]
+```
+
+Now, `django-api-admin` will use the provided `authentication_classes` for authenticating users.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -240,11 +314,8 @@ This section provides a simple example on how to use django-api-admin. If you're
 - [x] Rewrite django.contrib.admin as an API
 - [x] Add support for Bulk Actions
 - [x] Add OpenAPI documentation
-- [ ] Add a customizable dashboard
-- [ ] Oauth support
-- [ ] Multi-language Support
-    - [ ] Arabic
-    - [x] English
+- [ ] Add support for charts
+- [ ] Add support for global full-text search
 
 See the [open issues](https://github.com/demon-bixia/django-api-admin/issues) for a full list of proposed features (and known issues).
 
@@ -288,9 +359,9 @@ Distributed under the MIT License. See the `LICENSE` file  for more information.
 <!-- CONTACT -->
 ## Contact
 
-Muhammad Salah - [@demobixia](https://t.me/demonbixia) - msbizzaccount@outlook.com
+Muhammad Salah - [@daemobixia](https://t.me/demonbixia) - [msbizzaccount@gmail.com](mailto:[EMAIL_ADDRESS])
 
-Project Link: [https://github.com/demon-bixia/django-api-admin](https://github.com/demon-bixia/django-api-admin)
+Project Link: [https://github.com/demon-bixia/django-api-admin](https://github.com/daemon-bixia/django-api-admin)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -303,8 +374,6 @@ This section is dedicated to recognizing the valuable resources and contribution
 
 * [Django Web Framework](https://www.djangoproject.com/)
 * [Django Rest Framework](https://www.django-rest-framework.org/)
-* [Simple JWT](https://github.com/jazzband/djangorestframework-simplejwt/tree/master)
-* [Django Cors Headers](https://github.com/adamchainz/django-cors-headers)
 * [DRF Spectacular](https://github.com/tfranzel/drf-spectacular)
 * [Best README Template](https://github.com/othneildrew/Best-README-Template)
 
@@ -337,5 +406,8 @@ This section is dedicated to recognizing the valuable resources and contribution
 
 [DRF-url]: https://www.django-rest-framework.org/
 [Django REST framework]: https://img.shields.io/badge/django--rest--framework-3.12.4-green?style=for-the-badge&labelColor=333333&logo=django&logoColor=white&color=green
+
+[DRFSPD-url]: https://drf-spectacular.readthedocs.io/en/latest/
+[DRF Spectacular]: https://img.shields.io/badge/drf-spectacular-orange?style=for-the-badge&labelColor=333333&logo=django&logoColor=white&color=green
 
 [product-screenshot]: assets/images/screenshot.png
