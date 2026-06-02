@@ -20,6 +20,14 @@ dependencies = [
 testing = [
     "pillow>=12.2.0",
 ]
+example = [
+    "pillow>=12.2.0",
+    "django-allauth[mfa,socialaccount]>=65.18.0",
+    "django-cors-headers>=4.9.0",
+    "pillow>=12.2.0",
+    "python-dotenv>=1.2.2",
+    "factory-boy>=3.3.3",
+]
 
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
