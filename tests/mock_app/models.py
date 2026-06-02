@@ -68,6 +68,15 @@ class Product(models.Model):
         return reverse("product-detail", kwargs={"pk": self.pk})
 
 
+class Contract(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="contracts")
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+
 class ProductImage(models.Model):
     product = models.OneToOneField(
         Product, on_delete=models.CASCADE, related_name="image")

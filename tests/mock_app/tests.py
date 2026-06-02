@@ -23,8 +23,9 @@ from rest_framework.renderers import JSONRenderer
 
 from django_api_admin import APIModelAdmin, site
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
+from django_api_admin.models import LogEntry
 
-from .models import Product, Trademark, Category, Review, Customer
+from .models import Product, Trademark, Category, Review, Customer, Contract
 from .views import ProductDetailView
 from .admin import ProductAdmin
 
@@ -79,6 +80,10 @@ def setup_tests(test_case):
                                                       stock_status="in_stock", trademark=test_case.nike_trademark,
                                                       category=test_case.footwear_category)
 
+    # Add a contract
+    test_case.product_contract_1 = Contract.objects.create(
+        product=test_case.air_max_product, name="Air Max Contract")
+
     # Add a customer
     test_case.customer = Customer.objects.create(user=test_case.user)
 
@@ -87,6 +92,8 @@ def setup_tests(test_case):
         product=test_case.air_max_product, rating=1, review_title="Bad product", review_content="Very bad product", customer=test_case.customer)
     test_case.review_good_air_max = Review.objects.create(
         product=test_case.air_max_product, rating=4, review_title="Good product", review_content="Good product", customer=test_case.customer)
+    test_case.review_neutral_air_max = Review.objects.create(
+        product=test_case.air_max_product, rating=3, review_title="Not bad product", review_content="Not bad product", customer=test_case.customer)
 
 
 class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
@@ -560,3 +567,308 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
         self.assertEqual(list(fields.keys()), ["stock_status"])
         self.assertEqual(list(fields["stock_status"].choices), [
                          "in_stock", "out_of_stock", "pre_order"])
+
+
+class InlineAdminTestCase(APITestCase, URLPatternsTestCase):
+    urlpatterns = [
+        path("api_admin/", site.urls),
+    ]
+
+    def setUp(self) -> None:
+        setup_tests(self)
+
+    def test_inline_bulk_additions(self):
+        url = reverse("api_admin:%s_%s_add" % self.product_info)
+        data = {
+            "data": {
+                "name": "Duramo SL",
+                "category": 1,
+                "trademark": 2,
+                "price": 199.99,
+                "stock_status": "in_stock",
+                "description": "The adidas Duramo SL Shoes put some snap into your step with LIGHTMOTION"
+            },
+            "inlines": {
+                "mock_app.review": {
+                    "add": {
+                        "j18ca": {
+                            "rating": 1,
+                            "review_title": "Bad product",
+                            "review_content": "Very bad product",
+                            "customer": self.customer.pk
+                        },
+                        "a92b#": {
+                            "rating": 4,
+                            "review_title": "Good product",
+                            "review_content": "Very good product",
+                            "customer": self.customer.pk
+                        },
+                    }
+                }
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNotNone(response.data.get("inlines"))
+        self.assertEqual(
+            len(response.data["inlines"]["mock_app.review"]["add"]), 2)
+        self.assertEqual(response.data["inlines"]
+                         ["mock_app.review"]["add"][0]["rating"], 1)
+
+    def test_inline_bulk_updates(self):
+        url = reverse("api_admin:%s_%s_change" %
+                      self.product_info, kwargs={"object_id": self.air_max_product.pk})
+        data = {
+            "data": {
+                "price": 200,
+            },
+            "inlines": {
+                "mock_app.review": {
+                    "change": {
+                        "$fqf?": {
+                            "pk": self.review_bad_air_max.pk,
+                            "rating": 1,
+                            "review_title": "Very Expensive Product",
+                            "review_content": "Why is it so expensive now",
+                            "customer": self.customer.pk
+                        },
+                        "a92b#": {
+                            "pk": self.review_good_air_max.pk,
+                            "rating": 4,
+                            "review_title": "Sudden Price Increase",
+                            "review_content": "Why the sudden increase in price?",
+                            "customer": self.customer.pk
+                        }
+                    },
+                    "delete": {
+                        "$e&xg":  self.review_neutral_air_max.pk
+                    }
+                },
+            },
+        }
+        response = self.client.patch(url, data=data, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data.get("inlines"))
+        self.assertEqual(
+            len(response.data["inlines"]["mock_app.review"]["change"]), 2)
+        self.assertEqual(response.data["inlines"]["mock_app.review"]
+                         ["change"][0]["review_title"], "Very Expensive Product")
+        self.assertEqual(
+            len(response.data["inlines"]["mock_app.review"]["delete"]), 1)
+        self.assertEqual(
+            response.data["inlines"]["mock_app.review"]["delete"][0]["review_title"], "Not bad product")
+
+    def test_updating_unrelated_inlines(self):
+        url = reverse("api_admin:%s_%s_add" % self.product_info)
+        data = {
+            "data": {
+                "name": "Duramo SL",
+                "category": 1,
+                "trademark": 2,
+                "price": 199.99,
+                "stock_status": "in_stock",
+                "description": "The adidas Duramo SL Shoes put some snap into your step with LIGHTMOTION"
+            },
+            "inlines": {
+                "mock_app.technique": {
+                    "add": {
+                        "2cad3": {"name": "heavenly demon transformation art"}
+                    }
+                }
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNotNone(response.data.get("errors"))
+        self.assertTrue(isinstance(
+            response.data["errors"]["mock_app.technique"]["non_field_errors"], list))
+
+    def test_invalid_inline_data(self):
+        url = reverse("api_admin:%s_%s_add" % self.product_info)
+        data = {
+            "data": {
+                "name": "Alpha Huarache",
+                "category": 1,
+                "trademark": 2,
+                "price": 200.00,
+                "stock_status": "in_stock",
+                "description": "Men's Alpha Huarache NXT Baseball Cleats"
+            },
+            "inlines": {
+                "mock_app.review": {
+                    "add": {
+                        "40fjq": {
+                            "rating": 2,
+                            # Missing review_title
+                            "review_content": "Decent, but could be better.",
+                            "customer": self.customer.pk
+                        },
+                        "abcde": {
+                            "rating": 5,
+                            "review_title": "Amazing comfort",
+                            "review_content": "The best cleats I have ever worn.",
+                            "customer": self.customer.pk
+                        },
+                        "fghij": {
+                            "rating": 4,
+                            "review_title": "Great performance",
+                            "review_content": "Very light and responsive on the field.",
+                            "customer": self.customer.pk
+                        },
+                        "klmno": {
+                            "rating": 3,
+                            "review_title": "Average",
+                            "review_content": "Not bad, but I expected more for the price.",
+                            "customer": self.customer.pk
+                        },
+                        "pqrstu": {
+                            "rating": 1,
+                            "review_title": "Disappointing",
+                            "review_content": "Tore after only two games. Very poor quality.",
+                            "customer": self.customer.pk
+                        },
+                        "vwxyz": {
+                            "rating": 4,
+                            "review_title": "Solid choice",
+                            "review_content": "Good traction and fit. Would recommend.",
+                            "customer": self.customer.pk
+                        },
+                        "12345": {
+                            # Exceeds the `max_num`
+                            "rating": 5,
+                            "review_title": "Perfect fit",
+                            "review_content": "True to size and very comfortable.",
+                            "customer": self.customer.pk
+                        }
+                    },
+                    "change": {
+                        "52dax": {
+                            # Missing pk
+                            "rating": 3,
+                            "review_title": "Updated thoughts",
+                            "review_content": "After more use, I've adjusted my rating.",
+                            "customer": self.customer.pk
+                        }
+                    }
+                },
+            }
+        }
+        response = self.client.post(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(isinstance(
+            response.data["errors"]["mock_app.review"]["40fjq"][0], list))
+        self.assertTrue(isinstance(
+            response.data["errors"]["mock_app.review"]["12345"], list))
+        self.assertEqual(len(Product.objects.filter(
+            name="Alpha Huarache")), 0)
+
+    def test_changing_unrelated_instance(self):
+        url = reverse("api_admin:%s_%s_change" %
+                      self.product_info, kwargs={"object_id": self.stan_smith_product.pk})
+        data = {
+            "data": {},
+            "inlines": {
+                "mock_app.review": {
+                    "change": {
+                        "$e&xg": {
+                            "pk": self.review_bad_air_max.pk,
+                            "rating": 1,
+                            "review_title": "Very Expensive Product",
+                            "review_content": "Why is it so expensive now",
+                            "customer": self.customer.pk
+                        },
+                    }
+                },
+            },
+        }
+        response = self.client.patch(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(isinstance(
+            response.data["errors"]["mock_app.review"]["$e&xg"], list))
+
+    def test_constructing_change_messages(self):
+        url = reverse("api_admin:%s_%s_change" %
+                      self.product_info, kwargs={"object_id": self.air_max_product.pk})
+        data = {
+            "data": {
+                "price": 300
+            },
+            "inlines": {
+                "mock_app.review": {
+                    "add": {
+                        "j18ca": {
+                            "rating": 5,
+                            "review_title": "Highly Recommended",
+                            "review_content": "Excellent quality and very durable.",
+                            "customer": self.customer.pk
+                        },
+                    },
+                    "change": {
+                        "ca4tq": {
+                            "pk": self.review_bad_air_max.pk,
+                            "rating": 2,
+                            "review_title": "Better than expected",
+                            "review_content": "I previously gave a bad review, but it's not that bad.",
+                            "customer": self.customer.pk
+                        },
+                        "$fqf?": {
+                            "pk": self.review_good_air_max.pk,
+                            "rating": 5,
+                            "review_title": "Updated: Still Great",
+                            "review_content": "After 6 months, these are still holding up well.",
+                            "customer": self.customer.pk
+                        }
+                    },
+                    "delete": {
+                        "$e&xg": self.review_neutral_air_max.pk
+                    }
+                },
+            },
+        }
+        response = self.client.patch(url, data=data, format="json")
+        self.assertEqual(response.status_code, 200)
+
+        log_entry = LogEntry.objects.get(object_repr="Air Max")
+        change_message = json.loads(log_entry.change_message)
+        self.assertEqual(len(change_message), 5)
+
+        self.assertTrue("changed" in change_message[0])
+        self.assertEqual(change_message[0]["changed"]["fields"], ["Price"])
+
+        self.assertTrue("added" in change_message[1])
+        self.assertEqual(change_message[1]["added"]
+                         ["object"], "Highly Recommended - 5")
+
+        self.assertTrue("changed" in change_message[2])
+        self.assertEqual(
+            change_message[2]["changed"]["object"], "Better than expected - 2")
+
+        self.assertTrue("changed" in change_message[3])
+        self.assertEqual(
+            change_message[3]["changed"]["object"], "Updated: Still Great - 5")
+
+        self.assertTrue("deleted" in change_message[4])
+        self.assertEqual(
+            change_message[4]["deleted"]["object"], "Not bad product - 3")
+
+    def test_deleting_protected_inline_instance(self):
+        url = reverse("api_admin:%s_%s_change" %
+                      self.trademark_info, kwargs={"object_id": 1})
+        data = {
+            "data": {
+                "name": "Nike, Inc.",
+            },
+            "inlines": {
+                "mock_app.product": {
+                    "delete": {
+                        "12345": 1
+                    }
+                }
+            }
+        }
+        response = self.client.patch(url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(response.data["errors"]["mock_app.product"]["12345"][0].startswith(
+            ("Deleting product Air Max would require deleting the following protected related"
+             " objects: contract Air Max Contract")))

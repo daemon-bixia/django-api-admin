@@ -31,6 +31,8 @@ class CatalogInline(TabularInlineAPI):
 
 class ReviewInline(TabularInlineAPI):
     model = Review
+    min_num = 0
+    max_num = 5
 
 
 class ProductAdmin(APIModelAdmin):
@@ -82,6 +84,10 @@ class ProductAdmin(APIModelAdmin):
         return sum(ratings) / len(ratings) if ratings else None
 
 
+class ProductInline(TabularInlineAPI):
+    model = Product
+
+
 class TrademarkAdmin(APIModelAdmin):
     list_display = ("name", )
     list_display_links = ("name",)
@@ -89,6 +95,8 @@ class TrademarkAdmin(APIModelAdmin):
     empty_value_display = "-"
     search_fields = ("name",)
     ordering = ("-name",)
+
+    inlines = [ProductInline,]
 
 
 # Register your models here
