@@ -213,7 +213,6 @@ class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
             "model_name": Product._meta.model_name,
             "field_name": "related_products"
         })
-        print(response.data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["text"], "Stan Smith")
 
@@ -290,7 +289,7 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
     def test_delete_view_protected(self):
         url = reverse("api_admin:%s_%s_delete" %
                       self.trademark_info,
-                      kwargs={"object_id": 5})
+                      kwargs={"object_id": 1})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["detail"], "Cannot delete trademark")
@@ -407,7 +406,6 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
             "model": "Product", "object_id": product_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        print(response.data)
         self.assertEqual(response.data["results"]
                          [0]["object_repr"], "Duramo SL")
 
@@ -431,13 +429,13 @@ class ModelAdminTestCase(APITestCase, URLPatternsTestCase):
 
         # Inline formsets
         review_formset = data["inlines"][2]
-        self.assertEqual(len(review_formset["formset"]), 3)
+        self.assertEqual(len(review_formset["formset"]), 4)
         self.assertEqual(review_formset["formset"][0]
                          [2]["attrs"]["current_value"], self.review_bad_air_max.rating)
         self.assertEqual(review_formset["formset"][1]
                          [2]["attrs"]["current_value"], self.review_good_air_max.rating)
         self.assertNotIn(
-            "current_value", review_formset["formset"][2][0]["attrs"])
+            "current_value", review_formset["formset"][3][0]["attrs"])
 
     def test_change_view(self):
         url = reverse("api_admin:%s_%s_change" % self.product_info, kwargs={

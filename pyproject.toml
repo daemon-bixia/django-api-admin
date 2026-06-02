@@ -14,6 +14,7 @@ dependencies = [
     "django",
     "djangorestframework",
     "drf-spectacular",
+    "tblib>=3.2.2",
 ]
 
 [project.optional-dependencies]
