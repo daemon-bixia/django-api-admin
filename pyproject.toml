@@ -1,6 +1,6 @@
 [project]
 name = "django-api-admin"
-version = "1.2.2"
+version = "1.3.0"
 description = "A RESTful API implementation of django.contrib.admin, designed for writing custom frontends."
 authors = [{name = "Muhammad Salah", email = "msbizzacc0unt@outlook.com"}]
 license-files = ["LICENSE", "LICENSE-*"]
