@@ -25,7 +25,7 @@ jobs:
       - name: Install the latest version of uv and set the python version ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
           enable-cache: true # Ensures lightning-fast subsequent runs
 
       - name: Build release distributions
