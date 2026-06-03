@@ -23,6 +23,7 @@ class ViewOnSiteView(APIView):
     its absolute URL, and constructs the full URL (including schema and domain)
     based on the associated Site configuration.
     """
+
     permission_classes = []
     admin_site = None
 
@@ -30,16 +31,10 @@ class ViewOnSiteView(APIView):
         operation_id="Get object site URL",
         parameters=[
             OpenApiParameter(
-                name="content_type_id",
-                type=int,
-                location=OpenApiParameter.PATH,
-                description=_("The ID of the content type.")
+                name="content_type_id", type=int, location=OpenApiParameter.PATH, description=_("The ID of the content type.")
             ),
             OpenApiParameter(
-                name="object_id",
-                type=int,
-                location=OpenApiParameter.PATH,
-                description=_("The ID of the object.")
+                name="object_id", type=int, location=OpenApiParameter.PATH, description=_("The ID of the object.")
             ),
         ],
         responses={
@@ -48,14 +43,12 @@ class ViewOnSiteView(APIView):
                 description=_("The object's site-specific absolute URL"),
                 examples=[
                     OpenApiExample(
-                        name=_("Success Response"),
-                        value={"url": "http://localhost:8000/api/author/1/"},
-                        status_codes=["200"]
+                        name=_("Success Response"), value={"url": "http://localhost:8000/api/author/1/"}, status_codes=["200"]
                     )
                 ],
             ),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
+            401: CommonAPIResponses.unauthorized(),
         },
     )
     def get(self, request, content_type_id, object_id):
@@ -63,24 +56,24 @@ class ViewOnSiteView(APIView):
         try:
             content_type = ContentType.objects.get(pk=content_type_id)
             if not content_type.model_class():
-                raise ParseError({
-                    "detail": _("Content type %(ct_id)s object has no associated model")
-                    % {"ct_id": content_type_id}
-                })
+                raise ParseError(
+                    {"detail": _("Content type %(ct_id)s object has no associated model") % {"ct_id": content_type_id}}
+                )
             obj = content_type.get_object_for_this_type(pk=object_id)
         except (ObjectDoesNotExist, ValueError, ValidationError):
-            raise ParseError({
-                "detail": _("Content type %(ct_id)s object %(obj_id)s doesn’t exist")
-                % {"ct_id": content_type_id, "obj_id": object_id}
-            })
+            raise ParseError(
+                {
+                    "detail": _("Content type %(ct_id)s object %(obj_id)s doesn’t exist")
+                    % {"ct_id": content_type_id, "obj_id": object_id}
+                }
+            )
 
         try:
             get_absolute_url = obj.get_absolute_url
         except AttributeError:
-            raise ParseError({
-                "detail": _("%(ct_name)s objects don`t have a get_absolute_url() method")
-                % {"ct_name": content_type.name}
-            })
+            raise ParseError(
+                {"detail": _("%(ct_name)s objects don`t have a get_absolute_url() method") % {"ct_name": content_type.name}}
+            )
         absurl = get_absolute_url()
 
         # Try to figure out the object's domain, so we can do a cross-site redirect
@@ -88,7 +81,7 @@ class ViewOnSiteView(APIView):
 
         # If the object actually defines a domain, we're done.
         if absurl.startswith(("http://", "https://", "//")):
-            return Response({'url': absurl}, status=status.HTTP_200_OK)
+            return Response({"url": absurl}, status=status.HTTP_200_OK)
 
         # Otherwise, we need to introspect the object's relationships for a
         # relation to the Site object
@@ -128,8 +121,8 @@ class ViewOnSiteView(APIView):
                             object_domain = site.domain
                             break
 
-          # If all that malarkey found an object domain, use it. Otherwise, fall back
-          # to whatever get_absolute_url() returned.
+        # If all that malarkey found an object domain, use it. Otherwise, fall back
+        # to whatever get_absolute_url() returned.
 
         if object_domain is not None:
             protocol = request.scheme

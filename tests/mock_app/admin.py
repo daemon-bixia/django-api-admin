@@ -44,7 +44,11 @@ class ProductAdmin(APIModelAdmin):
     list_editable = ("stock_status",)
     list_per_page = 6
     empty_value_display = "-"
-    search_fields = ("name", "description", "trademark__name",)
+    search_fields = (
+        "name",
+        "description",
+        "trademark__name",
+    )
     ordering = ("-date_created",)
 
     filter_horizontal = ("related_products",)
@@ -56,25 +60,43 @@ class ProductAdmin(APIModelAdmin):
         models.DecimalField: {"help_text": "Enter a number (decimals allowed)"},
     }
 
-    serializer_field_attributes = {
-        "LocationField": [*CORE_FIELD_ATTRIBUTES]
-    }
+    serializer_field_attributes = {"LocationField": [*CORE_FIELD_ATTRIBUTES]}
 
     actions = (mark_out_of_stock, apply_ten_percent_discount)
     actions_selection_counter = True
 
     fieldsets = (
-        ("General Information", {
-            "fields": ("name", ("category", "trademark",),
-                       ("price", "discount", "discount_price",),
-                       "stock_status", "average_rating", "description",), }),
+        (
+            "General Information",
+            {
+                "fields": (
+                    "name",
+                    (
+                        "category",
+                        "trademark",
+                    ),
+                    (
+                        "price",
+                        "discount",
+                        "discount_price",
+                    ),
+                    "stock_status",
+                    "average_rating",
+                    "description",
+                ),
+            },
+        ),
     )
     # A list of field names to exclude from the add/change form.
     exclude = ("date_created",)
     readonly_fields = ("date_created", "average_rating")
 
-    inlines = [ProductImageInline, CatalogInline,
-               ReviewInline, MetaDataInline,]
+    inlines = [
+        ProductImageInline,
+        CatalogInline,
+        ReviewInline,
+        MetaDataInline,
+    ]
 
     show_facets = ShowFacets.ALWAYS
 
@@ -89,14 +111,16 @@ class ProductInline(TabularInlineAPI):
 
 
 class TrademarkAdmin(APIModelAdmin):
-    list_display = ("name", )
+    list_display = ("name",)
     list_display_links = ("name",)
     list_per_page = 6
     empty_value_display = "-"
     search_fields = ("name",)
     ordering = ("-name",)
 
-    inlines = [ProductInline,]
+    inlines = [
+        ProductInline,
+    ]
 
 
 # Register your models here

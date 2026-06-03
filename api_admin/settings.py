@@ -164,10 +164,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "POSTPROCESSING_HOOKS": [
-        "drf_spectacular.hooks.postprocess_schema_enums",
-        "django_api_admin.hooks.modify_schema"
-    ],
+    "POSTPROCESSING_HOOKS": ["drf_spectacular.hooks.postprocess_schema_enums", "django_api_admin.hooks.modify_schema"],
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -183,7 +180,9 @@ HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "http://localhost:3000/verify-email/{key}",
 }
 
-ACCOUNT_LOGIN_METHODS = {"email", }
+ACCOUNT_LOGIN_METHODS = {
+    "email",
+}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
@@ -198,8 +197,9 @@ SOCIALACCOUNT_PROVIDERS = {
     "github": {
         "APP": {
             "client_id": os.environ.get("GITHUB_OAUTH_CLIENT_ID"),
-            "secret": os.environ.get("GITHUB_OAUTH_CLIENT_SECRET"), }
-    }
+            "secret": os.environ.get("GITHUB_OAUTH_CLIENT_SECRET"),
+        }
+    },
 }
 
 MFA_SAFE_PERIOD = 3 * 24 * 60 * 60 * 1000  # 3 days

@@ -15,7 +15,7 @@ class SiteContextView(APIView):
     Retrieve core attributes of the admin site.
 
     Returns a JSON payload containing configurable admin site settings such as
-    `site_title`, `site_header`, `site_url`, and registered apps in the admin 
+    `site_title`, `site_header`, `site_url`, and registered apps in the admin
     site.
     """
 
@@ -27,8 +27,7 @@ class SiteContextView(APIView):
         responses={
             200: OpenApiResponse(
                 response=SiteContextSerializer,
-                description=_(
-                    "Retrieve site context attributes such as site title and header"),
+                description=_("Retrieve site context attributes such as site title and header"),
                 examples=[
                     OpenApiExample(
                         name=_("Success Response"),
@@ -47,24 +46,19 @@ class SiteContextView(APIView):
                                         {
                                             "name": "Users",
                                             "object_name": "User",
-                                            "perms": {
-                                                "add": True,
-                                                "change": True,
-                                                "delete": True,
-                                                "view": True
-                                            }
+                                            "perms": {"add": True, "change": True, "delete": True, "view": True},
                                         }
-                                    ]
+                                    ],
                                 }
                             ],
-                            "is_nav_sidebar_enabled": True
+                            "is_nav_sidebar_enabled": True,
                         },
-                        status_codes=["200"]
+                        status_codes=["200"],
                     )
                 ],
             ),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
+            401: CommonAPIResponses.unauthorized(),
         },
     )
     def get(self, request):

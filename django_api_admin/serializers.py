@@ -30,44 +30,30 @@ class LogEntrySerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "action_time": {"help_text": _("The date and time of the action.")},
             "user": {"help_text": _("The user who performed the action.")},
-            "content_type": {
-                "help_text": _("The content type of the object being acted upon.")
-            },
+            "content_type": {"help_text": _("The content type of the object being acted upon.")},
             "object_id": {"help_text": _("The ID of the object being acted upon.")},
-            "object_repr": {
-                "help_text": _("The textual representation of the object.")
-            },
-            "action_flag": {
-                "help_text": _(
-                    "The type of action (1 for Addition, 2 for Change, 3 for Deletion)."
-                )
-            },
+            "object_repr": {"help_text": _("The textual representation of the object.")},
+            "action_flag": {"help_text": _("The type of action (1 for Addition, 2 for Change, 3 for Deletion).")},
             "change_message": {"help_text": _("A description of the changes made.")},
         }
 
 
 class PaginationSerializer(serializers.Serializer):
     num_pages = serializers.IntegerField(
-        required=True, help_text=_("The total number of pages.")
-    )
+        required=True, help_text=_("The total number of pages."))
     count = serializers.IntegerField(
-        required=True, help_text=_("The total number of items.")
-    )
+        required=True, help_text=_("The total number of items."))
     has_next = serializers.BooleanField(
-        required=True, help_text=_("Whether there is a next page.")
-    )
+        required=True, help_text=_("Whether there is a next page."))
     has_previous = serializers.BooleanField(
-        required=True, help_text=_("Whether there is a previous page.")
-    )
+        required=True, help_text=_("Whether there is a previous page."))
 
 
 class HistoryViewResponseSerializer(serializers.Serializer):
     pagination = PaginationSerializer(
-        required=True, help_text=_("Pagination information.")
-    )
+        required=True, help_text=_("Pagination information."))
     results = LogEntrySerializer(
-        many=True, required=True, help_text=_("the list of log entries.")
-    )
+        many=True, required=True, help_text=_("the list of log entries."))
 
 
 class HistoryViewRequestSerializer(serializers.Serializer):
@@ -83,15 +69,13 @@ class HistoryViewRequestSerializer(serializers.Serializer):
         required=False,
         help_text=_("The field to use for ordering the log entries."),
     )
-    object_id = serializers.IntegerField(
-        required=False, help_text=_("The ID of the specific object to filter logs for.")
-    )
+    object_id = serializers.IntegerField(required=False, help_text=_(
+        "The ID of the specific object to filter logs for."))
 
 
 class ViewOnsiteViewResponseSerializer(serializers.Serializer):
-    url = serializers.CharField(
-        required=True, help_text=_("The site-specific absolute URL of the object.")
-    )
+    url = serializers.CharField(required=True, help_text=_(
+        "The site-specific absolute URL of the object."))
 
 
 class ActionSerializer(serializers.Serializer):
@@ -131,20 +115,17 @@ class ChangeListSerializer(serializers.Serializer):
     """
     Validates the changelist querystring
     """
+
     q = serializers.CharField(
-        required=False, trim_whitespace=False, help_text=_("Search query.")
-    )
+        required=False, trim_whitespace=False, help_text=_("Search query."))
     p = serializers.IntegerField(
-        required=False, min_value=1, help_text=_("Page number.")
-    )
+        required=False, min_value=1, help_text=_("Page number."))
     all = serializers.BooleanField(
         required=False, help_text=_("Show all results."))
-    o = serializers.CharField(
-        required=False, help_text=_("The field(s) to use for ordering.")
-    )
+    o = serializers.CharField(required=False, help_text=_(
+        "The field(s) to use for ordering."))
     _to_field = serializers.CharField(
-        required=False, help_text=_("The field to match for lookups.")
-    )
+        required=False, help_text=_("The field to match for lookups."))
 
 
 class AppIndexSerializer(serializers.Serializer):
@@ -160,8 +141,7 @@ class AppIndexSerializer(serializers.Serializer):
 class ModelSerializer(serializers.Serializer):
     name = serializers.CharField(help_text=_("The name of the model."))
     object_name = serializers.CharField(
-        help_text=_("The name of instances of that model.")
-    )
+        help_text=_("The name of instances of that model."))
     perms = PermissionsSerializer(
         help_text=_("The permissions for the model."))
     view_only = serializers.BooleanField(
@@ -173,34 +153,28 @@ class AppSerializer(serializers.Serializer):
     app_label = serializers.CharField(
         help_text=_("The label of the application."))
     app_url = serializers.CharField(help_text=_("The URL of the application."))
-    has_module_perms = serializers.BooleanField(
-        help_text=_("Whether the user has permissions for this application.")
-    )
-    models = ModelSerializer(
-        many=True, help_text=_("The list of models in this application.")
-    )
+    has_module_perms = serializers.BooleanField(help_text=_(
+        "Whether the user has permissions for this application."))
+    models = ModelSerializer(many=True, help_text=_(
+        "The list of models in this application."))
 
 
 class AppListSerializer(serializers.Serializer):
-    app_list = AppSerializer(
-        many=True, help_text=_("The list of registered applications.")
-    )
+    app_list = AppSerializer(many=True, help_text=_(
+        "The list of registered applications."))
 
 
 class AutoCompleteSerializer(serializers.Serializer):
-    app_label = serializers.CharField(
-        required=True, help_text=_("The app label of the model to search.")
-    )
+    app_label = serializers.CharField(required=True, help_text=_(
+        "The app label of the model to search."))
     model_name = serializers.CharField(
-        required=True, help_text=_("The name of the model to search.")
-    )
+        required=True, help_text=_("The name of the model to search."))
     field_name = serializers.CharField(
         required=True,
         help_text=_("The name of the source field to use for the search."),
     )
-    term = serializers.CharField(
-        required=False, default="", help_text=_("The search term to filter results.")
-    )
+    term = serializers.CharField(required=False, default="", help_text=_(
+        "The search term to filter results."))
 
 
 class AutocompleteResultSerializer(serializers.Serializer):
@@ -217,11 +191,9 @@ class AutocompletePaginationSerializer(serializers.Serializer):
 
 class AutocompleteResponseSerializer(serializers.Serializer):
     results = AutocompleteResultSerializer(
-        many=True, help_text=_("The list of search results.")
-    )
+        many=True, help_text=_("The list of search results."))
     pagination = AutocompletePaginationSerializer(
-        help_text=_("Pagination information.")
-    )
+        help_text=_("Pagination information."))
 
 
 class FormatsSerializer(serializers.Serializer):
@@ -237,14 +209,11 @@ class FormatsSerializer(serializers.Serializer):
     THOUSAND_SEPARATOR = serializers.CharField(allow_blank=False)
     NUMBER_GROUPING = serializers.IntegerField()
     DATE_INPUT_FORMATS = serializers.ListField(
-        child=serializers.CharField(allow_blank=False)
-    )
+        child=serializers.CharField(allow_blank=False))
     TIME_INPUT_FORMATS = serializers.ListField(
-        child=serializers.CharField(allow_blank=False)
-    )
+        child=serializers.CharField(allow_blank=False))
     DATETIME_INPUT_FORMATS = serializers.ListField(
-        child=serializers.CharField(allow_blank=False)
-    )
+        child=serializers.CharField(allow_blank=False))
 
 
 class FieldAttributesSerializer(serializers.Serializer):
@@ -330,10 +299,12 @@ class FieldAttributesSerializer(serializers.Serializer):
         help_text="A list of valid values or choice tuples (value, display_name) that the field can accept.",
     )
     html_cutoff = serializers.IntegerField(
-        help_text="The maximum number of choices that will be rendered in HTML select dropdowns to prevent performance degradation."
+        help_text=("The maximum number of choices that will be rendered"
+                   " in HTML select dropdowns to prevent performance degradation.")
     )
     html_cutoff_text = serializers.CharField(
-        help_text="The string message displayed in HTML forms when the total available choices exceed the html_cutoff threshold."
+        help_text=("The string message displayed in HTML"
+                   " forms when the total available choices exceed the html_cutoff threshold.")
     )
     allow_empty_files = serializers.BooleanField(
         help_text="If True, allows FileField or ImageField uploads to contain empty, zero-length files."
@@ -342,10 +313,12 @@ class FieldAttributesSerializer(serializers.Serializer):
         help_text="If True, file-based fields will return the full URL to the file in responses instead of just the filename."
     )
     allow_empty = serializers.BooleanField(
-        help_text="If True, allows collection-based fields (like ListField or ManyRelatedField) to pass validation with zero elements."
+        help_text=("If True, allows collection-based fields"
+                   " (like ListField or ManyRelatedField) to pass validation with zero elements.")
     )
     child = serializers.JSONField(
-        help_text="The configuration metadata representing the underlying DRF field type used to validate each item within a collection."
+        help_text=("The configuration metadata representing"
+                   " the underlying DRF field type used to validate each item within a collection.")
     )
 
 
@@ -377,9 +350,7 @@ class PrepopulatedFieldsSerializer(serializers.Serializer):
         child=serializers.ListField(
             child=serializers.CharField(),
             help_text=_(
-                "List of source field names whose values are concatenated to "
-                "populate the target field."
-            ),
+                "List of source field names whose values are concatenated to populate the target field."),
         ),
         help_text=_(
             "Dictionary where each key is the name of a field that will be "
@@ -420,26 +391,36 @@ class FormSerializer(serializers.Serializer):
     save_as = serializers.BooleanField(
         required=True, help_text="enable a “save as new” feature on admin change forms")
     save_as_continue = serializers.BooleanField(
-        required=True, help_text="When True, the default redirect after saving the new object is to the change view for that object")
+        required=True,
+        help_text="When True, the default redirect after saving the new object is to the change view for that object",
+    )
     save_on_top = serializers.BooleanField(
-        required=True, help_text="Add save buttons across the top of your admin change forms")
+        required=True, help_text="Add save buttons across the top of your admin change forms"
+    )
     filter_horizontal = serializers.ListField(
         child=serializers.CharField(),
-        required=True, help_text="Horizontal filter widgets to render for ModelForms with ManyToManyFields")
+        required=True,
+        help_text="Horizontal filter widgets to render for ModelForms with ManyToManyFields",
+    )
     filter_vertical = serializers.ListField(
         child=serializers.CharField(),
-        required=True, help_text="Vertical filter widgets to render for ModelForms with ManyToManyFields")
+        required=True,
+        help_text="Vertical filter widgets to render for ModelForms with ManyToManyFields",
+    )
     raw_id_fields = serializers.ListField(
         child=serializers.CharField(),
-        required=True, help_text="Automatically turn any ForeignKey or ManyToManyField into a raw HTML input widget")
+        required=True,
+        help_text="Automatically turn any ForeignKey or ManyToManyField into a raw HTML input widget",
+    )
     radio_fields = serializers.DictField(
-        child=serializers.CharField(),
-        required=True, help_text="Fields to render as radio buttons")
+        child=serializers.CharField(), required=True, help_text="Fields to render as radio buttons"
+    )
     view_on_site = serializers.BooleanField(
-        required=True, help_text="Whether to display a link to view the object on the site")
+        required=True, help_text="Whether to display a link to view the object on the site"
+    )
     autocomplete_fields = serializers.ListField(
-        child=serializers.CharField(),
-        required=True, help_text="Fields to use with autocomplete widgets")
+        child=serializers.CharField(), required=True, help_text="Fields to use with autocomplete widgets"
+    )
 
 
 class InlineSerializer(serializers.Serializer):
@@ -532,15 +513,12 @@ class SiteContextSerializer(serializers.Serializer):
     site_header = serializers.CharField(
         help_text=_("The header of the admin site."))
     site_url = serializers.CharField(help_text=_("The URL of the admin site."))
-    has_permission = serializers.BooleanField(
-        help_text=_("Whether the user has permission to access the site.")
-    )
-    available_apps = AppSerializer(
-        many=True, help_text=_("The list of applications available to the user.")
-    )
+    has_permission = serializers.BooleanField(help_text=_(
+        "Whether the user has permission to access the site."))
+    available_apps = AppSerializer(many=True, help_text=_(
+        "The list of applications available to the user."))
     is_nav_siderbar_enabled = serializers.BooleanField(
-        help_text=_("Whether the navigation sidebar is enabled.")
-    )
+        help_text=_("Whether the navigation sidebar is enabled."))
 
 
 class ActionChoiceSerializer(serializers.Serializer):
@@ -583,24 +561,29 @@ class ConfigSerializer(serializers.Serializer):
         help_text=_("The string to display for empty values."))
     list_display = serializers.ListField(child=serializers.CharField(
     ), help_text=_("The fields to display in the list."))
-    list_display_links = serializers.ListField(child=serializers.CharField(
-    ), help_text=_("The fields that should link to the change view."))
-    list_editable = serializers.ListField(child=serializers.CharField(
-    ), help_text=_("The fields that are editable directly in the list."))
+    list_display_links = serializers.ListField(
+        child=serializers.CharField(), help_text=_("The fields that should link to the change view.")
+    )
+    list_editable = serializers.ListField(
+        child=serializers.CharField(), help_text=_("The fields that are editable directly in the list.")
+    )
     exclude = serializers.ListField(child=serializers.CharField(
     ), help_text=_("The fields to exclude from the list."))
     show_full_result_count = serializers.BooleanField(
         help_text=_("Whether to show the total count of results."))
     list_per_page = serializers.IntegerField(
         help_text=_("The number of items to show per page."))
-    list_max_show_all = serializers.IntegerField(help_text=_(
-        "The maximum number of items to show when 'Show all' is clicked."))
+    list_max_show_all = serializers.IntegerField(
+        help_text=_(
+            "The maximum number of items to show when 'Show all' is clicked.")
+    )
     date_hierarchy = serializers.CharField(help_text=_(
         "The field to use for date-based navigation."))
     search_help_text = serializers.CharField(allow_null=True, help_text=_(
         "The help text to display for the search box."))
     sortable_by = serializers.ListField(
-        child=serializers.CharField(), allow_null=True, help_text=_("The fields that the user can sort by."))
+        child=serializers.CharField(), allow_null=True, help_text=_("The fields that the user can sort by.")
+    )
     search_fields = serializers.ListField(child=serializers.CharField(
     ), help_text=_("The fields to include in the search."))
     preserve_filters = serializers.BooleanField(help_text=_(
@@ -613,8 +596,9 @@ class ConfigSerializer(serializers.Serializer):
         many=True, help_text=_("The list of available actions."))
     filters = FilterSerializer(many=True, help_text=_(
         "The list of available filters."))
-    list_display_fields = serializers.ListField(child=serializers.CharField(
-    ), help_text=_("The list of fields available for list display."))
+    list_display_fields = serializers.ListField(
+        child=serializers.CharField(), help_text=_("The list of fields available for list display.")
+    )
     editing_fields = serializers.ListField(child=EditingFieldSerializer(
     ), help_text=_("Metadata for list-editable fields."))
 
@@ -632,33 +616,26 @@ class RowSerializer(serializers.Serializer):
     id = serializers.IntegerField(
         help_text=_("The primary key of the object."))
     cells = serializers.DictField(
-        child=serializers.CharField(),
-        help_text=_("The data cells for this row, mapped by field name."))
+        child=serializers.CharField(), help_text=_("The data cells for this row, mapped by field name.")
+    )
 
 
 class ChangelistResponseSerializer(serializers.Serializer):
-    action_form = FormFieldsSerializer(
-        help_text=_(
-            "Configuration for the action form, including fields and inlines.")
-    )
-    config = ConfigSerializer(
-        help_text=_("Configuration metadata for the changelist.")
-    )
-    columns = ColumnSerializer(
-        many=True, help_text=_("A list of column definitions for the table.")
-    )
-    rows = RowSerializer(
-        many=True, help_text=_("The actual data rows to be displayed.")
-    )
+    action_form = FormFieldsSerializer(help_text=_(
+        "Configuration for the action form, including fields and inlines."))
+    config = ConfigSerializer(help_text=_(
+        "Configuration metadata for the changelist."))
+    columns = ColumnSerializer(many=True, help_text=_(
+        "A list of column definitions for the table."))
+    rows = RowSerializer(many=True, help_text=_(
+        "The actual data rows to be displayed."))
 
 
 class ResponseMessageSerializer(serializers.Serializer):
-    detail = serializers.CharField(
-        help_text=_("A detailed description of the response message.")
-    )
+    detail = serializers.CharField(help_text=_(
+        "A detailed description of the response message."))
 
 
 class ErrorMessageSerializer(serializers.Serializer):
-    detail = serializers.CharField(
-        help_text=_("A detailed description of the error or response.")
-    )
+    detail = serializers.CharField(help_text=_(
+        "A detailed description of the error or response."))

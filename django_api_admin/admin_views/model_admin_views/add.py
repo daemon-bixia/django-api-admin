@@ -21,6 +21,7 @@ class AddView(APIView):
     related child instances simultaneously, provided their models are configured
     as Inlines in the ModelAdmin.
     """
+
     serializer_class = None
     permission_classes = []
     model_admin = None
@@ -28,13 +29,12 @@ class AddView(APIView):
     @extend_schema(
         responses={
             200: OpenApiResponse(
-                description=_(
-                    "Configurations and a list of fields representing the add form"),
+                description=_("Configurations and a list of fields representing the add form"),
                 response=FormFieldsSerializer,
-                examples=[APIResponseExamples.form_description()]
+                examples=[APIResponseExamples.form_description()],
             ),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
+            401: CommonAPIResponses.unauthorized(),
         },
     )
     def get(self, request):
@@ -53,10 +53,7 @@ class AddView(APIView):
 
     @extend_schema(
         responses={
-            200: OpenApiResponse(
-                description=_(
-                    "The serialized instance, and inlines that were affected")
-            ),
+            200: OpenApiResponse(description=_("The serialized instance, and inlines that were affected")),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
         },
@@ -68,38 +65,30 @@ class AddView(APIView):
                 raise PermissionDenied
 
             # Initiate the serializer
-            serializer = self.serializer_class(data=request.data.get("data", {}),
-                                               context={"request": request})
+            serializer = self.serializer_class(data=request.data.get("data", {}), context={"request": request})
 
             # Validate the new_object data
             if serializer.is_valid():
-                new_object = self.model_admin.save_serializer(
-                    request, serializer, False)
-                self.model_admin.save_model(
-                    request, new_object, serializer, False)
+                new_object = self.model_admin.save_serializer(request, serializer, False)
+                self.model_admin.save_model(request, new_object, serializer, False)
 
                 # Process bulk operations
                 inline_results = None
                 bulk_operation = None
                 if request.data.get("inlines"):
-                    bulk_operation = InlineBulkOperation(
-                        request, self.model_admin, new_object, request.data.get("inlines"))
+                    bulk_operation = InlineBulkOperation(request, self.model_admin, new_object, request.data.get("inlines"))
 
                     if bulk_operation.is_valid():
-                        self.model_admin.save_related(
-                            request, new_object, serializer, bulk_operation, False)
+                        self.model_admin.save_related(request, new_object, serializer, bulk_operation, False)
                         inline_results = bulk_operation.result
                     else:
-                        raise ValidationError(
-                            {"errors": bulk_operation.errors})
+                        raise ValidationError({"errors": bulk_operation.errors})
                 else:
                     serializer.save_m2m()
 
                 # Construct the change message, and log the changes
-                change_message = self.model_admin.construct_change_message(
-                    request, (serializer, []), inline_results, False)
-                self.model_admin.log_change(
-                    request, new_object, change_message)
+                change_message = self.model_admin.construct_change_message(request, (serializer, []), inline_results, False)
+                self.model_admin.log_change(request, new_object, change_message)
 
                 return self.model_admin.response_add(request, new_object, serializer, bulk_operation)
 

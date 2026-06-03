@@ -28,10 +28,11 @@ from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams
 class AutoCompleteView(APIView):
     """
     Handles the "search-as-you-type" functionality.
-    It extracts search parameters, validates user permissions, 
-    retrieves the relevant queryset, paginates the results, 
+    It extracts search parameters, validates user permissions,
+    retrieves the relevant queryset, paginates the results,
     and returns them as a JSON response.
     """
+
     permission_classes = []
     admin_site = None
 
@@ -42,10 +43,7 @@ class AutoCompleteView(APIView):
 
     @extend_schema(
         operation_id="Retrieve autocomplete results",
-        parameters=[
-            AutoCompleteSerializer,
-            CommonAPIQueryParams.page
-        ],
+        parameters=[AutoCompleteSerializer, CommonAPIQueryParams.page],
         responses={
             200: OpenApiResponse(
                 description=_("List of objects matching the search term"),
@@ -54,15 +52,12 @@ class AutoCompleteView(APIView):
                     OpenApiExample(
                         name=_("Success Response"),
                         value={
-                            "results": [
-                                {"id": "1", "text": "Muhammad Salah"},
-                                {"id": "2", "text": "Another User"}
-                            ],
-                            "pagination": {"more": False}
+                            "results": [{"id": "1", "text": "Muhammad Salah"}, {"id": "2", "text": "Another User"}],
+                            "pagination": {"more": False},
                         },
                         status_codes=["200"],
                     )
-                ]
+                ],
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
@@ -84,13 +79,10 @@ class AutoCompleteView(APIView):
 
         return Response(
             {
-                "results": [
-                    self.serialize_result(obj, to_field_name)
-                    for obj in context["object_list"]
-                ],
-                "pagination": {"more": context["page_obj"].has_next()}
+                "results": [self.serialize_result(obj, to_field_name) for obj in context["object_list"]],
+                "pagination": {"more": context["page_obj"].has_next()},
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     def serialize_result(self, obj, to_field_name):
@@ -104,8 +96,7 @@ class AutoCompleteView(APIView):
         """Return queryset based on model_admin.get_search_results()."""
         qs = self.model_admin.get_queryset(request)
         qs = qs.complex_filter(self.source_field.get_limit_choices_to())
-        qs, search_use_distinct = self.model_admin.get_search_results(
-            request, qs, self.term)
+        qs, search_use_distinct = self.model_admin.get_search_results(request, qs, self.term)
         if search_use_distinct:
             qs = qs.distinct()
         return qs
@@ -128,8 +119,7 @@ class AutoCompleteView(APIView):
             model_name = request.GET["model_name"]
             field_name = request.GET["field_name"]
         except KeyError:
-            raise ParseError(
-                {"detail": _("missing values app_label, model_name, and field_name")})
+            raise ParseError({"detail": _("missing values app_label, model_name, and field_name")})
 
         # Retrieve objects from parameters.
         try:
@@ -139,27 +129,21 @@ class AutoCompleteView(APIView):
         try:
             source_field = source_model._meta.get_field(field_name)
         except FieldDoesNotExist:
-            raise ParseError(
-                {"detail": _(f"source field not found in source model {source_model._meta.verbose_name}")})
+            raise ParseError({"detail": _(f"source field not found in source model {source_model._meta.verbose_name}")})
         try:
             remote_model = source_field.remote_field.model
         except AttributeError:
-            raise ParseError(
-                {"detail": _(f"unable to locate the related model using source field {source_field.name}")})
+            raise ParseError({"detail": _(f"unable to locate the related model using source field {source_field.name}")})
         try:
             model_admin = self.admin_site.get_model_admin(remote_model)
         except KeyError:
-            raise ParseError(
-                {"detail": _("the remote model is not registered in the admin")})
+            raise ParseError({"detail": _("the remote model is not registered in the admin")})
 
         # Validate suitability of objects.
         if not getattr(model_admin, "search_fields"):
-            raise ParseError(_("%s must have search_fields for the autocomplete_view.") % type(
-                model_admin).__qualname__)
+            raise ParseError(_("%s must have search_fields for the autocomplete_view.") % type(model_admin).__qualname__)
 
-        to_field_name = getattr(
-            source_field.remote_field, "field_name", remote_model._meta.pk.attname
-        )
+        to_field_name = getattr(source_field.remote_field, "field_name", remote_model._meta.pk.attname)
         to_field_name = remote_model._meta.get_field(to_field_name).attname
         if not model_admin.to_field_allowed(request, to_field_name):
             raise PermissionDenied
@@ -183,7 +167,8 @@ class AutoCompleteView(APIView):
                 self.allow_empty,
             )
             page, queryset, is_paginated = self.model_admin.admin_site.paginate_queryset(
-                self.request, paginator, self.page_kwarg)
+                self.request, paginator, self.page_kwarg
+            )
             context = {
                 "paginator": paginator,
                 "page_obj": page,

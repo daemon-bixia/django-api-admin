@@ -11,7 +11,7 @@ def get_changed_data(serializer):
             continue
 
         # Case 1: The "Star" Field (Flattened Data)
-        if field.source in ['*', '.']:
+        if field.source in ["*", "."]:
             raw_data = serializer.initial_data.get(field_name)
             if raw_data is None:
                 continue
@@ -45,7 +45,7 @@ def does_not_equal(field, old_value, new_value):
 
     if isinstance(field, relations.RelatedField):
         if many:
-            old_pks = list(old_value.values_list('pk', flat=True))
+            old_pks = list(old_value.values_list("pk", flat=True))
             new_pks = [v.pk for v in new_value]
             return old_pks != new_pks
         return old_value.pk != new_value.pk

@@ -42,8 +42,7 @@ def model_serializer_factory(
 
     # If the parent model serializer defines a meta class we need to inherit from
     # that meta class
-    bases = (serializer_class.Meta,) if hasattr(
-        serializer_class, "Meta") else ()
+    bases = (serializer_class.Meta,) if hasattr(serializer_class, "Meta") else ()
     Meta = type("Meta", bases, attrs)
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -51,8 +50,7 @@ def model_serializer_factory(
         Overrides the default build_fields of the `ModelSerializer` class
         by calling the serializer_field_callback method to override the fields.
         """
-        cls, kwargs = serializer_class.build_field(
-            self, field_name, info, model_class, nested_depth)
+        cls, kwargs = serializer_class.build_field(self, field_name, info, model_class, nested_depth)
 
         if field_name in info.fields_and_pk:
             db_field = info.fields_and_pk[field_name]
@@ -61,8 +59,7 @@ def model_serializer_factory(
             db_field = relation_info.model_field
 
         if db_field:
-            serializerfield_kwargs = serializer_field_callback(
-                db_field, **kwargs)
+            serializerfield_kwargs = serializer_field_callback(db_field, **kwargs)
 
             # Remove the field
             if serializerfield_kwargs is None:
@@ -73,18 +70,15 @@ def model_serializer_factory(
         return (cls, kwargs)
 
     # Class attributes for the new form class.
-    serializer_class_attrs = {"Meta": Meta,
-                              "build_field": build_field}
+    serializer_class_attrs = {"Meta": Meta, "build_field": build_field}
 
     # Give this new serializer class a reasonable name.
     serializer_class_name = class_name or model.__name__ + "Serializer"
 
     if getattr(Meta, "fields", None) is None and getattr(Meta, "exclude", None) is None:
         raise ImproperlyConfigured(
-            "Calling modelserializer_factory without defining 'fields' or "
-            "'exclude' explicitly is prohibited."
+            "Calling modelserializer_factory without defining 'fields' or 'exclude' explicitly is prohibited."
         )
 
     # Dynamically construct a model serializer
-    return type(serializer_class)(
-        serializer_class_name, (serializer_class,), serializer_class_attrs)
+    return type(serializer_class)(serializer_class_name, (serializer_class,), serializer_class_attrs)

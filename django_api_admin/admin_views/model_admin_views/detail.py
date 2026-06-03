@@ -23,9 +23,10 @@ from django_api_admin.openapi import (
 class DetailView(APIView):
     """
     Retrieves a single instance of the model identified by the provided `object_id`,
-    supporting optional reverse lookups via the `to_field` query parameter, and 
+    supporting optional reverse lookups via the `to_field` query parameter, and
     performing permission checks.
     """
+
     serializer_class = None
     permission_classes = []
     model_admin = None
@@ -37,7 +38,7 @@ class DetailView(APIView):
                 name="to_field",
                 type=str,
                 location=OpenApiParameter.QUERY,
-                description=_("Reverse to field. Default is primary key")
+                description=_("Reverse to field. Default is primary key"),
             ),
         ],
         responses={
@@ -52,10 +53,8 @@ class DetailView(APIView):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
         if to_field and not self.model_admin.to_field_allowed(request, to_field):
-            return Response({"detail": _("The field %s cannot be referenced.") % to_field},
-                            status=status.HTTP_400_BAD_REQUEST)
-        obj = self.model_admin.get_object(
-            request, unquote(object_id), to_field)
+            return Response({"detail": _("The field %s cannot be referenced.") % to_field}, status=status.HTTP_400_BAD_REQUEST)
+        obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
         # If the object doesn't exist respond with not found
         if obj is None:

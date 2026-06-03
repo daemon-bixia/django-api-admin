@@ -6,10 +6,7 @@ from django_api_admin.serializers import ErrorMessageSerializer
 form_with_inlines_description = {
     "form": {
         "model": "example.author",
-        "readonly_fields": [
-            "date_joined",
-            "is_old_enough"
-        ],
+        "readonly_fields": ["date_joined", "is_old_enough"],
         "fields": [
             {
                 "type": "CharField",
@@ -28,24 +25,14 @@ form_with_inlines_description = {
                     "min_length": None,
                     "allow_blank": False,
                     "trim_whitespace": True,
-                    "current_value": "Muhammad Salah"
-                }
+                    "current_value": "Muhammad Salah",
+                },
             }
         ],
         "fieldsets": [
             [
                 "Information",
-                {
-                    "fields": [
-                        ["name", "age"],
-                        "is_vip",
-                        "user",
-                        "publisher",
-                        "is_old_enough",
-                        "date_joined",
-                        "location"
-                    ]
-                }
+                {"fields": [["name", "age"], "is_vip", "user", "publisher", "is_old_enough", "date_joined", "location"]},
             ]
         ],
         "prepopulated": {},
@@ -53,45 +40,29 @@ form_with_inlines_description = {
             "has_add_permission": True,
             "has_change_permission": True,
             "has_delete_permission": True,
-            "has_view_permission": True
+            "has_view_permission": True,
         },
         "save_as": False,
         "save_as_continue": True,
         "save_on_top": False,
         "filter_horizontal": [],
         "filter_vertical": [],
-        "raw_id_fields": [
-            "publisher"
-        ],
+        "raw_id_fields": ["publisher"],
         "radio_fields": {},
         "view_on_site": True,
-        "autocomplete_fields": [
-            "publisher"
-        ]
+        "autocomplete_fields": ["publisher"],
     },
     "inlines": [
         {
             "model": "example.book",
             "readonly_fields": [],
-            "fieldsets": [
-                [
-                    None,
-                    {
-                        "fields": [
-                            "id",
-                            "title",
-                            "author",
-                            "credits"
-                        ]
-                    }
-                ]
-            ],
+            "fieldsets": [[None, {"fields": ["id", "title", "author", "credits"]}]],
             "prepopulated": {},
             "permissions": {
                 "has_add_permission": True,
                 "has_change_permission": True,
                 "has_delete_permission": True,
-                "has_view_permission": True
+                "has_view_permission": True,
             },
             "extra": 3,
             "min_num": 1,
@@ -120,13 +91,13 @@ form_with_inlines_description = {
                             "min_length": None,
                             "allow_blank": False,
                             "trim_whitespace": True,
-                            "current_value": "How to do something"
-                        }
+                            "current_value": "How to do something",
+                        },
                     }
                 ]
-            ]
+            ],
         }
-    ]
+    ],
 }
 
 
@@ -134,13 +105,13 @@ class APIResponseExamples:
     """
     Provides an example of a successful API response for retrieving form field
     """
+
     @staticmethod
     def form_description():
         return OpenApiExample(
             name=_("Success Response"),
             summary=_("Example of a successful field attribute response"),
-            description=_(
-                "Retrieve form field attributes for the endpoint"),
+            description=_("Retrieve form field attributes for the endpoint"),
             value=form_with_inlines_description,
             status_codes=["200"],
         )
@@ -150,12 +121,7 @@ class APIResponseExamples:
         return OpenApiExample(
             name=_("Success Response"),
             value={
-                "pagination": {
-                    "num_pages": 1,
-                    "count": 1,
-                    "has_next": False,
-                    "has_previous": False
-                },
+                "pagination": {"num_pages": 1, "count": 1, "has_next": False, "has_previous": False},
                 "results": [
                     {
                         "id": 1,
@@ -253,7 +219,7 @@ class APIResponseExamples:
                                 "example.add_guestentry",
                                 "sessions.delete_session",
                                 "mfa.add_authenticator",
-                                "example.view_category"
+                                "example.view_category",
                             ],
                             "last_login": "2026-05-06T13:20:22.418291Z",
                             "is_superuser": True,
@@ -265,24 +231,16 @@ class APIResponseExamples:
                             "is_active": True,
                             "date_joined": "2026-01-27T21:01:04Z",
                             "groups": [],
-                            "user_permissions": []
+                            "user_permissions": [],
                         },
                         "action_time": "2026-04-24T10:32:53.511990Z",
                         "object_id": "1",
                         "object_repr": "Muhammad Salah",
                         "action_flag": 2,
-                        "change_message": [
-                            {
-                                "changed": {
-                                    "fields": [
-                                        "Age"
-                                    ]
-                                }
-                            }
-                        ],
-                        "content_type": 8
+                        "change_message": [{"changed": {"fields": ["Age"]}}],
+                        "content_type": 8,
                     }
-                ]
+                ],
             },
             status_codes=["200"],
         )
@@ -299,11 +257,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Permission denied"),
-                    value={"detail": _(
-                        "You do not have permission to perform this action.")},
-                    status_codes=["403"]
+                    value={"detail": _("You do not have permission to perform this action.")},
+                    status_codes=["403"],
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -313,13 +270,9 @@ class CommonAPIResponses:
             response=ErrorMessageSerializer,
             examples=[
                 OpenApiExample(
-                    name=_("Not Found"),
-                    value={
-                        "detail": _("The requested resource was not found.")
-                    },
-                    status_codes=["404"]
+                    name=_("Not Found"), value={"detail": _("The requested resource was not found.")}, status_codes=["404"]
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -330,12 +283,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Bad Request"),
-                    value={
-                        "detail": _("The request contains invalid parameters or data.")
-                    },
-                    status_codes=["400"]
+                    value={"detail": _("The request contains invalid parameters or data.")},
+                    status_codes=["400"],
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -346,11 +297,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Unauthorized"),
-                    value={"detail": _(
-                        "Authentication credentials were not provided.")},
-                    status_codes=["401"]
+                    value={"detail": _("Authentication credentials were not provided.")},
+                    status_codes=["401"],
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -361,12 +311,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Method Not Allowed"),
-                    value={
-                        "detail": _("Method not allowed for this endpoint.")
-                    },
-                    status_codes=["405"]
+                    value={"detail": _("Method not allowed for this endpoint.")},
+                    status_codes=["405"],
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -377,12 +325,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Conflict"),
-                    value={
-                        "detail": _("The request conflicts with the current state of the target resource.")
-                    },
-                    status_codes=["409"]
+                    value={"detail": _("The request conflicts with the current state of the target resource.")},
+                    status_codes=["409"],
                 )
-            ]
+            ],
         )
 
     @staticmethod
@@ -393,12 +339,10 @@ class CommonAPIResponses:
             examples=[
                 OpenApiExample(
                     name=_("Server Error"),
-                    value={
-                        "detail": _("An unexpected error occurred while processing the request.")
-                    },
-                    status_codes=["500"]
+                    value={"detail": _("An unexpected error occurred while processing the request.")},
+                    status_codes=["500"],
                 )
-            ]
+            ],
         )
 
 
@@ -408,7 +352,7 @@ class CommonAPIQueryParams:
         type=int,
         default=1,
         location=OpenApiParameter.QUERY,
-        description=_("A page number within the paginated result set.")
+        description=_("A page number within the paginated result set."),
     )
 
 
@@ -417,8 +361,7 @@ class CommonAPIPathParams:
         name="object_id",
         type=str,
         location=OpenApiParameter.PATH,
-        description=_(
-            "The primary key value of the instance to be updated"),
+        description=_("The primary key value of the instance to be updated"),
         required=True,
     )
 
@@ -435,7 +378,7 @@ User = {
     "is_active": True,
     "date_joined": "2025-01-24T11:43:43.500792Z",
     "groups": [],
-    "user_permissions": []
+    "user_permissions": [],
 }
 
 ChangeList = {
@@ -445,35 +388,34 @@ ChangeList = {
                 "type": "ChoiceField",
                 "name": "action",
                 "attrs": {
-                        "read_only": False,
-                        "write_only": False,
-                        "required": True,
-                        "default": None,
-                        "allow_null": False,
-                        "label": "Action",
-                        "help_text": None,
-                        "initial": None,
-                        "style": {},
-                        "choices": {
-                            "": "---------",
-                            "delete_selected": "Delete selected authors",
-                            "make_old": "make all authors old",
-                            "make_young": "make all authors young"
-                        },
+                    "read_only": False,
+                    "write_only": False,
+                    "required": True,
+                    "default": None,
+                    "allow_null": False,
+                    "label": "Action",
+                    "help_text": None,
+                    "initial": None,
+                    "style": {},
+                    "choices": {
+                        "": "---------",
+                        "delete_selected": "Delete selected authors",
+                        "make_old": "make all authors old",
+                        "make_young": "make all authors young",
+                    },
                     "allow_blank": False,
                     "html_cutoff": None,
-                    "html_cutoff_text": "More than {count} items..."
-                }
-            },]
+                    "html_cutoff_text": "More than {count} items...",
+                },
+            },
+        ]
     },
     "config": {
         "actions_on_top": True,
         "actions_on_bottom": False,
         "actions_selection_counter": True,
         "empty_value_display": "-",
-        "list_display": [
-            "name", "age", "user", "is_old_enough", "title", "gender"
-        ],
+        "list_display": ["name", "age", "user", "is_old_enough", "title", "gender"],
         "list_display_links": ["name"],
         "list_editable": ["title"],
         "exclude": ["gender"],
@@ -490,31 +432,26 @@ ChangeList = {
         "action_choices": [
             ["delete_selected", "Delete selected authors"],
             ["make_old", "make all authors old"],
-            ["make_young", "make all authors young"]
+            ["make_young", "make all authors young"],
         ],
         "filters": [
             {
                 "title": "is vip",
                 "choices": [
                     {"selected": True, "query_string": "?", "display": "All"},
-                    {"selected": False, "query_string": "?is_vip__exact=1",
-                        "display": "Yes"},
-                    {"selected": False, "query_string": "?is_vip__exact=0",
-                        "display": "No"}
-                ]
+                    {"selected": False, "query_string": "?is_vip__exact=1", "display": "Yes"},
+                    {"selected": False, "query_string": "?is_vip__exact=0", "display": "No"},
+                ],
             },
             {
                 "title": "age",
                 "choices": [
                     {"selected": True, "query_string": "?", "display": "All"},
-                    {"selected": False, "query_string": "?age__exact=60",
-                        "display": "senior"},
-                    {"selected": False, "query_string": "?age__exact=1",
-                        "display": "baby"},
-                    {"selected": False, "query_string": "?age__exact=2",
-                        "display": "also a baby"}
-                ]
-            }
+                    {"selected": False, "query_string": "?age__exact=60", "display": "senior"},
+                    {"selected": False, "query_string": "?age__exact=1", "display": "baby"},
+                    {"selected": False, "query_string": "?age__exact=2", "display": "also a baby"},
+                ],
+            },
         ],
         "list_display_fields": ["name", "age", "user", "title"],
         "editing_fields": [
@@ -534,8 +471,8 @@ ChangeList = {
                     "initial": "",
                     "max_length": 20,
                     "min_length": None,
-                    "trim_whitespace": True
-                }
+                    "trim_whitespace": True,
+                },
             }
         ],
     },
@@ -544,21 +481,15 @@ ChangeList = {
         {"field": "age", "headerName": "age"},
         {"field": "user", "headerName": "user"},
         {"field": "is_old_enough", "headerName": "is this author old enough"},
-        {"field": "title", "headerName": "title"}
+        {"field": "title", "headerName": "title"},
     ],
     "rows": [
         {
             "change_url": "http://localhost:8000/api_admin/example/author/1/change/",
             "id": 1,
-            "cells": {
-                "name": "Muhammad",
-                "age": "60",
-                "user": "ms",
-                "is_old_enough": True,
-                "title": "-"
-            }
+            "cells": {"name": "Muhammad", "age": "60", "user": "ms", "is_old_enough": True, "title": "-"},
         }
-    ]
+    ],
 }
 
 CrudOperation = {
@@ -572,6 +503,6 @@ CrudOperation = {
         "title": None,
         "user": 1,
         "publisher": [1],
-        "pk": 1
+        "pk": 1,
     },
 }

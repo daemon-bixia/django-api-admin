@@ -27,11 +27,7 @@ from django.utils.deprecation import RemovedInDjango60Warning
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 
-from django_api_admin.exceptions import (
-    DisallowedModelAdminLookup,
-    IncorrectLookupParameters,
-    DisallowedModelAdminToField
-)
+from django_api_admin.exceptions import DisallowedModelAdminLookup, IncorrectLookupParameters, DisallowedModelAdminToField
 from django_api_admin.filters import FieldListFilter
 from django_api_admin.serializers import ChangeListSerializer
 from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, TO_FIELD_VAR, IS_POPUP_VAR, ShowFacets
@@ -116,9 +112,7 @@ class ChangeList:
         self.is_facets_optional = model_admin.show_facets is ShowFacets.ALLOW
         to_field = request.GET.get(TO_FIELD_VAR)
         if to_field and not model_admin.to_field_allowed(request, to_field):
-            raise DisallowedModelAdminToField(
-                "The field %s cannot be referenced." % to_field
-            )
+            raise DisallowedModelAdminToField("The field %s cannot be referenced." % to_field)
         self.to_field = to_field
         self.params = dict(request.GET.items())
         self.filter_params = dict(request.GET.lists())
@@ -160,30 +154,24 @@ class ChangeList:
         may_have_duplicates = False
         has_active_filters = False
 
-        supports_request = func_supports_parameter(
-            self.model_admin.lookup_allowed, "request"
-        )
+        supports_request = func_supports_parameter(self.model_admin.lookup_allowed, "request")
         if not supports_request:
             warnings.warn(
-                f"`request` must be added to the signature of "
-                f"{self.model_admin.__class__.__qualname__}.lookup_allowed().",
+                f"`request` must be added to the signature of {self.model_admin.__class__.__qualname__}.lookup_allowed().",
                 RemovedInDjango60Warning,
             )
         for key, value_list in lookup_params.items():
             for value in value_list:
-                params = (key, value, request) if supports_request else (
-                    key, value)
+                params = (key, value, request) if supports_request else (key, value)
                 if not self.model_admin.lookup_allowed(*params):
-                    raise DisallowedModelAdminLookup(
-                        f"Filtering by {key} not allowed")
+                    raise DisallowedModelAdminLookup(f"Filtering by {key} not allowed")
 
         filter_specs = []
         for list_filter in self.list_filter:
             lookup_params_count = len(lookup_params)
             if callable(list_filter):
                 # This is simply a custom list filter class.
-                spec = list_filter(request, lookup_params,
-                                   self.model, self.model_admin)
+                spec = list_filter(request, lookup_params, self.model, self.model_admin)
             else:
                 field_path = None
                 if isinstance(list_filter, (tuple, list)):
@@ -224,8 +212,7 @@ class ChangeList:
             # efficient.
             year = lookup_params.pop("%s__year" % self.date_hierarchy, None)
             if year is not None:
-                month = lookup_params.pop(
-                    "%s__month" % self.date_hierarchy, None)
+                month = lookup_params.pop("%s__month" % self.date_hierarchy, None)
                 day = lookup_params.pop("%s__day" % self.date_hierarchy, None)
                 try:
                     from_date = datetime(
@@ -262,8 +249,7 @@ class ChangeList:
         try:
             for key, value in lookup_params.items():
                 lookup_params[key] = prepare_lookup_value(key, value)
-                may_have_duplicates |= lookup_spawns_duplicates(
-                    self.lookup_opts, key)
+                may_have_duplicates |= lookup_spawns_duplicates(self.lookup_opts, key)
             return (
                 filter_specs,
                 bool(filter_specs),
@@ -293,9 +279,7 @@ class ChangeList:
         return "?%s" % urlencode(sorted(p.items()), doseq=True)
 
     def get_results(self, request):
-        paginator = self.model_admin.get_paginator(
-            request, self.queryset, self.list_per_page
-        )
+        paginator = self.model_admin.get_paginator(request, self.queryset, self.list_per_page)
         # Get the number of objects, with admin filters applied.
         result_count = paginator.count
 
@@ -324,9 +308,7 @@ class ChangeList:
         # Admin actions are shown if there is at least one entry
         # or if entries are not counted because show_full_result_count is
         # disabled
-        self.show_admin_actions = not self.show_full_result_count or bool(
-            full_result_count
-        )
+        self.show_admin_actions = not self.show_full_result_count or bool(full_result_count)
         self.full_result_count = full_result_count
         self.result_list = result_list
         self.can_show_all = can_show_all
@@ -380,10 +362,7 @@ class ChangeList:
         constructed ordering.
         """
         params = self.params
-        ordering = list(
-            self.model_admin.get_ordering(
-                request) or self._get_default_ordering()
-        )
+        ordering = list(self.model_admin.get_ordering(request) or self._get_default_ordering())
         if params.get(ORDER_VAR):
             # Clear ordering and used params
             ordering = []
@@ -402,9 +381,7 @@ class ChangeList:
                         ordering.append(order_field)
                     elif hasattr(order_field, "resolve_expression"):
                         # order_field is an expression.
-                        ordering.append(
-                            order_field.desc() if pfx == "-" else order_field.asc()
-                        )
+                        ordering.append(order_field.desc() if pfx == "-" else order_field.asc())
                     # Reverse order if order_field has already "-" as prefix
                     elif pfx == "-" and order_field.startswith(pfx):
                         ordering.append(order_field.removeprefix(pfx))
@@ -428,9 +405,7 @@ class ChangeList:
         ordering = list(ordering)
         ordering_fields = set()
         total_ordering_fields = {"pk"} | {
-            field.attname
-            for field in self.lookup_opts.fields
-            if field.unique and not field.null
+            field.attname for field in self.lookup_opts.fields if field.unique and not field.null
         }
         for part in ordering:
             # Search for single field providing a total ordering.
@@ -461,16 +436,11 @@ class ChangeList:
             # unique constraints.
             constraint_field_names = (
                 *self.lookup_opts.unique_together,
-                *(
-                    constraint.fields
-                    for constraint in self.lookup_opts.total_unique_constraints
-                ),
+                *(constraint.fields for constraint in self.lookup_opts.total_unique_constraints),
             )
             for field_names in constraint_field_names:
                 # Normalize attname references by using get_field().
-                fields = [
-                    self.lookup_opts.get_field(field_name) for field_name in field_names
-                ]
+                fields = [self.lookup_opts.get_field(field_name) for field_name in field_names]
                 # Composite unique constraints containing a nullable column
                 # cannot ensure total ordering.
                 if any(field.null for field in fields):
@@ -535,10 +505,7 @@ class ChangeList:
         # Then, we let every list filter modify the queryset to its liking.
         qs = self.root_queryset
         for filter_spec in self.filter_specs:
-            if (
-                exclude_parameters is None
-                or filter_spec.expected_parameters() != exclude_parameters
-            ):
+            if exclude_parameters is None or filter_spec.expected_parameters() != exclude_parameters:
                 new_qs = filter_spec.queryset(request, qs)
                 if new_qs is not None:
                     qs = new_qs
@@ -547,8 +514,7 @@ class ChangeList:
             # Finally, we apply the remaining lookup parameters from the query
             # string (i.e. those that haven't already been processed by the
             # filters).
-            q_object = build_q_object_from_lookup_parameters(
-                remaining_lookup_params)
+            q_object = build_q_object_from_lookup_parameters(remaining_lookup_params)
             qs = qs.filter(q_object)
         except (SuspiciousOperation, ImproperlyConfigured):
             # Allow certain types of errors to be re-raised as-is so that the
@@ -614,8 +580,7 @@ class ChangeList:
 
     def url_for_result(self, request, result):
         pk = getattr(result, self.pk_attname)
-        model_info = (
-            self.opts.app_label, self.opts.model_name)
+        model_info = (self.opts.app_label, self.opts.model_name)
         return reverse(
             "api_admin:%s_%s_change" % model_info,
             kwargs={"object_id": pk},

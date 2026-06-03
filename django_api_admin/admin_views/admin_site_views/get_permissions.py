@@ -29,8 +29,8 @@ class PermissionsView(APIView):
                 description=_("Map of user permission check results"),
             ),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
-        }
+            401: CommonAPIResponses.unauthorized(),
+        },
     )
     def get(self, request):
         permission_classes = self.admin_site.get_permission_classes(request)
@@ -54,8 +54,6 @@ class PermissionsView(APIView):
     def get_serializer_class(self):
         permission_classes = self.admin_site.get_permission_classes(None)
         fields = {
-            permission_class.__name__: serializers.BooleanField(read_only=True)
-            for permission_class in permission_classes
+            permission_class.__name__: serializers.BooleanField(read_only=True) for permission_class in permission_classes
         }
-        return type(
-            "SitePermissionsSerializer", (serializers.Serializer,), fields)
+        return type("SitePermissionsSerializer", (serializers.Serializer,), fields)

@@ -17,19 +17,6 @@ dependencies = [
 ]
 requires-python = ">=3.12"
 
-[project.optional-dependencies]
-testing = [
-    "pillow>=12.2.0",
-    "tblib>=3.2.2",
-]
-example = [
-    "pillow>=12.2.0",
-    "django-allauth[mfa,socialaccount]>=65.18.0",
-    "django-cors-headers>=4.9.0",
-    "python-dotenv>=1.2.2",
-    "factory-boy>=3.3.3",
-]
-
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
 
@@ -48,7 +35,29 @@ requires = ["uv_build>=0.8.13,<0.9.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = [
-    "aiosmtpd>=1.4.6",
-    "pytest-django>=4.11.1",
+test = [
+    "pillow>=12.2.0",
+    "ruff>=0.15.15",
+    "tblib>=3.2.2",
 ]
+dev = [
+    "pillow>=12.2.0",
+    "django-allauth[mfa,socialaccount]>=65.18.0",
+    "django-cors-headers>=4.9.0",
+    "python-dotenv>=1.2.2",
+    "factory-boy>=3.3.3",
+]
+
+[tool.ruff]
+# Target Python version
+target-version = "py312"
+# Match your existing line length preference
+line-length = 127
+extend-exclude = [
+    "migrations",
+]
+
+[tool.ruff.lint]
+# Select rules: E (Error), F (Pyflakes/Undefined names)
+# This perfectly replaces flake8's E9, F63, F7, F82
+select = ["E", "F"]

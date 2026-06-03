@@ -14,18 +14,16 @@ class AppListView(APIView):
     """
     Retrieve a list of all the apps that have models registered in the admin site.
     """
+
     permission_classes = []
     admin_site = None
 
     @extend_schema(
         operation_id="List registered applications",
         responses={
-            200: OpenApiResponse(
-                response=AppListSerializer,
-                description=_("List of objects with application details")
-            ),
+            200: OpenApiResponse(response=AppListSerializer, description=_("List of objects with application details")),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
+            401: CommonAPIResponses.unauthorized(),
         },
     )
     def get(self, request):

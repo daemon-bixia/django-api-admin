@@ -5,6 +5,7 @@
 # Licensed under the BSD 3-Clause License.
 # -----------------------------------------------------------------------------
 
+
 def prepare_lookup_value(key, value, separator=","):
     """
     Return a lookup value prepared to be used in queryset filtering.

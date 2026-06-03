@@ -13,8 +13,7 @@ def construct_change_message(request, main_result, inline_results, add):
         change_message.append({"added": {}})
     elif main_result[1]:
         with translation_override(None):
-            changed_field_labels = _get_changed_field_labels_from_serializer(
-                *main_result)
+            changed_field_labels = _get_changed_field_labels_from_serializer(*main_result)
         change_message.append({"changed": {"fields": changed_field_labels}})
 
     if inline_results:
@@ -35,9 +34,7 @@ def construct_change_message(request, main_result, inline_results, add):
                             "changed": {
                                 "name": str(serializer.instance._meta.verbose_name),
                                 "object": str(serializer.instance),
-                                "fields": _get_changed_field_labels_from_serializer(
-                                    serializer, changed_data
-                                ),
+                                "fields": _get_changed_field_labels_from_serializer(serializer, changed_data),
                             }
                         }
                     )

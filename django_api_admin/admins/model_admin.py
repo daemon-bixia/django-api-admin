@@ -85,10 +85,22 @@ class APIModelAdmin(BaseAPIModelAdmin):
     # These are the admin options used to customize the change list page UI
     # server-side customizations like `list_select_related` and `actions` are not included
     changelist_options = [
-        "actions_on_top", "actions_on_bottom", "actions_selection_counter",
-        "empty_value_display", "list_display", "list_display_links", "list_editable", "exclude",
-        "show_full_result_count", "list_per_page", "list_max_show_all",
-        "date_hierarchy", "search_help_text", "sortable_by", "search_fields", "preserve_filters",
+        "actions_on_top",
+        "actions_on_bottom",
+        "actions_selection_counter",
+        "empty_value_display",
+        "list_display",
+        "list_display_links",
+        "list_editable",
+        "exclude",
+        "show_full_result_count",
+        "list_per_page",
+        "list_max_show_all",
+        "date_hierarchy",
+        "search_help_text",
+        "sortable_by",
+        "search_fields",
+        "preserve_filters",
     ]
 
     def __init__(self, model, admin_site):
@@ -102,10 +114,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return "%s.%s" % (self.opts.app_label, self.__class__.__name__)
 
     def __repr__(self):
-        return (
-            f"<{self.__class__.__qualname__}: model={self.model.__qualname__} "
-            f"site={self.admin_site!r}>"
-        )
+        return f"<{self.__class__.__qualname__}: model={self.model.__qualname__} site={self.admin_site!r}>"
 
     def get_inline_instances(self, request, obj=None):
         inline_instances = []
@@ -136,15 +145,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
         info = f"{self.model._meta.app_label}_{self.model._meta.model_name}"
         prefix = f"{self.model._meta.app_label}/{self.model._meta.model_name}"
         urlpatterns = [
-            path(f"{prefix}/changelist/",
-                 wrap(self.get_changelist_view()), name=f"{info}_changelist"),
+            path(f"{prefix}/changelist/", wrap(self.get_changelist_view()), name=f"{info}_changelist"),
             path(f"{prefix}/add/", wrap(self.get_add_view()), name=f"{info}_add"),
-            path(f"{prefix}/<path:object_id>/detail/",
-                 wrap(self.get_detail_view()), name=f"{info}_detail"),
-            path(f"{prefix}/<path:object_id>/delete/",
-                 wrap(self.get_delete_view()), name=f"{info}_delete"),
-            path(f"{prefix}/<path:object_id>/change/",
-                 wrap(self.get_change_view()), name=f"{info}_change"),
+            path(f"{prefix}/<path:object_id>/detail/", wrap(self.get_detail_view()), name=f"{info}_detail"),
+            path(f"{prefix}/<path:object_id>/delete/", wrap(self.get_delete_view()), name=f"{info}_delete"),
+            path(f"{prefix}/<path:object_id>/change/", wrap(self.get_change_view()), name=f"{info}_change"),
         ]
 
         return urlpatterns
@@ -176,7 +181,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_changelist_instance(self, request):
         """
-        Return a `ChangeList` instance based on `request`. 
+        Return a `ChangeList` instance based on `request`.
         May raise `IncorrectLookupParameters`.
         """
         list_display = self.list_display
@@ -197,7 +202,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             self.list_editable,
             self,
             sortable_by,
-            self.search_help_text
+            self.search_help_text,
         )
 
     def get_object(self, request, object_id, from_field=None):
@@ -208,10 +213,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         queryset = self.get_queryset(request)
         model = queryset.model
-        field = (
-            model._meta.pk if from_field is None else model._meta.get_field(
-                from_field)
-        )
+        field = model._meta.pk if from_field is None else model._meta.get_field(from_field)
         try:
             object_id = field.to_python(object_id)
             return queryset.get(**{field.name: object_id})
@@ -253,11 +255,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         from django_api_admin.models import ADDITION, LogEntry
 
         return LogEntry.objects.log_actions(
-            user_id=request.user.pk,
-            queryset=[obj],
-            action_flag=ADDITION,
-            change_message=message,
-            single_object=True
+            user_id=request.user.pk, queryset=[obj], action_flag=ADDITION, change_message=message, single_object=True
         )
 
     def log_change(self, request, obj, message):
@@ -301,8 +299,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
     def _get_base_actions(self):
         """Return the list of actions, prior to any request-based filtering."""
         actions = []
-        base_actions = (self.get_action(action)
-                        for action in self.actions or [])
+        base_actions = (self.get_action(action) for action in self.actions or [])
         # get_action might have returned None, so filter any of those out.
         base_actions = [action for action in base_actions if action]
         base_action_names = {name for _, name, _ in base_actions}
@@ -326,8 +323,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 filtered_actions.append(action)
                 continue
             permission_checks = (
-                getattr(self, "has_%s_permission" % permission)
-                for permission in callable.allowed_permissions
+                getattr(self, "has_%s_permission" % permission) for permission in callable.allowed_permissions
             )
             if any(has_permission(request) for has_permission in permission_checks):
                 filtered_actions.append(action)
@@ -342,8 +338,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         # this page.
         if self.actions is None:
             return {}
-        actions = self._filter_actions_by_permissions(
-            request, self._get_base_actions())
+        actions = self._filter_actions_by_permissions(request, self._get_base_actions())
         return {name: (func, name, desc) for func, name, desc in actions}
 
     def get_action_choices(self, request, default_choices=models.BLANK_CHOICE_DASH):
@@ -386,7 +381,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_action_serializer_class(self, request):
         """
-        Get the Serializer class used to validate actions. Populate it with the 
+        Get the Serializer class used to validate actions. Populate it with the
         action, and  selected_ids choices based on the model
         """
         from django_api_admin.serializers import ActionSerializer
@@ -397,14 +392,18 @@ class APIModelAdmin(BaseAPIModelAdmin):
         choices = []
         queryset = self.get_queryset(request)
         for item in queryset:
-            choices.append((f'{item.pk}', f'{str(item)}'))
+            choices.append((f"{item.pk}", f"{str(item)}"))
 
         # Dynamically create an instance of the self.action_serializer with the `action` choices
         # being the actions defined in the model_admin and the `selected_ids` being the `choices`
-        return type(f'{self.model.__name__}ActionSerializer', (action_serializer,), {
-            'action': serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
-            'selected_ids': serializers.MultipleChoiceField(choices=[*choices])
-        })
+        return type(
+            f"{self.model.__name__}ActionSerializer",
+            (action_serializer,),
+            {
+                "action": serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
+                "selected_ids": serializers.MultipleChoiceField(choices=[*choices]),
+            },
+        )
 
     def get_list_display(self, request):
         """
@@ -419,11 +418,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         on the changelist. The list_display parameter is the list of fields
         returned by get_list_display().
         """
-        if (
-            self.list_display_links
-            or self.list_display_links is None
-            or not list_display
-        ):
+        if self.list_display_links or self.list_display_links is None or not list_display:
             return self.list_display_links
         else:
             # Use only the first item in list_display as link
@@ -483,9 +478,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 except FieldDoesNotExist:
                     # Use valid query lookups.
                     if prev_field and prev_field.get_lookup(path_part):
-                        if path_part == "exact" and not isinstance(
-                            prev_field, (models.CharField, models.TextField)
-                        ):
+                        if path_part == "exact" and not isinstance(prev_field, (models.CharField, models.TextField)):
                             # Use prev_field to validate the search term.
                             return field_name, prev_field
                         return field_name, None
@@ -526,18 +519,14 @@ class APIModelAdmin(BaseAPIModelAdmin):
                         value = bit
                     bit_lookups.append((orm_lookup, value))
                 if bit_lookups:
-                    or_queries = models.Q.create(
-                        bit_lookups, connector=models.Q.OR)
+                    or_queries = models.Q.create(bit_lookups, connector=models.Q.OR)
                     term_queries.append(or_queries)
                 else:
                     # No valid lookups: add a filter that returns nothing.
                     term_queries.append(models.Q(pk__in=[]))
             if term_queries:
                 queryset = queryset.filter(models.Q.create(term_queries))
-            may_have_duplicates |= any(
-                lookup_spawns_duplicates(self.opts, search_spec)
-                for search_spec, _ in orm_lookups
-            )
+            may_have_duplicates |= any(lookup_spawns_duplicates(self.opts, search_spec) for search_spec, _ in orm_lookups)
         return queryset, may_have_duplicates
 
     def construct_change_message(self, request, serializer, serializers, add=False):
@@ -554,8 +543,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         validated_data = {**serializer.validated_data}
 
         if change:
-            serializers.raise_errors_on_nested_writes(
-                'update', serializer, validated_data)
+            serializers.raise_errors_on_nested_writes("update", serializer, validated_data)
             info = model_meta.get_field_info(serializer.instance)
 
             # Simply set each attribute on the instance, and then save it.
@@ -584,8 +572,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
             return serializer.instance
         else:
-            serializers.raise_errors_on_nested_writes(
-                'create', serializer, validated_data)
+            serializers.raise_errors_on_nested_writes("create", serializer, validated_data)
             ModelClass = self.model
 
             # Remove many-to-many relationships from validated_data.
@@ -595,27 +582,26 @@ class APIModelAdmin(BaseAPIModelAdmin):
             many_to_many = {}
             for field_name, relation_info in info.relations.items():
                 if relation_info.to_many and (field_name in validated_data):
-                    many_to_many[field_name] = validated_data.pop(
-                        field_name)
+                    many_to_many[field_name] = validated_data.pop(field_name)
 
             try:
                 instance = ModelClass(**validated_data)
             except TypeError:
                 tb = traceback.format_exc()
                 msg = (
-                    'Got a `TypeError` when calling `%s.%s.create()`. '
-                    'This may be because you have a writable field on the '
-                    'serializer class that is not a valid argument to '
-                    '`%s.%s.create()`. You may need to make the field '
-                    'read-only, or override the %s.create() method to handle '
-                    'this correctly.\nOriginal exception was:\n %s' %
-                    (
+                    "Got a `TypeError` when calling `%s.%s.create()`. "
+                    "This may be because you have a writable field on the "
+                    "serializer class that is not a valid argument to "
+                    "`%s.%s.create()`. You may need to make the field "
+                    "read-only, or override the %s.create() method to handle "
+                    "this correctly.\nOriginal exception was:\n %s"
+                    % (
                         ModelClass.__name__,
                         ModelClass._default_manager.name,
                         ModelClass.__name__,
                         ModelClass._default_manager.name,
                         serializer.__class__.__name__,
-                        tb
+                        tb,
                     )
                 )
                 raise TypeError(msg)
@@ -673,15 +659,14 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         serializer.save_m2m()
         for inline_operation in bulk_operation.result.values():
-            self.save_inline_operation(
-                request, serializer, inline_operation, change)
+            self.save_inline_operation(request, serializer, inline_operation, change)
 
     def response_add(self, request, obj, serializer, bulk_operation):
         """
         Determine the Response for the add_view stage.
         """
         data = {
-            "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was added successfully.'),
+            "detail": _(f"The {self.model._meta.verbose_name} “{str(obj)}” was added successfully."),
             "data": serializer.data,
         }
         if bulk_operation:
@@ -694,7 +679,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         Determine the Response for the change_view stage.
         """
         data = {
-            "detail": _(f'The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully.'),
+            "detail": _(f"The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully."),
             "data": serializer.data,
         }
         if bulk_operation:
@@ -719,8 +704,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             # Get a list of pks of selected changelist items
             selected = request.data.get("selected_ids", None)
             if not selected and not select_across:
-                msg = _("Items must be selected in order to perform "
-                        "actions on them. No items have been changed.")
+                msg = _("Items must be selected in order to perform actions on them. No items have been changed.")
                 return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
             if selected and not select_across:
                 queryset = queryset.filter(pk__in=selected)
@@ -740,18 +724,20 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         Determine the Response for the delete_view stage.
         """
-        return Response({"detail": _("The %(name)s “%(obj)s” was deleted successfully.") % {
-                        "name": self.opts.verbose_name,
-                        "obj": obj_display,
-                        }}, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {
+                "detail": _("The %(name)s “%(obj)s” was deleted successfully.")
+                % {
+                    "name": self.opts.verbose_name,
+                    "obj": obj_display,
+                }
+            },
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
     def get_inline_formsets_description(self, request, serializer_classes, inline_instances, obj=None):
         # Edit permissions on parent model are required for editable inlines.
-        can_edit_parent = (
-            self.has_change_permission(request, obj)
-            if obj
-            else self.has_add_permission(request)
-        )
+        can_edit_parent = self.has_change_permission(request, obj) if obj else self.has_add_permission(request)
 
         inlines_descriptions = []
 
@@ -760,22 +746,18 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
             if can_edit_parent:
                 has_add_permission = inline.has_add_permission(request, obj)
-                has_change_permission = inline.has_change_permission(
-                    request, obj)
-                has_delete_permission = inline.has_delete_permission(
-                    request, obj)
+                has_change_permission = inline.has_change_permission(request, obj)
+                has_delete_permission = inline.has_delete_permission(request, obj)
             else:
                 # Disable all edit-permissions, and override formset settings.
-                has_add_permission = has_change_permission = has_delete_permission = (
-                    False
-                )
+                has_add_permission = has_change_permission = has_delete_permission = False
             has_view_permission = inline.has_view_permission(request, obj)
 
             inline_description = {
                 "model": model_name,
                 "readonly_fields": list(inline.get_readonly_fields(request, obj)),
                 "fieldsets": list(inline.get_fieldsets(request, obj)),
-                "prepopulated":  dict(inline.get_prepopulated_fields(request, obj)),
+                "prepopulated": dict(inline.get_prepopulated_fields(request, obj)),
                 "permissions": {
                     "has_add_permission": has_add_permission,
                     "has_change_permission": has_change_permission,
@@ -795,8 +777,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             formset = []
 
             if obj:
-                fk = _get_foreign_key(inline.parent_model,
-                                      inline.model, fk_name=inline.fk_name)
+                fk = _get_foreign_key(inline.parent_model, inline.model, fk_name=inline.fk_name)
                 related_name = fk.remote_field.accessor_name
                 try:
                     reverse_field = getattr(obj, related_name)
@@ -805,8 +786,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                     related_instances = []
 
                 for instance in related_instances:
-                    formset.append(
-                        inline.get_form_fields_description(request, instance))
+                    formset.append(inline.get_form_fields_description(request, instance))
 
             formset.append(inline.get_form_fields_description(request, None))
 
@@ -851,8 +831,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
                 serializer_classes[model_name] = []
 
                 if obj:
-                    fk = _get_foreign_key(
-                        inline.parent_model, inline.model, fk_name=inline.fk_name)
+                    fk = _get_foreign_key(inline.parent_model, inline.model, fk_name=inline.fk_name)
                     related_name = fk.remote_field.accessor_name
                     try:
                         reverse_field = getattr(obj, related_name)
@@ -861,27 +840,22 @@ class APIModelAdmin(BaseAPIModelAdmin):
                         related_instances = []
 
                     for instance in related_instances:
-                        serializer_class = inline.get_serializer_class(
-                            request, instance, True)
-                        serializer_classes[model_name].append(
-                            serializer_class)
+                        serializer_class = inline.get_serializer_class(request, instance, True)
+                        serializer_classes[model_name].append(serializer_class)
 
-                serializer_class = inline.get_serializer_class(
-                    request, None, False)
+                serializer_class = inline.get_serializer_class(request, None, False)
                 serializer_classes[model_name].append(serializer_class)
 
             form_description["inlines"] = self.get_inline_formsets_description(
-                request, serializer_classes, inline_instances, obj)
+                request, serializer_classes, inline_instances, obj
+            )
 
         return form_description
 
     def get_changelist_form_fields_description(self, request, obj):
-        serializer_class = self.get_changelist_serializer_class(
-            request)
-        serializer = serializer_class(
-            instance=obj, context={"request": request})
-        return get_form_fields_description(
-            serializer, self, True)
+        serializer_class = self.get_changelist_serializer_class(request)
+        serializer = serializer_class(instance=obj, context={"request": request})
+        return get_form_fields_description(serializer, self, True)
 
     def get_detail_view(self):
         from django_api_admin.admin_views.model_admin_views.detail import DetailView
@@ -915,7 +889,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def _get_edited_object_pks(self, request):
         """Return POST data values of list_editable primary keys."""
-        return [data["pk"] for data in request.data.get('data', {})]
+        return [data["pk"] for data in request.data.get("data", {})]
 
     def _get_list_editable_queryset(self, request):
         """
@@ -935,6 +909,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_changelist_view(self):
         from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
+
         defaults = {
             "serializer_class": self.get_changelist_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
@@ -959,18 +934,12 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return DeleteView.as_view(**defaults)
 
     def get_inline_serializer_kwargs(self, request, operation, inline, instance=None, data=None):
-        inline_serializer_params = {
-            "data": data, "context": {"request": request}}
+        inline_serializer_params = {"data": data, "context": {"request": request}}
 
         if operation == "change":
-            inline_serializer_params.update({
-                "instance": instance,
-                "partial": True
-            })
+            inline_serializer_params.update({"instance": instance, "partial": True})
         elif operation == "delete":
             del inline_serializer_params["data"]
-            inline_serializer_params.update({
-                "instance": instance
-            })
+            inline_serializer_params.update({"instance": instance})
 
         return inline_serializer_params

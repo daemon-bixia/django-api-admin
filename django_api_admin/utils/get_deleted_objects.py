@@ -36,17 +36,16 @@ def get_deleted_objects(objs, request, admin_site):
             if not admin_site._registry[model].has_delete_permission(request):
                 perms_needed.add(opts.verbose_name)
 
-        return {"model": model._meta.model_name,
-                "app_label": model._meta.app_label,
-                "pk": obj.pk,
-                "has_admin": has_admin, }
+        return {
+            "model": model._meta.model_name,
+            "app_label": model._meta.app_label,
+            "pk": obj.pk,
+            "has_admin": has_admin,
+        }
 
     to_delete = collector.nested(format_callback)
 
     protected = [format_callback(obj) for obj in collector.protected]
-    model_count = {
-        model._meta.verbose_name_plural: len(objs)
-        for model, objs in collector.model_objs.items()
-    }
+    model_count = {model._meta.verbose_name_plural: len(objs) for model, objs in collector.model_objs.items()}
 
     return to_delete, model_count, perms_needed, protected

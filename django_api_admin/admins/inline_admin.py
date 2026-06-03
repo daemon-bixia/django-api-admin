@@ -21,6 +21,7 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
     """
     Edit models connected with a relationship in one page
     """
+
     model = None
     fk_name = None
     extra = 3
@@ -42,8 +43,7 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
             if self.verbose_name is None:
                 self.verbose_name_plural = self.opts.verbose_name_plural
             else:
-                self.verbose_name_plural = format_lazy(
-                    "{}s", self.verbose_name)
+                self.verbose_name_plural = format_lazy("{}s", self.verbose_name)
         if self.verbose_name is None:
             self.verbose_name = self.opts.verbose_name
 
@@ -78,12 +78,7 @@ class InlineAPIModelAdmin(BaseAPIModelAdmin):
             if field.remote_field and field.remote_field.model != self.parent_model:
                 opts = field.remote_field.model._meta
                 break
-        return any(
-            request.user.has_perm(
-                "%s.%s" % (opts.app_label, get_permission_codename(perm, opts))
-            )
-            for perm in perms
-        )
+        return any(request.user.has_perm("%s.%s" % (opts.app_label, get_permission_codename(perm, opts))) for perm in perms)
 
     def has_add_permission(self, request, obj):
         if self.opts.auto_created:

@@ -17,9 +17,10 @@ from django_api_admin.exceptions import DisallowedModelAdminToField
 
 class DeleteView(APIView):
     """
-    Deletes a single instance of the model identified by the provided object ID, 
+    Deletes a single instance of the model identified by the provided object ID,
     performing permission checks and handling related object cleanup.
     """
+
     serializer_class = ResponseMessageSerializer
     permission_classes = []
     model_admin = None
@@ -31,8 +32,8 @@ class DeleteView(APIView):
                 description=_("Successfully deleted the selected objects"),
             ),
             403: CommonAPIResponses.permission_denied(),
-            401: CommonAPIResponses.unauthorized()
-        }
+            401: CommonAPIResponses.unauthorized(),
+        },
     )
     def delete(self, request, object_id):
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
@@ -41,12 +42,9 @@ class DeleteView(APIView):
             # Validate the reverse to field reference.
             to_field = request.query_params.get(TO_FIELD_VAR)
             if to_field and not self.model_admin.to_field_allowed(request, to_field):
-                raise DisallowedModelAdminToField(
-                    "The field %s cannot be referenced." % to_field
-                )
+                raise DisallowedModelAdminToField("The field %s cannot be referenced." % to_field)
 
-            obj = self.model_admin.get_object(
-                request, unquote(object_id), to_field)
+            obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
             # Check delete object permission
             if not self.model_admin.has_delete_permission(request):
@@ -79,6 +77,6 @@ class DeleteView(APIView):
 
                 return self.model_admin.response_delete(request, obj_display, obj_id)
 
-            return Response({"detail": _("Cannot delete %(name)s")
-                             % {"name": str(opts.verbose_name)}},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": _("Cannot delete %(name)s") % {"name": str(opts.verbose_name)}}, status=status.HTTP_400_BAD_REQUEST
+            )

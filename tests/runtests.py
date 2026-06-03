@@ -17,15 +17,12 @@ import sys
 from pathlib import Path
 
 # Add the project root to sys.path to allow importing django_api_admin.
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     import django
 except ImportError as e:
-    raise RuntimeError(
-        "Django module not found, reference tests/README.rst for instructions."
-    ) from e
+    raise RuntimeError("Django module not found, reference tests/README.rst for instructions.") from e
 else:
     from django.apps import apps
     from django.conf import settings
@@ -75,11 +72,7 @@ def get_test_modules():
         dirpath = os.path.join(RUNTESTS_DIR, dirname)
         with os.scandir(dirpath) as entries:
             for f in entries:
-                if (
-                    "." in f.name
-                    or f.is_file()
-                    or not os.path.exists(os.path.join(f.path, "__init__.py"))
-                ):
+                if "." in f.name or f.is_file() or not os.path.exists(os.path.join(f.path, "__init__.py")):
                     continue
                 test_module = f.name
                 if dirname:
@@ -129,10 +122,7 @@ def get_filtered_test_modules(start_at, start_after, test_labels=None):
                 continue
         # If the module (or an ancestor) was named on the command line, or
         # no modules were named (i.e., run all), include the test module.
-        if not test_labels or any(
-            _module_match_label(test_module, label_module)
-            for label_module in label_modules
-        ):
+        if not test_labels or any(_module_match_label(test_module, label_module) for label_module in label_modules):
             yield test_module
 
 
@@ -184,9 +174,7 @@ def get_apps_to_install(test_modules):
 
 
 def setup_run_tests(verbosity, start_at, start_after, test_labels=None):
-    test_modules = setup_collect_tests(
-        start_at, start_after, test_labels=test_labels
-    )
+    test_modules = setup_collect_tests(start_at, start_after, test_labels=test_labels)
 
     installed_apps = set(get_installed())
     for app in get_apps_to_install(test_modules):
@@ -201,9 +189,7 @@ def setup_run_tests(verbosity, start_at, start_after, test_labels=None):
 
     # Force declaring available_apps in TransactionTestCase for faster tests.
     def no_available_apps(cls):
-        raise Exception(
-            "Please define available_apps in TransactionTestCase and its subclasses."
-        )
+        raise Exception("Please define available_apps in TransactionTestCase and its subclasses.")
 
     TransactionTestCase.available_apps = classproperty(no_available_apps)
     TestCase.available_apps = None
@@ -246,9 +232,7 @@ def django_tests(
         max_parallel = parallel
 
     if verbosity >= 1:
-        msg = "Testing against Django installed in '%s'" % os.path.dirname(
-            django.__file__
-        )
+        msg = "Testing against Django installed in '%s'" % os.path.dirname(django.__file__)
         if max_parallel > 1:
             msg += " with up to %d processes" % max_parallel
         print(msg)
@@ -297,8 +281,7 @@ if __name__ == "__main__":
         "modules",
         nargs="*",
         metavar="module",
-        help='Optional path(s) to test modules; e.g. "i18n" or '
-        '"i18n.tests.TranslationTests.test_lazy_objects".',
+        help='Optional path(s) to test modules; e.g. "i18n" or "i18n.tests.TranslationTests.test_lazy_objects".',
     )
     parser.add_argument(
         "-v",
@@ -336,10 +319,7 @@ if __name__ == "__main__":
         default=False,
         type=int,
         metavar="SEED",
-        help=(
-            "Shuffle the order of test cases to help check that tests are "
-            "properly isolated."
-        ),
+        help=("Shuffle the order of test cases to help check that tests are properly isolated."),
     )
     parser.add_argument(
         "--reverse",
@@ -363,8 +343,7 @@ if __name__ == "__main__":
         type=parallel_type,
         metavar="N",
         help=(
-            'Run tests using up to N parallel processes. Use the value "auto" '
-            "to run one test process for each processor core."
+            'Run tests using up to N parallel processes. Use the value "auto" to run one test process for each processor core.'
         ),
     )
     parser.add_argument(
@@ -389,9 +368,7 @@ if __name__ == "__main__":
         dest="start_at",
         help="Run tests starting at the specified top-level module.",
     )
-    parser.add_argument(
-        "--pdb", action="store_true", help="Runs the PDB debugger on error or failure."
-    )
+    parser.add_argument("--pdb", action="store_true", help="Runs the PDB debugger on error or failure.")
     parser.add_argument(
         "-b",
         "--buffer",
@@ -431,23 +408,15 @@ if __name__ == "__main__":
         options.start_after,
         options.modules,
     ]
-    enabled_module_options = [
-        bool(option) for option in mutually_exclusive_options
-    ].count(True)
+    enabled_module_options = [bool(option) for option in mutually_exclusive_options].count(True)
     if enabled_module_options > 1:
-        print(
-            "Aborting: --start-at, --start-after, and test labels are mutually "
-            "exclusive."
-        )
+        print("Aborting: --start-at, --start-after, and test labels are mutually exclusive.")
         sys.exit(1)
     for opt_name in ["start_at", "start_after"]:
         opt_val = getattr(options, opt_name)
         if opt_val:
             if "." in opt_val:
-                print(
-                    "Aborting: --%s must be a top-level module."
-                    % opt_name.replace("_", "-")
-                )
+                print("Aborting: --%s must be a top-level module." % opt_name.replace("_", "-"))
                 sys.exit(1)
             setattr(options, opt_name, os.path.normpath(opt_val))
     if options.settings:

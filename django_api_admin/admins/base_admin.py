@@ -45,6 +45,7 @@ class BaseAPIModelAdmin:
     """
     Shared behavior between APIModelAdmin, APIInlineModelAdmin.
     """
+
     autocomplete_fields = ()
     raw_id_fields = ()
     fields = None
@@ -90,15 +91,12 @@ class BaseAPIModelAdmin:
         # Call the hooks for the relational fields
         if isinstance(db_field, (models.ForeignKey, models.ManyToManyField)):
             if db_field.__class__ in self.serializer_field_overrides:
-                kwargs = {
-                    **self.serializer_field_overrides[db_field.__class__], **kwargs}
+                kwargs = {**self.serializer_field_overrides[db_field.__class__], **kwargs}
 
             if isinstance(db_field, models.ForeignKey):
-                kwargs = self.serializer_field_for_foreignkey(
-                    db_field, request, **kwargs)
+                kwargs = self.serializer_field_for_foreignkey(db_field, request, **kwargs)
             elif isinstance(db_field, models.ManyToManyField):
-                kwargs = self.serializer_field_for_manytomany(
-                    db_field, request, **kwargs)
+                kwargs = self.serializer_field_for_manytomany(db_field, request, **kwargs)
 
             return kwargs
 
@@ -106,8 +104,7 @@ class BaseAPIModelAdmin:
         # passed to serializer_field_for_dbfield override the defaults.
         for klass in db_field.__class__.mro():
             if klass in self.serializer_field_overrides:
-                return {
-                    **copy.deepcopy(self.serializer_field_overrides[klass]), **kwargs}
+                return {**copy.deepcopy(self.serializer_field_overrides[klass]), **kwargs}
 
         return kwargs
 
@@ -125,16 +122,13 @@ class BaseAPIModelAdmin:
         (return None in that case).
         """
         try:
-            related_admin = self.admin_site.get_model_admin(
-                db_field.remote_field.model)
+            related_admin = self.admin_site.get_model_admin(db_field.remote_field.model)
         except NotRegistered:
             return None
         else:
             ordering = related_admin.get_ordering(request)
             if ordering is not None and ordering != ():
-                return db_field.remote_field.model._default_manager.order_by(
-                    *ordering
-                )
+                return db_field.remote_field.model._default_manager.order_by(*ordering)
         return None
 
     def serializer_field_for_foreignkey(self, db_field, request, **kwargs):
@@ -206,41 +200,25 @@ class BaseAPIModelAdmin:
 
         # Exclude all fields if it's a request and the user doesn't have
         # the change permission.
-        if (
-            change
-            and hasattr(request, "user")
-            and not self.has_change_permission(request, obj)
-        ):
+        if change and hasattr(request, "user") and not self.has_change_permission(request, obj):
             exclude.extend(fields)
 
         # Take the serializer_class's Meta.exclude into account only if the
         # ModelAdmin doesn't define its own.
-        if (
-            excluded is None
-            and hasattr(self.serializer_class, "Meta")
-            and hasattr(self.serializer_class.Meta, "exclude")
-        ):
+        if excluded is None and hasattr(self.serializer_class, "Meta") and hasattr(self.serializer_class.Meta, "exclude"):
             exclude.extend(self.serializer_class.Meta.exclude)
 
         callables = dict()
         # Include callables in `fields` as `MethodField`s
         if fields is not None:
             for field in fields:
-                method = getattr(self, field, None) or getattr(
-                    self.model, field, None)
+                method = getattr(self, field, None) or getattr(self.model, field, None)
                 if field not in self.serializer_class._declared_fields and callable(method):
                     callables[field] = MethodField(method)
 
         # Remove serializer fields declared in excluded.
-        new_attrs = {
-            **dict.fromkeys(f for f in exclude if f in self.serializer_class._declared_fields),
-            **callables
-        }
-        serializer_class = type(
-            self.serializer_class.__name__,
-            (self.serializer_class,),
-            new_attrs
-        )
+        new_attrs = {**dict.fromkeys(f for f in exclude if f in self.serializer_class._declared_fields), **callables}
+        serializer_class = type(self.serializer_class.__name__, (self.serializer_class,), new_attrs)
 
         # Remove the excluded fields from the `fields` delcared in the model_admin.
         if fields is not None:
@@ -249,9 +227,9 @@ class BaseAPIModelAdmin:
 
             # Always add the primary key to `readonly_fields` and `fields` to identity the object
             if "pk" not in fields:
-                fields.append('pk')
+                fields.append("pk")
             if "pk" not in readonly_fields:
-                readonly_fields.append('pk')
+                readonly_fields.append("pk")
 
         defaults = {
             "serializer_class": serializer_class,
@@ -262,8 +240,7 @@ class BaseAPIModelAdmin:
             **kwargs,
         }
 
-        return model_serializer_factory(
-            self.model, **defaults)
+        return model_serializer_factory(self.model, **defaults)
 
     def get_empty_value_display(self):
         """
@@ -332,11 +309,7 @@ class BaseAPIModelAdmin:
 
     def get_sortable_by(self, request):
         """Hook for specifying which fields can be sorted in the changelist."""
-        return (
-            self.sortable_by
-            if self.sortable_by is not None
-            else self.get_list_display(request)
-        )
+        return self.sortable_by if self.sortable_by is not None else self.get_list_display(request)
 
     def lookup_allowed(self, lookup, value, request):
         from django_api_admin.filters import SimpleListFilter
@@ -349,9 +322,7 @@ class BaseAPIModelAdmin:
             # As ``limit_choices_to`` can be a callable, invoke it here.
             if callable(fk_lookup):
                 fk_lookup = fk_lookup()
-            if (lookup, value) in url_params_from_lookup_dict(
-                fk_lookup
-            ).items():
+            if (lookup, value) in url_params_from_lookup_dict(fk_lookup).items():
                 return True
 
         relation_parts = []
@@ -371,10 +342,7 @@ class BaseAPIModelAdmin:
                 prev_field.is_relation
                 and field not in model._meta.parents.values()
                 and field is not model._meta.auto_field
-                and (
-                    model._meta.auto_field is None
-                    or part not in getattr(prev_field, "to_fields", [])
-                )
+                and (model._meta.auto_field is None or part not in getattr(prev_field, "to_fields", []))
                 and (field.is_relation or not field.primary_key)
             ):
                 relation_parts.append(part)
@@ -390,9 +358,7 @@ class BaseAPIModelAdmin:
             return True
         valid_lookups = {self.date_hierarchy}
         for filter_item in self.get_list_filter(request):
-            if isinstance(filter_item, type) and issubclass(
-                filter_item, SimpleListFilter
-            ):
+            if isinstance(filter_item, type) and issubclass(filter_item, SimpleListFilter):
                 valid_lookups.add(filter_item.parameter_name)
             elif isinstance(filter_item, (list, tuple)):
                 valid_lookups.add(filter_item[0])
@@ -434,17 +400,12 @@ class BaseAPIModelAdmin:
             for inline in admin.inlines:
                 registered_models.add(inline.model)
 
-        related_objects = (
-            f
-            for f in self.opts.get_fields(include_hidden=True)
-            if (f.auto_created and not f.concrete)
-        )
+        related_objects = (f for f in self.opts.get_fields(include_hidden=True) if (f.auto_created and not f.concrete))
         for related_object in related_objects:
             related_model = related_object.related_model
             remote_field = related_object.field.remote_field
             if (
-                any(issubclass(model, related_model)
-                    for model in registered_models)
+                any(issubclass(model, related_model) for model in registered_models)
                 and hasattr(remote_field, "get_related_field")
                 and remote_field.get_related_field() == field
             ):
@@ -473,7 +434,7 @@ class BaseAPIModelAdmin:
         request has permission to change *any* object of the given type.
         """
         opts = self.opts
-        codename = get_permission_codename('change', opts)
+        codename = get_permission_codename("change", opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
     def has_delete_permission(self, request, obj=None):
@@ -488,7 +449,7 @@ class BaseAPIModelAdmin:
         request has permission to delete *any* object of the given type.
         """
         opts = self.opts
-        codename = get_permission_codename('delete', opts)
+        codename = get_permission_codename("delete", opts)
         return request.user.has_perm("%s.%s" % (opts.app_label, codename))
 
     def has_view_permission(self, request, obj=None):
@@ -503,11 +464,10 @@ class BaseAPIModelAdmin:
         any object of the given type.
         """
         opts = self.opts
-        codename_view = get_permission_codename('view', opts)
-        codename_change = get_permission_codename('change', opts)
-        return (
-            request.user.has_perm('%s.%s' % (opts.app_label, codename_view)) or
-            request.user.has_perm('%s.%s' % (opts.app_label, codename_change))
+        codename_view = get_permission_codename("view", opts)
+        codename_change = get_permission_codename("change", opts)
+        return request.user.has_perm("%s.%s" % (opts.app_label, codename_view)) or request.user.has_perm(
+            "%s.%s" % (opts.app_label, codename_change)
         )
 
     def has_view_or_change_permission(self, request, obj=None):
@@ -529,6 +489,7 @@ class BaseAPIModelAdmin:
     @property
     def is_inline(self):
         from django_api_admin.admins.inline_admin import InlineAPIModelAdmin
+
         return isinstance(self, InlineAPIModelAdmin)
 
     def get_form_fields_description(self, request, obj=None):
@@ -537,6 +498,5 @@ class BaseAPIModelAdmin:
         """
         change = obj is not None
         serializer_class = self.get_serializer_class(request, obj, change)
-        serializer = serializer_class(
-            instance=obj, context={"request": request})
+        serializer = serializer_class(instance=obj, context={"request": request})
         return get_form_fields_description(serializer, self, change)

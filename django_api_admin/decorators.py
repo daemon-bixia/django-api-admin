@@ -10,6 +10,7 @@
 # This file includes both Django code and your my own contributions.
 # -----------------------------------------------------------------------------
 
+
 def action(function=None, *, permissions=None, description=None):
     """
     Conveniently add attributes to an action function::
@@ -43,9 +44,7 @@ def action(function=None, *, permissions=None, description=None):
         return decorator(function)
 
 
-def display(
-    function=None, *, boolean=None, ordering=None, description=None, empty_value=None
-):
+def display(function=None, *, boolean=None, ordering=None, description=None, empty_value=None):
     """
     Conveniently add attributes to a display function::
 
@@ -69,10 +68,7 @@ def display(
 
     def decorator(func):
         if boolean is not None and empty_value is not None:
-            raise ValueError(
-                "The boolean and empty_value arguments to the @display "
-                "decorator are mutually exclusive."
-            )
+            raise ValueError("The boolean and empty_value arguments to the @display decorator are mutually exclusive.")
         if boolean is not None:
             func.boolean = boolean
         if ordering is not None:

@@ -20,11 +20,12 @@ class HistoryView(APIView):
     """
     Retrieve a paginated history of administrative actions.
 
-    This endpoint provides a detailed log of actions performed within the admin 
-    interface, such as object creation, modification, and deletion. It supports 
-    filtering by application, model, and object ID, and allows for sorting 
+    This endpoint provides a detailed log of actions performed within the admin
+    interface, such as object creation, modification, and deletion. It supports
+    filtering by application, model, and object ID, and allows for sorting
     by action time.
     """
+
     serializer_class = None
     permission_classes = []
     ordering_fields = ["action_time", "-action_time"]
@@ -37,22 +38,17 @@ class HistoryView(APIView):
 
     @extend_schema(
         operation_id="Retrieve admin log entries",
-        parameters=[
-            HistoryViewRequestSerializer,
-            CommonAPIQueryParams.page
-        ],
+        parameters=[HistoryViewRequestSerializer, CommonAPIQueryParams.page],
         responses={
             200: OpenApiResponse(
                 description=_("List of log entry objects"),
                 response=HistoryViewResponseSerializer(),
-                examples=[
-                    APIResponseExamples.history_view_200()
-                ],
+                examples=[APIResponseExamples.history_view_200()],
             ),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
         },
-        tags=["admin-log"]
+        tags=["admin-log"],
     )
     def get(self, request):
         # Get the queryset
@@ -81,8 +77,7 @@ class HistoryView(APIView):
 
         # Check for change or view permissions
         for obj in action_list:
-            model_admin = self.admin_site.get_model_admin(
-                obj.content_type.model_class())
+            model_admin = self.admin_site.get_model_admin(obj.content_type.model_class())
             if not model_admin.has_view_or_change_permission(request, obj):
                 raise PermissionDenied
 
@@ -93,24 +88,25 @@ class HistoryView(APIView):
             self.paginate_orphans,
             self.allow_empty,
         )
-        page, queryset, is_paginated = self.admin_site.paginate_queryset(
-            request, paginator, self.page_kwarg)
+        page, queryset, is_paginated = self.admin_site.paginate_queryset(request, paginator, self.page_kwarg)
         serializer = self.serializer_class(queryset, many=True)
 
-        return Response({
-            "pagination": {
-                "num_pages": paginator.num_pages,
-                "count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
+        return Response(
+            {
+                "pagination": {
+                    "num_pages": paginator.num_pages,
+                    "count": paginator.count,
+                    "has_next": page.has_next(),
+                    "has_previous": page.has_previous(),
+                },
+                "results": self.serialize_messages(serializer.data),
             },
-            "results": self.serialize_messages(serializer.data),
-        }, status=status.HTTP_200_OK)
+            status=status.HTTP_200_OK,
+        )
 
     def serialize_messages(self, data):
         for idx, item in enumerate(data, start=0):
-            data[idx]["change_message"] = json.loads(
-                item["change_message"] or "[]")
+            data[idx]["change_message"] = json.loads(item["change_message"] or "[]")
         return data
 
     def get_config(self, page, queryset):

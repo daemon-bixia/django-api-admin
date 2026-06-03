@@ -12,7 +12,7 @@ class XSessionTokenScheme(OpenApiAuthenticationExtension):
             "type": "apiKey",
             "in": "header",
             "name": "X-Session-Token",
-            "description": "Session token. Only needed when using django-allauth's `app` authentication."
+            "description": "Session token. Only needed when using django-allauth's `app` authentication.",
         }
 
 

@@ -33,12 +33,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     @factory.post_generation
     def email_address(self, create, extracted, **kwargs):
         if create:
-            EmailAddress.objects.create(
-                user=self,
-                email=self.email,
-                primary=True,
-                verified=True
-            )
+            EmailAddress.objects.create(user=self, email=self.email, primary=True, verified=True)
 
 
 class EmailAddressFactory(factory.django.DjangoModelFactory):
@@ -78,8 +73,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
 
     name = factory.Faker("sentence", nb_words=3)
     category = factory.SubFactory(CategoryFactory)
-    price = factory.Faker("pydecimal", left_digits=3,
-                          right_digits=2, positive=True)
+    price = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
     stock_status = factory.Iterator(["in_stock", "out_of_stock", "pre_order"])
     trademark = factory.SubFactory(TrademarkFactory)
     description = factory.Faker("paragraph")

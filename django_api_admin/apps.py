@@ -7,9 +7,10 @@ from django_api_admin.checks import check_admin_app, check_dependencies
 
 class DjangoApiAdminConfig(AppConfig):
     """Simple AppConfig which does not do automatic discovery."""
-    default_auto_field = 'django.db.models.BigAutoField'
+
+    default_auto_field = "django.db.models.BigAutoField"
     default_site = "django_api_admin.sites.APIAdminSite"
-    name = 'django_api_admin'
+    name = "django_api_admin"
     verbose_name = _("Administration")
 
     def ready(self):

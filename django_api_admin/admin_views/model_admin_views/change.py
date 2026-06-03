@@ -48,8 +48,7 @@ class ChangeView(APIView):
         parameters=[CommonAPIPathParams.object_id],
         responses={
             200: OpenApiResponse(
-                description=_(
-                    "Configurations and a list of fields representing the change form"),
+                description=_("Configurations and a list of fields representing the change form"),
                 response=FormFieldsSerializer,
                 examples=[APIResponseExamples.form_description()],
             ),
@@ -59,11 +58,11 @@ class ChangeView(APIView):
     )
     def get(self, request, object_id):
         """
-        Retrieve the configurations required to construct the change form and inline forms 
+        Retrieve the configurations required to construct the change form and inline forms
         on the client.
 
-        This includes serializer field attributes, permissions, form styles, the location 
-        of the save button, names of fields utilizing custom widgets (e.g., `filter_horizontal`), 
+        This includes serializer field attributes, permissions, form styles, the location
+        of the save button, names of fields utilizing custom widgets (e.g., `filter_horizontal`),
         and any custom values added by overriding `ModelAdmin.get_form_description()`
         """
         obj = self.get_object(request, object_id)
@@ -74,9 +73,7 @@ class ChangeView(APIView):
         if not self.model_admin.has_change_permission(request, obj):
             fieldsets = self.get_fieldsets(request, obj)
             readonly_fields = flatten_fieldsets(fieldsets)
-            data = self.model_admin.get_form_description(
-                request, obj, {"readonly_fields": readonly_fields}
-            )
+            data = self.model_admin.get_form_description(request, obj, {"readonly_fields": readonly_fields})
         else:
             data = self.model_admin.get_form_description(request, obj)
 
@@ -86,8 +83,7 @@ class ChangeView(APIView):
         parameters=[CommonAPIPathParams.object_id],
         responses={
             200: OpenApiResponse(
-                description=_(
-                    "The serialized instance, and inlines that were affected"),
+                description=_("The serialized instance, and inlines that were affected"),
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
@@ -110,11 +106,8 @@ class ChangeView(APIView):
             # Validate the update data
             if serializer.is_valid():
                 changed_data = get_changed_data(serializer)
-                updated_object = self.model_admin.save_serializer(
-                    request, serializer, True
-                )
-                self.model_admin.save_model(
-                    request, updated_object, serializer, True)
+                updated_object = self.model_admin.save_serializer(request, serializer, True)
+                self.model_admin.save_model(request, updated_object, serializer, True)
 
                 # Process bulk operations
                 inline_results = None
@@ -127,13 +120,10 @@ class ChangeView(APIView):
                         request.data.get("inlines"),
                     )
                     if bulk_operation.is_valid():
-                        self.model_admin.save_related(
-                            request, updated_object, serializer, bulk_operation, True
-                        )
+                        self.model_admin.save_related(request, updated_object, serializer, bulk_operation, True)
                         inline_results = bulk_operation.result
                     else:
-                        raise ValidationError(
-                            {"errors": bulk_operation.errors})
+                        raise ValidationError({"errors": bulk_operation.errors})
                 else:
                     serializer.save_m2m()
 
@@ -141,12 +131,9 @@ class ChangeView(APIView):
                 change_message = self.model_admin.construct_change_message(
                     request, (serializer, changed_data), inline_results, False
                 )
-                self.model_admin.log_change(
-                    request, updated_object, change_message)
+                self.model_admin.log_change(request, updated_object, change_message)
 
-                return self.model_admin.response_change(
-                    request, updated_object, serializer, bulk_operation
-                )
+                return self.model_admin.response_change(request, updated_object, serializer, bulk_operation)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -169,9 +156,7 @@ class ChangeView(APIView):
             )
 
         elif request.method == "GET":
-            serializer = self.serializer_class(
-                instance=obj, context={"request": request}
-            )
+            serializer = self.serializer_class(instance=obj, context={"request": request})
 
         return serializer
 
@@ -179,18 +164,13 @@ class ChangeView(APIView):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
         if to_field and not self.model_admin.to_field_allowed(request, to_field):
-            raise ParseError(
-                {"detail": _("The field %s cannot be referenced.") % to_field}
-            )
+            raise ParseError({"detail": _("The field %s cannot be referenced.") % to_field})
 
-        obj = self.model_admin.get_object(
-            request, unquote(object_id), to_field)
+        obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
         # If the object doesn't exist respond with not found
         if obj is None:
-            msg = _(
-                "%(name)s with ID “%(key)s” doesn't exist. Perhaps it was deleted?"
-            ) % {
+            msg = _("%(name)s with ID “%(key)s” doesn't exist. Perhaps it was deleted?") % {
                 "name": self.model_admin.model._meta.verbose_name,
                 "key": unquote(object_id),
             }

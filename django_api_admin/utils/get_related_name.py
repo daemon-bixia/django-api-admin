@@ -4,4 +4,4 @@ def get_related_name(fk):
     """
     if fk._related_name:
         return fk._related_name
-    return fk.model._meta.model_name + '_set'
+    return fk.model._meta.model_name + "_set"

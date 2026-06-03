@@ -54,11 +54,7 @@ def label_for_field(name, model, model_admin=None, return_attr=False, form=None)
 
             if hasattr(attr, "short_description"):
                 label = attr.short_description
-            elif (
-                isinstance(attr, property)
-                and hasattr(attr, "fget")
-                and hasattr(attr.fget, "short_description")
-            ):
+            elif isinstance(attr, property) and hasattr(attr, "fget") and hasattr(attr.fget, "short_description"):
                 label = attr.fget.short_description
             elif callable(attr):
                 if attr.__name__ == "<lambda>":

@@ -9,17 +9,13 @@ from django_api_admin.utils.get_deleted_objects import get_deleted_objects
 from django_api_admin.decorators import action
 
 
-@action(
-    permissions=['delete'],
-    description=gettext_lazy('Delete selected %(verbose_name_plural)s')
-)
+@action(permissions=["delete"], description=gettext_lazy("Delete selected %(verbose_name_plural)s"))
 def delete_selected(modeladmin, request, queryset):
     """
     default api_admin action deletes the selected objects
     no confirmation page
     """
-    _deletable_objects, _model_count, perms_needed, _protected = get_deleted_objects(
-        queryset, request, modeladmin.admin_site)
+    _deletable_objects, _model_count, perms_needed, _protected = get_deleted_objects(queryset, request, modeladmin.admin_site)
 
     # Check the permissions
     if perms_needed:
@@ -34,6 +30,5 @@ def delete_selected(modeladmin, request, queryset):
 
     # Delete the queryset
     modeladmin.delete_queryset(request, queryset)
-    msg = _("Successfully deleted %s %s.") % (
-        n, model_ngettext(modeladmin.opts, n))
-    return Response({'detail': msg}, status=status.HTTP_200_OK)
+    msg = _("Successfully deleted %s %s.") % (n, model_ngettext(modeladmin.opts, n))
+    return Response({"detail": msg}, status=status.HTTP_200_OK)

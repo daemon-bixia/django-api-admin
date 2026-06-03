@@ -26,9 +26,7 @@ def find_endpoint_urls(path, endpoints, url_prefix, result):
         # Check that the endpoint exists in the ModelAdmin's, or AdminSite's OpenAPI endpoints
         if result["paths"].get(endpoint_url, None):
             # Extract the endpoint's route used in the urlpatterns list
-            endpoint_url_pattern = (
-                endpoint[1][1:] if endpoint[1].startswith("/") else endpoint[1]
-            )
+            endpoint_url_pattern = endpoint[1][1:] if endpoint[1].startswith("/") else endpoint[1]
             if isinstance(path, URLResolver):
                 for inner_path in path.url_patterns:
                     full_pattern = str(path.pattern) + str(inner_path.pattern)
@@ -44,13 +42,11 @@ def tag_result_paths(urlpatterns, endpoints, site, result, tag_name):
     Tag method of the endpoints in result[paths] with the tag_name.
     """
     for path in urlpatterns:
-        endpoint_urls = find_endpoint_urls(
-            path, endpoints, site.url_prefix, result)
+        endpoint_urls = find_endpoint_urls(path, endpoints, site.url_prefix, result)
         for endpoint_url in endpoint_urls:
             # Tag all the methods of the endpoint with the tag_name
             for method, body in result["paths"][endpoint_url].items():
-                result["paths"][endpoint_url][method] = {
-                    **body, "tags": [tag_name]}
+                result["paths"][endpoint_url][method] = {**body, "tags": [tag_name]}
     return result
 
 
@@ -71,18 +67,13 @@ def add_site_views_dynamic_schema(result, site, request):
     # Helper to build description/help_text for a permission class
     def get_permission_description(perm_cls):
         if perm_cls.__doc__:
-            doc = " ".join(
-                [line.strip()
-                 for line in perm_cls.__doc__.splitlines() if line.strip()]
-            )
+            doc = " ".join([line.strip() for line in perm_cls.__doc__.splitlines() if line.strip()])
             if doc:
                 return doc
         message = getattr(perm_cls, "message", None)
         if message:
             return str(message)
-        return (
-            f"Indicates whether the user satisfies the {perm_cls.__name__} permission."
-        )
+        return f"Indicates whether the user satisfies the {perm_cls.__name__} permission."
 
     # Build the schema for permissions
     result["components"]["schemas"][schema_name] = {
@@ -105,10 +96,7 @@ def add_site_views_dynamic_schema(result, site, request):
         path_item = result["paths"][permissions_path]
         if "get" in path_item:
             # Update the 200 response to point to the new permissions schema
-            response_200 = (
-                path_item["get"].setdefault(
-                    "responses", {}).setdefault("200", {})
-            )
+            response_200 = path_item["get"].setdefault("responses", {}).setdefault("200", {})
             content = response_200.setdefault("content", {})
             json_content = content.setdefault("application/json", {})
             json_content["schema"] = {
@@ -128,9 +116,7 @@ def add_site_views_dynamic_schema(result, site, request):
                 "Success Response": {
                     "value": {
                         "status": 200,
-                        "data": {
-                            perm_cls.__name__: True for perm_cls in permission_classes
-                        },
+                        "data": {perm_cls.__name__: True for perm_cls in permission_classes},
                     }
                 }
             }
@@ -161,12 +147,10 @@ def build_serializer_schema(result, inspector, serializer_class, json_content, d
     """
     Resolve a serializer into an OpenAPI component
     """
-    resolved = inspector.resolve_serializer(
-        serializer_class, direction=direction)
+    resolved = inspector.resolve_serializer(serializer_class, direction=direction)
     # Include the component in `schema/components` if not already included
     if resolved.name not in result["components"]["schemas"]:
-        result.setdefault("components", {}).setdefault("schemas", {})[
-            resolved.name] = resolved.schema
+        result.setdefault("components", {}).setdefault("schemas", {})[resolved.name] = resolved.schema
     return resolved.ref
 
 
@@ -180,22 +164,17 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
     """
     # Add the serializer auto schema reference as `data`
     serializer_class = model_admin.get_serializer_class(request)
-    resolved_ref = build_serializer_schema(
-        result, inspector, serializer_class, json_content)
+    resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content)
     json_content["schema"]["properties"]["data"]["allOf"] = [resolved_ref]
     # Add a list of auto schema references for every inline model
     inlines = model_admin.inlines
     for inline in inlines:
         inline_instance = inline(model_admin.model, model_admin.admin_site)
         serializer_class = inline_instance.get_serializer_class(request)
-        resolved = inspector.resolve_serializer(
-            serializer_class,
-            direction="response"
-        )
+        resolved = inspector.resolve_serializer(serializer_class, direction="response")
         # Include the component in `schema/components` if not already included
         if resolved.name not in result["components"]["schemas"]:
-            result.setdefault("components", {}).setdefault("schemas", {})[
-                resolved.name] = resolved.schema
+            result.setdefault("components", {}).setdefault("schemas", {})[resolved.name] = resolved.schema
 
         # Add a schema for inline model representing every inline operation.
         inline_app_label = inline.model._meta.app_label
@@ -208,25 +187,19 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
                 "add": {
                     "type": "array",
                     "description": "List of added inline objects",
-                    "items": {
-                        "$ref": f"#/components/schemas/{resolved.name}"
-                    }
+                    "items": {"$ref": f"#/components/schemas/{resolved.name}"},
                 },
                 "change": {
                     "type": "array",
                     "description": "List of changed inline objects",
-                    "items": {
-                        "$ref": f"#/components/schemas/{resolved.name}"
-                    }
+                    "items": {"$ref": f"#/components/schemas/{resolved.name}"},
                 },
                 "delete": {
                     "type": "array",
                     "description": "List of deleted inline objects",
-                    "items": {
-                        "$ref": f"#/components/schemas/{resolved.name}"
-                    }
-                }
-            }
+                    "items": {"$ref": f"#/components/schemas/{resolved.name}"},
+                },
+            },
         }
         if add:
             del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["change"]
@@ -252,8 +225,7 @@ def build_changelist_put_request_schema(result, inspector, model_admin, request,
     Build the request schema for changelist bulk updates (PUT).
     """
     serializer_class = model_admin.get_changelist_serializer_class(request)
-    resolved_ref = build_serializer_schema(
-        result, inspector, serializer_class, json_content, direction="request")
+    resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content, direction="request")
     json_content["schema"] = {
         "type": "object",
         "properties": {
@@ -262,18 +234,15 @@ def build_changelist_put_request_schema(result, inspector, model_admin, request,
                 "items": {
                     "type": "object",
                     "properties": {
-                        "pk": {
-                            "type": "integer",
-                            "description": "The primary key of the record to update."
-                        },
+                        "pk": {"type": "integer", "description": "The primary key of the record to update."},
                     },
                     "allOf": [resolved_ref],
-                    "required": ["pk"]
+                    "required": ["pk"],
                 },
-                "description": "A list of objects to update."
+                "description": "A list of objects to update.",
             }
         },
-        "required": ["data"]
+        "required": ["data"],
     }
     return json_content["schema"]
 
@@ -283,8 +252,7 @@ def build_changelist_put_response_schema(result, inspector, model_admin, request
     Build the response schema for changelist bulk updates (PUT).
     """
     serializer_class = model_admin.get_changelist_serializer_class(request)
-    resolved_ref = build_serializer_schema(
-        result, inspector, serializer_class, json_content, direction="response")
+    resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content, direction="response")
     json_content["schema"] = {
         "type": "object",
         "properties": {
@@ -296,9 +264,9 @@ def build_changelist_put_response_schema(result, inspector, model_admin, request
                 "type": "object",
                 "additionalProperties": resolved_ref,
                 "description": "A mapping of object IDs to their updated data.",
-            }
+            },
         },
-        "required": ["detail", "data"]
+        "required": ["detail", "data"],
     }
     return json_content["schema"]
 
@@ -321,16 +289,15 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
     for url in model_urls:
         if url.name == f"{app_label}_{model_name}_change":
             change_path = result.setdefault("paths", {}).setdefault(
-                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/change/", {})
+                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/change/", {}
+            )
             if change_path:
                 # Add `operationId` to ChangeView
-                change_path.setdefault("get", {})[
-                    "operationId"] = f"Get change form for {app_label}.{model_name}"
+                change_path.setdefault("get", {})["operationId"] = f"Get change form for {app_label}.{model_name}"
                 patch = change_path.setdefault("patch", {})
                 patch["operationId"] = f"Update {app_label}.{model_name}"
                 # Add dynamic response schema to ChangeView
-                response_200 = patch.setdefault(
-                    "responses", {}).setdefault("200", {})
+                response_200 = patch.setdefault("responses", {}).setdefault("200", {})
                 content = response_200.setdefault("content", {})
                 json_content = content.setdefault("application/json", {})
                 json_content["schema"] = {
@@ -347,41 +314,37 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                             "type": "object",
                             "properties": {},
                             "description": "The modified inlines instances",
-                        }
+                        },
                     },
-                    "required": ["detail", "data", "inlines"]
+                    "required": ["detail", "data", "inlines"],
                 }
                 # Populate `data` and `inlines` schema properties
-                build_serializer_with_inlines_schema(
-                    result, inspector, model_admin, request, json_content
-                )
+                build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content)
         elif url.name == f"{app_label}_{model_name}_delete":
             delete_path = result.setdefault("paths", {}).setdefault(
-                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/delete/", {})
+                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/delete/", {}
+            )
             if delete_path:
                 # Add `operationId` to delete view
                 delete = delete_path.setdefault("delete", {})
                 delete["operationId"] = f"Delete {app_label}.{model_name}"
         elif url.name == f"{app_label}_{model_name}_detail":
             detail_path = result.setdefault("paths", {}).setdefault(
-                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/detail/", {})
+                f"{site.url_prefix}/{app_label}/{model_name}/{{object_id}}/detail/", {}
+            )
             if detail_path:
                 # Add `operationId` to detail view
                 get = detail_path.setdefault("get", {})
                 get["operationId"] = f"Retrieve {app_label}.{model_name}"
                 # Add dynamic response schema to ChangeView
-                response_200 = get.setdefault(
-                    "responses", {}).setdefault("200", {})
+                response_200 = get.setdefault("responses", {}).setdefault("200", {})
                 content = response_200.setdefault("content", {})
                 json_content = content.setdefault("application/json", {})
                 serializer_class = model_admin.get_serializer_class(request)
-                resolved_ref = build_serializer_schema(
-                    result, inspector, serializer_class, json_content
-                )
+                resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content)
                 json_content["schema"] = resolved_ref
         elif url.name == f"{app_label}_{model_name}_add":
-            add_path = result.setdefault("paths", {}).setdefault(
-                f"{site.url_prefix}/{app_label}/{model_name}/add/", {})
+            add_path = result.setdefault("paths", {}).setdefault(f"{site.url_prefix}/{app_label}/{model_name}/add/", {})
             if add_path:
                 # Add `operationId` to AddView
                 get = add_path.setdefault("get", {})
@@ -389,8 +352,7 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 post = add_path.setdefault("post", {})
                 post["operationId"] = f"Create {app_label}.{model_name}"
                 # Add dynamic response schema to add view
-                response_200 = post.setdefault(
-                    "responses", {}).setdefault("200", {})
+                response_200 = post.setdefault("responses", {}).setdefault("200", {})
                 content = response_200.setdefault("content", {})
                 json_content = content.setdefault("application/json", {})
                 json_content["schema"] = {
@@ -407,17 +369,16 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                             "type": "object",
                             "properties": {},
                             "description": "The modified inlines instances",
-                        }
+                        },
                     },
-                    "required": ["detail", "data", "inlines"]
+                    "required": ["detail", "data", "inlines"],
                 }
                 # Populate `data` and `inlines` schema properties
-                build_serializer_with_inlines_schema(
-                    result, inspector, model_admin, request, json_content, add=True
-                )
+                build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content, add=True)
         elif url.name == f"{app_label}_{model_name}_changelist":
             changelist_path = result.setdefault("paths", {}).setdefault(
-                f"{site.url_prefix}/{app_label}/{model_name}/changelist/", {})
+                f"{site.url_prefix}/{app_label}/{model_name}/changelist/", {}
+            )
             if changelist_path:
                 # Add `operationId` to ChangeListView
                 get = changelist_path.setdefault("get", {})
@@ -428,10 +389,10 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 post["operationId"] = f"Perform action on {app_label}.{model_name}"
                 post_request_body = post.setdefault("requestBody", {})
                 post_content = post_request_body.setdefault("content", {})
-                post_json_content = post_content.setdefault(
-                    "application/json", {})
+                post_json_content = post_content.setdefault("application/json", {})
                 post_json_content["schema"] = build_changelist_action_request_schema(
-                    result, inspector, model_admin, request, post_json_content)
+                    result, inspector, model_admin, request, post_json_content
+                )
 
                 # Add dynamic request schema to ChangelistView.put (Bulk Editing)
                 if model_admin.list_editable:
@@ -439,20 +400,15 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     put["operationId"] = f"Edit {app_label}.{model_name} changelist records"
                     put_request_body = put.setdefault("requestBody", {})
                     put_content = put_request_body.setdefault("content", {})
-                    put_json_content = put_content.setdefault(
-                        "application/json", {})
-                    build_changelist_put_request_schema(
-                        result, inspector, model_admin, request, put_json_content)
+                    put_json_content = put_content.setdefault("application/json", {})
+                    build_changelist_put_request_schema(result, inspector, model_admin, request, put_json_content)
 
                     # Add dynamic response schema to ChangelistView.put
                     put_responses = put.setdefault("responses", {})
                     put_response_200 = put_responses.setdefault("200", {})
-                    put_response_content = put_response_200.setdefault(
-                        "content", {})
-                    put_response_json_content = put_response_content.setdefault(
-                        "application/json", {})
-                    build_changelist_put_response_schema(
-                        result, inspector, model_admin, request, put_response_json_content)
+                    put_response_content = put_response_200.setdefault("content", {})
+                    put_response_json_content = put_response_content.setdefault("application/json", {})
+                    build_changelist_put_response_schema(result, inspector, model_admin, request, put_response_json_content)
 
     return result
 
@@ -472,7 +428,7 @@ def modify_schema(result, generator, request, public):
     current_dir = Path(__file__).resolve().parent
     markdown_path = current_dir / "API_DOCS.md"
     if markdown_path.exists():
-        with open(markdown_path, 'r', encoding='utf-8') as f:
+        with open(markdown_path, "r", encoding="utf-8") as f:
             markdown_content = f.read()
 
     # Change the api info
@@ -490,13 +446,9 @@ def modify_schema(result, generator, request, public):
     # Edit the tags for each path based on the model_admin or admin_site
     for site in all_sites:
         # Create a generator and parse the site urls so that we can compare them below
-        site_generator = spectacular_settings.DEFAULT_GENERATOR_CLASS(
-            patterns=site.site_urls
-        )
+        site_generator = spectacular_settings.DEFAULT_GENERATOR_CLASS(patterns=site.site_urls)
         site_generator.parse(request, True)
-        result = tag_result_paths(
-            site.site_urls, site_generator.endpoints, site, result, site.name
-        )
+        result = tag_result_paths(site.site_urls, site_generator.endpoints, site, result, site.name)
         add_site_views_dynamic_schema(result, site, request)
 
         # Remove the changelist put methods where list_editable is falsy
@@ -507,9 +459,7 @@ def modify_schema(result, generator, request, public):
             model_urls = site.admin_urls.get(model, None)
             if model_urls:
                 # Create a generator and parse the admin urls so that we can compare them below
-                admin_generator = spectacular_settings.DEFAULT_GENERATOR_CLASS(
-                    patterns=model_urls
-                )
+                admin_generator = spectacular_settings.DEFAULT_GENERATOR_CLASS(patterns=model_urls)
                 admin_generator.parse(request, True)
                 result = tag_result_paths(
                     model_urls,
@@ -518,13 +468,6 @@ def modify_schema(result, generator, request, public):
                     result,
                     model._meta.verbose_name,
                 )
-                result = add_model_admin_views_dynamic_schema(
-                    result,
-                    site,
-                    model_urls,
-                    model,
-                    request,
-                    generator
-                )
+                result = add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator)
 
     return result

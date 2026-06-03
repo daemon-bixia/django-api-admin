@@ -39,10 +39,11 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 all_sites = WeakSet()
 
 
-class APIAdminSite():
+class APIAdminSite:
     """
     Encapsulates an instance of the django admin application.
     """
+
     # Default model admin class
     admin_class = APIModelAdmin
 
@@ -125,9 +126,7 @@ class APIAdminSite():
         app_configs = set(app_configs)  # Speed up lookups below
 
         errors = []
-        model_admins = (
-            o for o in self._registry.values() if o.__class__ is not APIModelAdmin
-        )
+        model_admins = (o for o in self._registry.values() if o.__class__ is not APIModelAdmin)
         for model_admin in model_admins:
             if model_admin.model._meta.app_config in app_configs:
                 errors.extend(model_admin.check())
@@ -148,19 +147,15 @@ class APIAdminSite():
 
         for model in model_or_iterable:
             if model._meta.abstract:
-                raise ImproperlyConfigured(
-                    'The model %s is abstract, so it cannot be registered with admin.' % model.__name__
-                )
+                raise ImproperlyConfigured("The model %s is abstract, so it cannot be registered with admin." % model.__name__)
 
             if model in self._registry:
-                raise AlreadyRegistered(
-                    'The model %s is already registered ' % model.__name__)
+                raise AlreadyRegistered("The model %s is already registered " % model.__name__)
 
             if not model._meta.swapped:
                 if options:
-                    options['__module__'] = __name__
-                    admin_class = type("%sAPIAdmin" %
-                                       model.__name__, (admin_class,), options)
+                    options["__module__"] = __name__
+                    admin_class = type("%sAPIAdmin" % model.__name__, (admin_class,), options)
 
                 # Instantiate the admin class to save in the registry
                 self._registry[model] = admin_class(model, self)
@@ -175,8 +170,7 @@ class APIAdminSite():
             model_or_iterable = [model_or_iterable]
         for model in model_or_iterable:
             if model not in self._registry:
-                raise NotRegistered(
-                    "The model %s is not registered" % model.__name__)
+                raise NotRegistered("The model %s is not registered" % model.__name__)
             del self._registry[model]
 
     def is_registered(self, model):
@@ -189,8 +183,7 @@ class APIAdminSite():
         try:
             return self._registry[model]
         except KeyError:
-            raise NotRegistered(
-                f"The model {model.__name__} is not registered.")
+            raise NotRegistered(f"The model {model.__name__} is not registered.")
 
     def add_action(self, action, name=None):
         """
@@ -221,9 +214,8 @@ class APIAdminSite():
 
     def get_authentication_classes(self):
         from rest_framework.authentication import SessionAuthentication
-        return self.authentication_classes or [
-            SessionAuthentication
-        ]
+
+        return self.authentication_classes or [SessionAuthentication]
 
     def has_permission(self, request):
         """
@@ -231,10 +223,8 @@ class APIAdminSite():
         *at least one* page in the admin site.
         """
         permission_classes = self.get_permission_classes(request)
-        permissions = [permission_class()
-                       for permission_class in permission_classes]
-        return all(permission.has_permission(request, None)
-                   for permission in permissions)
+        permissions = [permission_class() for permission_class in permission_classes]
+        return all(permission.has_permission(request, None) for permission in permissions)
 
     def admin_view(self, view, cacheable=False):
         """
@@ -262,8 +252,7 @@ class APIAdminSite():
 
         def inner(request, *args, **kwargs):
             if not self.has_permission(request):
-                return JsonResponse({"detail": _("You do not have permission to perform this action.")},
-                                    status=403)
+                return JsonResponse({"detail": _("You do not have permission to perform this action.")}, status=403)
 
             return view(request, *args, **kwargs)
 
@@ -288,23 +277,20 @@ class APIAdminSite():
 
         urlpatterns = [
             path("", wrap(self.get_app_list_view()), name="index"),
-            path("autocomplete/", wrap(self.autocomplete_view()),
-                 name="autocomplete"),
-            path("site_context/", wrap(self.get_site_context_view()),
-                 name="site_context"),
-            path("history/", wrap(self.get_history_view()),
-                 name="history"),
-            path("permissions/", wrap(self.get_permissions_view()),
-                 name="permissions"),
-            path("r/<path:content_type_id>/<path:object_id>/",
-                 wrap(self.get_view_on_site_view()), name='view_on_site',),
+            path("autocomplete/", wrap(self.autocomplete_view()), name="autocomplete"),
+            path("site_context/", wrap(self.get_site_context_view()), name="site_context"),
+            path("history/", wrap(self.get_history_view()), name="history"),
+            path("permissions/", wrap(self.get_permissions_view()), name="permissions"),
+            path(
+                "r/<path:content_type_id>/<path:object_id>/",
+                wrap(self.get_view_on_site_view()),
+                name="view_on_site",
+            ),
         ]
 
         # Add the openapi-specification view
         if self.include_openapi_specification_view:
-            urlpatterns.append(path("openapi-specification/",
-                                    self.get_docs_view(),
-                                    name="openapi-specification"))
+            urlpatterns.append(path("openapi-specification/", self.get_docs_view(), name="openapi-specification"))
 
         # Save these urls under site_urls for schema tagging
         self.site_urls = copy(urlpatterns)
@@ -323,14 +309,16 @@ class APIAdminSite():
         # labels for which we need to allow access to the app_index view,
         if valid_app_labels:
             regex = r"^(?P<app_label>" + "|".join(valid_app_labels) + ")/$"
-            app_index_path = re_path(regex, wrap(
-                self.get_app_index_view()), name="app_index")
+            app_index_path = re_path(regex, wrap(self.get_app_index_view()), name="app_index")
             urlpatterns += [app_index_path]
             self.site_urls += [app_index_path]
 
         # Add the OpenAPI schema url and update the site_urls
-        schema_path = path("openapi-specification-schema/", self.get_schema_view(
-            [path(f"{self.url_prefix}/", include(urlpatterns))]), name="openapi-specification-schema")
+        schema_path = path(
+            "openapi-specification-schema/",
+            self.get_schema_view([path(f"{self.url_prefix}/", include(urlpatterns))]),
+            name="openapi-specification-schema",
+        )
         urlpatterns.append(schema_path)
         self.site_urls.append(schema_path)
 
@@ -348,10 +336,7 @@ class APIAdminSite():
         app_dict = {}
 
         if label:
-            models = {
-                m: m_a for m, m_a in self._registry.items()
-                if m._meta.app_label == label
-            }
+            models = {m: m_a for m, m_a in self._registry.items() if m._meta.app_label == label}
         else:
             models = self._registry
 
@@ -420,9 +405,7 @@ class APIAdminSite():
         hasn't been customized.
         """
         script_name = request.META["SCRIPT_NAME"]
-        site_url = (
-            script_name if self.site_url == "/" and script_name else self.site_url
-        )
+        site_url = script_name if self.site_url == "/" and script_name else self.site_url
         return {
             "site_title": self.site_title,
             "site_header": self.site_header,
@@ -433,39 +416,34 @@ class APIAdminSite():
         }
 
     def get_log_entry_serializer(self):
-        return type("LogEntrySerializer", (self.log_entry_serializer,), {
-            "user": self.user_serializer(read_only=True),
-        })
+        return type(
+            "LogEntrySerializer",
+            (self.log_entry_serializer,),
+            {
+                "user": self.user_serializer(read_only=True),
+            },
+        )
 
     def paginate_queryset(self, request, paginator, page_kwarg, **kwargs):
         """Paginate the queryset, if needed."""
-        page = kwargs.get(page_kwarg) or request.GET.get(
-            page_kwarg) or 1
+        page = kwargs.get(page_kwarg) or request.GET.get(page_kwarg) or 1
         try:
             page_number = int(page)
         except ValueError:
             if page == "last":
                 page_number = paginator.num_pages
             else:
-                raise NotFound(
-                    _("Page is not “last”, nor can it be converted to an int.")
-                )
+                raise NotFound(_("Page is not “last”, nor can it be converted to an int."))
         try:
             page = paginator.page(page_number)
             return (page, page.object_list, page.has_other_pages())
         except InvalidPage as e:
-            raise NotFound(
-                _("Invalid page (%(page_number)s): %(message)s")
-                % {"page_number": page_number, "message": str(e)}
-            )
+            raise NotFound(_("Invalid page (%(page_number)s): %(message)s") % {"page_number": page_number, "message": str(e)})
         try:
             page = paginator.page(page_number)
             return (page, page.object_list, page.has_other_pages())
         except InvalidPage as e:
-            raise NotFound(
-                _("Invalid page (%(page_number)s): %(message)s")
-                % {"page_number": page_number, "message": str(e)}
-            )
+            raise NotFound(_("Invalid page (%(page_number)s): %(message)s") % {"page_number": page_number, "message": str(e)})
 
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
@@ -479,10 +457,7 @@ class APIAdminSite():
     def get_app_index_view(self):
         from django_api_admin.admin_views.admin_site_views.app_index import AppIndexView
 
-        defaults = {
-            "authentication_classes": self.get_authentication_classes(),
-            "admin_site": self
-        }
+        defaults = {"authentication_classes": self.get_authentication_classes(), "admin_site": self}
         return AppIndexView.as_view(**defaults)
 
     def autocomplete_view(self):
@@ -524,6 +499,7 @@ class APIAdminSite():
 
     def get_permissions_view(self):
         from django_api_admin.admin_views.admin_site_views.get_permissions import PermissionsView
+
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
             "admin_site": self,
@@ -544,8 +520,7 @@ class APIAdminSite():
 
 class DefaultAdminSite(LazyObject):
     def _setup(self):
-        AdminSiteClass = import_string(
-            apps.get_app_config("django_api_admin").default_site)
+        AdminSiteClass = import_string(apps.get_app_config("django_api_admin").default_site)
         self._wrapped = AdminSiteClass(name="api_admin")
 
     def __repr__(self):
