@@ -19,18 +19,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Install the latest version of uv and set the python version ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true # Ensures lightning-fast subsequent runs
+
       - name: Install dependencies
         run: |
           uv sync --group test
+
       - name: Lint with ruff
         run: |
           # ruff automatically ignores .venv, respect your pyproject.toml, and runs instantly
           uv run ruff check .
+
       - name: Test with unitest
         run: |
           uv run python ./tests/runtests.py

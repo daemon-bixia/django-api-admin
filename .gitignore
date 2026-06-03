@@ -152,3 +152,8 @@ todo.md
 
 # Pytest
 pytest.ini
+
+
+# Ruff
+.ruff_cache
+.ruff_cache/

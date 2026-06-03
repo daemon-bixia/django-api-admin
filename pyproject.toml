@@ -20,15 +20,14 @@ requires-python = ">=3.12"
 [project.urls]
 Github = "https://github.com/demon-bixia/django-api-admin"
 
-[tool.uv.build-backend]
-module-root = ""
-source-include = ["assets/**"]
-source-exclude = ["<root>/api_admin"]
-
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "api_admin.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["assets/**", "tests/**"]
+source-exclude = ["api_admin/**", "example/**"]
 
 [build-system]
 requires = ["uv_build>=0.8.13,<0.9.0"]
