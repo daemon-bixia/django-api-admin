@@ -27,10 +27,10 @@ from django.utils.deprecation import RemovedInDjango60Warning
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 
-from django_api_admin.exceptions import DisallowedModelAdminLookup, IncorrectLookupParameters, DisallowedModelAdminToField
+from django_api_admin.exceptions import DisallowedModelAdminLookup, IncorrectLookupParameters
 from django_api_admin.filters import FieldListFilter
 from django_api_admin.serializers import ChangeListSerializer
-from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, TO_FIELD_VAR, IS_POPUP_VAR, ShowFacets
+from django_api_admin.admins.model_admin import SOURCE_MODEL_VAR, IS_FACETS_VAR, IS_POPUP_VAR, ShowFacets
 from django_api_admin.utils.get_fields_from_path import get_fields_from_path
 from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplicates
 from django_api_admin.utils.prepare_lookup_value import prepare_lookup_value
@@ -50,7 +50,6 @@ IGNORED_PARAMS = (
     IS_FACETS_VAR,
     IS_POPUP_VAR,
     SOURCE_MODEL_VAR,
-    TO_FIELD_VAR,
 )
 
 
@@ -110,10 +109,6 @@ class ChangeList:
             model_admin.show_facets is ShowFacets.ALLOW and IS_FACETS_VAR in request.GET
         )
         self.is_facets_optional = model_admin.show_facets is ShowFacets.ALLOW
-        to_field = request.GET.get(TO_FIELD_VAR)
-        if to_field and not model_admin.to_field_allowed(request, to_field):
-            raise DisallowedModelAdminToField("The field %s cannot be referenced." % to_field)
-        self.to_field = to_field
         self.params = dict(request.GET.items())
         self.filter_params = dict(request.GET.lists())
         if PAGE_VAR in self.params:

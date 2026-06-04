@@ -166,7 +166,7 @@ class ChangeListView(APIView):
         cl.get_results(request)
         empty_value_display = cl.model_admin.get_empty_value_display()
         for result in cl.result_list:
-            row = {"change_url": cl.url_for_result(request, result), "id": result.pk, "cells": {}}
+            row = {"id": result.pk, "cells": {}}
 
             # Construct the `cells` dictionary
             for field_name in self.get_fields_list(request, cl):

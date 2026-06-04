@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
-from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams
+from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams, CommonAPIQueryParams
 from django_api_admin.serializers import ResponseMessageSerializer
 from django_api_admin.exceptions import DisallowedModelAdminToField
 
@@ -26,7 +26,7 @@ class DeleteView(APIView):
     model_admin = None
 
     @extend_schema(
-        parameters=[CommonAPIPathParams.object_id],
+        parameters=[CommonAPIPathParams.object_id, CommonAPIQueryParams.to_field],
         responses={
             204: OpenApiResponse(
                 description=_("Successfully deleted the selected objects"),

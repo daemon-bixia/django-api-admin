@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
-    OpenApiParameter,
 )
 
 from django_api_admin.utils.quote import unquote
@@ -17,6 +16,7 @@ from django_api_admin.admins.model_admin import TO_FIELD_VAR
 from django_api_admin.openapi import (
     CommonAPIResponses,
     CommonAPIPathParams,
+    CommonAPIQueryParams,
 )
 
 
@@ -34,12 +34,7 @@ class DetailView(APIView):
     @extend_schema(
         parameters=[
             CommonAPIPathParams.object_id,
-            OpenApiParameter(
-                name="to_field",
-                type=str,
-                location=OpenApiParameter.QUERY,
-                description=_("Reverse to field. Default is primary key"),
-            ),
+            CommonAPIQueryParams.to_field,
         ],
         responses={
             200: OpenApiResponse(
@@ -54,6 +49,7 @@ class DetailView(APIView):
         to_field = request.query_params.get(TO_FIELD_VAR)
         if to_field and not self.model_admin.to_field_allowed(request, to_field):
             return Response({"detail": _("The field %s cannot be referenced.") % to_field}, status=status.HTTP_400_BAD_REQUEST)
+
         obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
         # If the object doesn't exist respond with not found

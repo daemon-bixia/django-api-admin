@@ -22,6 +22,7 @@ from django_api_admin.openapi import (
     CommonAPIResponses,
     CommonAPIPathParams,
     APIResponseExamples,
+    CommonAPIQueryParams,
 )
 from django_api_admin.serializers import (
     FormFieldsSerializer,
@@ -45,7 +46,7 @@ class ChangeView(APIView):
     model_admin = None
 
     @extend_schema(
-        parameters=[CommonAPIPathParams.object_id],
+        parameters=[CommonAPIPathParams.object_id, CommonAPIQueryParams.to_field],
         responses={
             200: OpenApiResponse(
                 description=_("Configurations and a list of fields representing the change form"),

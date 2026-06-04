@@ -354,6 +354,13 @@ class CommonAPIQueryParams:
         location=OpenApiParameter.QUERY,
         description=_("A page number within the paginated result set."),
     )
+    to_field = OpenApiParameter(
+        name="_to_field",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        description=_("The field to match for lookups."),
+        required=False,
+    )
 
 
 class CommonAPIPathParams:
@@ -485,7 +492,6 @@ ChangeList = {
     ],
     "rows": [
         {
-            "change_url": "http://localhost:8000/api_admin/example/author/1/change/",
             "id": 1,
             "cells": {"name": "Muhammad", "age": "60", "user": "ms", "is_old_enough": True, "title": "-"},
         }
