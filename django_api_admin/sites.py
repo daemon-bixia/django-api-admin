@@ -35,6 +35,8 @@ from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 from rest_framework.exceptions import NotFound
 from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.parsers import JSONParser
 
 all_sites = WeakSet()
 
@@ -226,11 +228,29 @@ class APIAdminSite:
         permissions = [permission_class() for permission_class in permission_classes]
         return all(permission.has_permission(request, None) for permission in permissions)
 
+    def is_authenticated(self, request):
+        """
+        Return True if the given HttpRequest is authenticated by one of the
+        authentication classes.
+        """
+
+        authentication_classes = self.get_authentication_classes()
+        drf_request = Request(request, parsers=[JSONParser()])
+
+        for auth_class in authentication_classes:
+            authenticator = auth_class()
+            user_auth_tuple = authenticator.authenticate(drf_request)
+
+            if user_auth_tuple is not None:
+                return True
+
+        return False
+
     def admin_view(self, view, cacheable=False):
         """
         Decorator to create an admin view attached to this ``AdminSite``. This
         wraps the view and provides permission checking by calling
-        ``self.has_permission``.
+        ``self.is_authenticated`` and ``self.has_permission``.
 
         You'll want to use this from within ``AdminSite.get_urls()``:
 
@@ -251,6 +271,9 @@ class APIAdminSite:
         """
 
         def inner(request, *args, **kwargs):
+            if not self.is_authenticated(request):
+                return JsonResponse({"detail": _("Authentication credentials were not provided.")}, status=401)
+
             if not self.has_permission(request):
                 return JsonResponse({"detail": _("You do not have permission to perform this action.")}, status=403)
 
