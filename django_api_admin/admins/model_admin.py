@@ -12,7 +12,7 @@
 
 import enum
 import traceback
-from functools import update_wrapper, partial
+from functools import partial
 
 from django.db import models
 from django.urls import path
@@ -134,22 +134,14 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return inline_instances
 
     def get_urls(self):
-
-        def wrap(view):
-            def wrapper(*args, **kwargs):
-                return self.admin_site.admin_view(view)(*args, **kwargs)
-
-            wrapper.model_admin = self
-            return update_wrapper(wrapper, view)
-
         info = f"{self.model._meta.app_label}_{self.model._meta.model_name}"
         prefix = f"{self.model._meta.app_label}/{self.model._meta.model_name}"
         urlpatterns = [
-            path(f"{prefix}/changelist/", wrap(self.get_changelist_view()), name=f"{info}_changelist"),
-            path(f"{prefix}/add/", wrap(self.get_add_view()), name=f"{info}_add"),
-            path(f"{prefix}/<path:object_id>/detail/", wrap(self.get_detail_view()), name=f"{info}_detail"),
-            path(f"{prefix}/<path:object_id>/delete/", wrap(self.get_delete_view()), name=f"{info}_delete"),
-            path(f"{prefix}/<path:object_id>/change/", wrap(self.get_change_view()), name=f"{info}_change"),
+            path(f"{prefix}/changelist/", self.get_changelist_view(), name=f"{info}_changelist"),
+            path(f"{prefix}/add/", self.get_add_view(), name=f"{info}_add"),
+            path(f"{prefix}/<path:object_id>/detail/", self.get_detail_view(), name=f"{info}_detail"),
+            path(f"{prefix}/<path:object_id>/delete/", self.get_delete_view(), name=f"{info}_delete"),
+            path(f"{prefix}/<path:object_id>/change/", self.get_change_view(), name=f"{info}_change"),
         ]
 
         return urlpatterns
@@ -857,12 +849,24 @@ class APIModelAdmin(BaseAPIModelAdmin):
         serializer = serializer_class(instance=obj, context={"request": request})
         return get_form_fields_description(serializer, self, True)
 
+    def get_inline_serializer_kwargs(self, request, operation, inline, instance=None, data=None):
+        inline_serializer_params = {"data": data, "context": {"request": request}}
+
+        if operation == "change":
+            inline_serializer_params.update({"instance": instance, "partial": True})
+        elif operation == "delete":
+            del inline_serializer_params["data"]
+            inline_serializer_params.update({"instance": instance})
+
+        return inline_serializer_params
+
     def get_detail_view(self):
         from django_api_admin.admin_views.model_admin_views.detail import DetailView
 
         defaults = {
             "serializer_class": self.get_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
+            "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
         }
         return DetailView.as_view(**defaults)
@@ -873,6 +877,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         defaults = {
             "serializer_class": self.get_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
+            "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
         }
         return AddView.as_view(**defaults)
@@ -883,6 +888,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         defaults = {
             "serializer_class": self.get_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
+            "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
         }
         return ChangeView.as_view(**defaults)
@@ -913,6 +919,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         defaults = {
             "serializer_class": self.get_changelist_serializer_class(None),
             "authentication_classes": self.admin_site.get_authentication_classes(),
+            "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
         }
         return ChangeListView.as_view(**defaults)
@@ -929,17 +936,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
         defaults = {
             "authentication_classes": self.admin_site.get_authentication_classes(),
+            "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
         }
         return DeleteView.as_view(**defaults)
-
-    def get_inline_serializer_kwargs(self, request, operation, inline, instance=None, data=None):
-        inline_serializer_params = {"data": data, "context": {"request": request}}
-
-        if operation == "change":
-            inline_serializer_params.update({"instance": instance, "partial": True})
-        elif operation == "delete":
-            del inline_serializer_params["data"]
-            inline_serializer_params.update({"instance": instance})
-
-        return inline_serializer_params

@@ -12,7 +12,6 @@
 
 from copy import copy
 from weakref import WeakSet
-from functools import update_wrapper
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -24,9 +23,6 @@ from django.utils.functional import LazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy, gettext as _
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
-from django.http import JsonResponse
 
 from django_api_admin import actions
 from django_api_admin.admins.model_admin import APIModelAdmin
@@ -35,8 +31,6 @@ from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
 from rest_framework.exceptions import NotFound
 from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.parsers import JSONParser
 
 all_sites = WeakSet()
 
@@ -208,7 +202,7 @@ class APIAdminSite:
         """
         return self._global_actions[name]
 
-    def get_permission_classes(self, request):
+    def get_permission_classes(self):
         return self.permission_classes or [
             IsAuthenticated,
             IsAdminUser,
@@ -218,138 +212,6 @@ class APIAdminSite:
         from rest_framework.authentication import SessionAuthentication
 
         return self.authentication_classes or [SessionAuthentication]
-
-    def has_permission(self, request):
-        """
-        Return True if the given HttpRequest has permission to view
-        *at least one* page in the admin site.
-        """
-        permission_classes = self.get_permission_classes(request)
-        permissions = [permission_class() for permission_class in permission_classes]
-        return all(permission.has_permission(request, None) for permission in permissions)
-
-    def is_authenticated(self, request):
-        """
-        Return True if the given HttpRequest is authenticated by one of the
-        authentication classes.
-        """
-
-        authentication_classes = self.get_authentication_classes()
-        drf_request = Request(request, parsers=[JSONParser()])
-
-        for auth_class in authentication_classes:
-            authenticator = auth_class()
-            user_auth_tuple = authenticator.authenticate(drf_request)
-
-            if user_auth_tuple is not None:
-                return True
-
-        return False
-
-    def admin_view(self, view, cacheable=False):
-        """
-        Decorator to create an admin view attached to this ``AdminSite``. This
-        wraps the view and provides permission checking by calling
-        ``self.is_authenticated`` and ``self.has_permission``.
-
-        You'll want to use this from within ``AdminSite.get_urls()``:
-
-            class MyAdminSite(AdminSite):
-
-                def get_urls(self):
-                    from django.urls import path
-
-                    urls = super().get_urls()
-                    urls += [
-                        path('my_view/', self.admin_view(some_view))
-                    ]
-                    return urls
-
-        By default, admin_views are marked non-cacheable using the
-        ``never_cache`` decorator. If the view can be safely cached, set
-        cacheable=True.
-        """
-
-        def inner(request, *args, **kwargs):
-            if not self.is_authenticated(request):
-                return JsonResponse({"detail": _("Authentication credentials were not provided.")}, status=401)
-
-            if not self.has_permission(request):
-                return JsonResponse({"detail": _("You do not have permission to perform this action.")}, status=403)
-
-            return view(request, *args, **kwargs)
-
-        if not cacheable:
-            inner = never_cache(inner)
-
-        # We add csrf_protect here so this function can be used as a utility
-        # function for any view, without having to repeat 'csrf_protect'.
-        if not getattr(view, "csrf_exempt", False):
-            inner = csrf_protect(inner)
-
-        return update_wrapper(inner, view)
-
-    def get_urls(self):
-
-        def wrap(view, cacheable=False):
-            def wrapper(*args, **kwargs):
-                return self.admin_view(view, cacheable)(*args, **kwargs)
-
-            wrapper.admin_site = self
-            return update_wrapper(wrapper, view)
-
-        urlpatterns = [
-            path("", wrap(self.get_app_list_view()), name="index"),
-            path("autocomplete/", wrap(self.autocomplete_view()), name="autocomplete"),
-            path("site_context/", wrap(self.get_site_context_view()), name="site_context"),
-            path("history/", wrap(self.get_history_view()), name="history"),
-            path("permissions/", wrap(self.get_permissions_view()), name="permissions"),
-            path(
-                "r/<path:content_type_id>/<path:object_id>/",
-                wrap(self.get_view_on_site_view()),
-                name="view_on_site",
-            ),
-        ]
-
-        # Add the openapi-specification view
-        if self.include_openapi_specification_view:
-            urlpatterns.append(path("openapi-specification/", self.get_docs_view(), name="openapi-specification"))
-
-        # Save these urls under site_urls for schema tagging
-        self.site_urls = copy(urlpatterns)
-
-        # Add in each model's views, and create a list of valid URLS for the
-        # app_index
-        valid_app_labels = []
-        for model, model_admin in self._registry.items():
-            self.admin_urls[model] = model_admin.urls
-            for url in model_admin.urls:
-                urlpatterns += [url]
-            if model._meta.app_label not in valid_app_labels:
-                valid_app_labels.append(model._meta.app_label)
-
-        # If there were ModelAdmins registered, we should have a list of app
-        # labels for which we need to allow access to the app_index view,
-        if valid_app_labels:
-            regex = r"^(?P<app_label>" + "|".join(valid_app_labels) + ")/$"
-            app_index_path = re_path(regex, wrap(self.get_app_index_view()), name="app_index")
-            urlpatterns += [app_index_path]
-            self.site_urls += [app_index_path]
-
-        # Add the OpenAPI schema url and update the site_urls
-        schema_path = path(
-            "openapi-specification-schema/",
-            self.get_schema_view([path(f"{self.url_prefix}/", include(urlpatterns))]),
-            name="openapi-specification-schema",
-        )
-        urlpatterns.append(schema_path)
-        self.site_urls.append(schema_path)
-
-        return urlpatterns
-
-    @property
-    def urls(self):
-        return self.get_urls(), self.name, self.name
 
     def _build_app_dict(self, request, label=None):
         """
@@ -468,11 +330,66 @@ class APIAdminSite:
         except InvalidPage as e:
             raise NotFound(_("Invalid page (%(page_number)s): %(message)s") % {"page_number": page_number, "message": str(e)})
 
+    def get_urls(self):
+        urlpatterns = [
+            path("", self.get_app_list_view(), name="index"),
+            path("autocomplete/", self.autocomplete_view(), name="autocomplete"),
+            path("site_context/", self.get_site_context_view(), name="site_context"),
+            path("history/", self.get_history_view(), name="history"),
+            path("permissions/", self.get_permissions_view(), name="permissions"),
+            path(
+                "r/<path:content_type_id>/<path:object_id>/",
+                self.get_view_on_site_view(),
+                name="view_on_site",
+            ),
+        ]
+
+        # Add the openapi-specification view
+        if self.include_openapi_specification_view:
+            urlpatterns.append(path("openapi-specification/", self.get_docs_view(), name="openapi-specification"))
+
+        # Save these urls under site_urls for schema tagging
+        self.site_urls = copy(urlpatterns)
+
+        # Add in each model's views, and create a list of valid URLS for the
+        # app_index
+        valid_app_labels = []
+        for model, model_admin in self._registry.items():
+            self.admin_urls[model] = model_admin.urls
+            for url in model_admin.urls:
+                urlpatterns += [url]
+            if model._meta.app_label not in valid_app_labels:
+                valid_app_labels.append(model._meta.app_label)
+
+        # If there were ModelAdmins registered, we should have a list of app
+        # labels for which we need to allow access to the app_index view,
+        if valid_app_labels:
+            regex = r"^(?P<app_label>" + "|".join(valid_app_labels) + ")/$"
+            app_index_path = re_path(regex, self.get_app_index_view(), name="app_index")
+            urlpatterns += [app_index_path]
+            self.site_urls += [app_index_path]
+
+        # Add the OpenAPI schema url and update the site_urls
+        schema_path = path(
+            "openapi-specification-schema/",
+            self.get_schema_view([path(f"{self.url_prefix}/", include(urlpatterns))]),
+            name="openapi-specification-schema",
+        )
+        urlpatterns.append(schema_path)
+        self.site_urls.append(schema_path)
+
+        return urlpatterns
+
+    @property
+    def urls(self):
+        return self.get_urls(), self.name, self.name
+
     def get_app_list_view(self):
         from django_api_admin.admin_views.admin_site_views.app_list import AppListView
 
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
         return AppListView.as_view(**defaults)
@@ -480,7 +397,11 @@ class APIAdminSite:
     def get_app_index_view(self):
         from django_api_admin.admin_views.admin_site_views.app_index import AppIndexView
 
-        defaults = {"authentication_classes": self.get_authentication_classes(), "admin_site": self}
+        defaults = {
+            "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
+            "admin_site": self,
+        }
         return AppIndexView.as_view(**defaults)
 
     def autocomplete_view(self):
@@ -488,6 +409,7 @@ class APIAdminSite:
 
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
         return AutoCompleteView.as_view(**defaults)
@@ -497,6 +419,7 @@ class APIAdminSite:
 
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
         return SiteContextView.as_view(**defaults)
@@ -507,6 +430,7 @@ class APIAdminSite:
         defaults = {
             "serializer_class": self.get_log_entry_serializer(),
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
         return HistoryView.as_view(**defaults)
@@ -516,6 +440,7 @@ class APIAdminSite:
 
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
         return ViewOnSiteView.as_view(**defaults)
@@ -525,20 +450,30 @@ class APIAdminSite:
 
         defaults = {
             "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
             "admin_site": self,
         }
-
         return PermissionsView.as_view(**defaults)
 
     def get_schema_view(self, urlconf):
         from drf_spectacular.views import SpectacularAPIView
 
-        return SpectacularAPIView.as_view(urlconf=urlconf)
+        defaults = {
+            "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
+            "urlconf": urlconf,
+        }
+        return SpectacularAPIView.as_view(**defaults)
 
     def get_docs_view(self):
         from drf_spectacular.views import SpectacularRedocView
 
-        return SpectacularRedocView.as_view(url_name=f"{self.name}:openapi-specification-schema")
+        defaults = {
+            "authentication_classes": self.get_authentication_classes(),
+            "permission_classes": self.get_permission_classes(),
+            "url_name": f"{self.name}:openapi-specification-schema",
+        }
+        return SpectacularRedocView.as_view(**defaults)
 
 
 class DefaultAdminSite(LazyObject):

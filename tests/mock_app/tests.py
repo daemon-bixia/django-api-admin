@@ -192,7 +192,7 @@ class AdminSiteTestCase(APITestCase, URLPatternsTestCase):
 
         # Authenticate the superuser
         self.client.login(username="guest", password="password")
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=user)
 
         # Test if app_index denies permission
         app_label = Product._meta.app_label
