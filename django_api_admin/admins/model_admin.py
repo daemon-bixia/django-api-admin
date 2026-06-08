@@ -881,6 +881,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "renderer_classes": self.admin_site.renderer_classes,
         }
         return DetailView.as_view(**defaults)
 
@@ -892,6 +893,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "renderer_classes": self.admin_site.renderer_classes,
         }
         return AddView.as_view(**defaults)
 
@@ -903,6 +905,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "renderer_classes": self.admin_site.renderer_classes,
         }
         return ChangeView.as_view(**defaults)
 
@@ -935,6 +938,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
             "admin_site": self.admin_site,
+            "renderer_classes": self.admin_site.renderer_classes,
         }
         return ChangeListView.as_view(**defaults)
 
@@ -952,5 +956,6 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "renderer_classes": self.admin_site.renderer_classes,
         }
         return DeleteView.as_view(**defaults)

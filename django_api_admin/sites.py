@@ -391,6 +391,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return AppListView.as_view(**defaults)
 
@@ -401,6 +402,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return AppIndexView.as_view(**defaults)
 
@@ -411,6 +413,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return AutoCompleteView.as_view(**defaults)
 
@@ -421,6 +424,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return SiteContextView.as_view(**defaults)
 
@@ -432,6 +436,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return HistoryView.as_view(**defaults)
 
@@ -442,6 +447,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return ViewOnSiteView.as_view(**defaults)
 
@@ -452,6 +458,7 @@ class APIAdminSite:
             "authentication_classes": self.get_authentication_classes(),
             "permission_classes": self.get_permission_classes(),
             "admin_site": self,
+            "renderer_classes": self.renderer_classes,
         }
         return PermissionsView.as_view(**defaults)
 
