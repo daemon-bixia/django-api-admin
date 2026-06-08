@@ -19,7 +19,7 @@ class AdminSite(APIAdminSite):
 
         return [XSessionTokenAuthentication, authentication.SessionAuthentication]
 
-    def get_permission_classes(self, request):
+    def get_permission_classes(self):
         return [
             IsAuthenticated,
             IsAdminUser,

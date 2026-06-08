@@ -33,7 +33,7 @@ class PermissionsView(APIView):
         },
     )
     def get(self, request):
-        permission_classes = self.admin_site.get_permission_classes(request)
+        permission_classes = self.admin_site.get_permission_classes()
 
         user_permissions = {}
         for permission_class in permission_classes:
@@ -52,7 +52,7 @@ class PermissionsView(APIView):
         return Response({"status": 200, "data": serializer.data}, status=200)
 
     def get_serializer_class(self):
-        permission_classes = self.admin_site.get_permission_classes(None)
+        permission_classes = self.admin_site.get_permission_classes()
         fields = {
             permission_class.__name__: serializers.BooleanField(read_only=True) for permission_class in permission_classes
         }

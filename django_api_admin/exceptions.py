@@ -10,7 +10,15 @@
 # This file includes both Django code and your my own contributions.
 # -----------------------------------------------------------------------------
 
+import json
+from types import SimpleNamespace
+
 from django.core.exceptions import SuspiciousOperation
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import exception_handler
+from rest_framework.exceptions import NotAuthenticated
 
 
 class NotRelationField(Exception):
@@ -49,3 +57,47 @@ class NotRegistered(Exception):
     """The model is not registered."""
 
     pass
+
+
+def allauth_exception_handler(exc, context):
+    """
+    Custom exception handler that translates DRF `NotAuthenticated`
+    errors into the same JSON payload shape returned by `django-allauth`
+    headless endpoints.
+    """
+    from allauth.headless.base.response import AuthenticationResponse
+    from allauth.headless.constants import Client
+
+    response = exception_handler(exc, context)
+
+    if isinstance(exc, NotAuthenticated):
+        request = context.get("request")
+        if request is not None:
+            raw_request = getattr(request, "_request", request)
+
+            # Ensure the request has the ``allauth.headless`` attributes that
+            # the ``AuthenticationResponse`` class expects.
+            raw_request.allauth = SimpleNamespace()
+            raw_request.allauth.headless = SimpleNamespace()
+            client_type = Client.BROWSER
+            if (hasattr(raw_request, "headers") and "X-Session-Token" in raw_request.headers) or raw_request.META.get(
+                "HTTP_X_SESSION_TOKEN"
+            ):
+                client_type = Client.APP
+            raw_request.allauth.headless.client = client_type
+
+            allauth_response = AuthenticationResponse(raw_request)
+            try:
+                data = json.loads(allauth_response.content.decode("utf-8"))
+            except Exception:
+                data = {}
+
+            drf_response = Response(data, status=status.HTTP_401_UNAUTHORIZED)
+            # Preserve any cookies / headers set by the allauth response.
+            drf_response.cookies = allauth_response.cookies
+            for header, value in allauth_response.headers.items():
+                drf_response[header] = value
+
+            return drf_response
+
+    return response

@@ -58,7 +58,7 @@ def add_site_views_dynamic_schema(result, site, request):
     Dynamically add schemas and update paths for the AdminSite.
     """
     # Add permission view response schema
-    permission_classes = site.get_permission_classes(request)
+    permission_classes = site.get_permission_classes()
     schema_name = f"{site.name.title()}SitePermissions"
 
     # Ensure components and schemas exist in the result dictionary
