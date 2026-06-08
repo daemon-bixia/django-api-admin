@@ -921,6 +921,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "admin_site": self.admin_site,
         }
         return ChangeListView.as_view(**defaults)
 

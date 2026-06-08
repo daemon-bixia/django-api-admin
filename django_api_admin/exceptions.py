@@ -101,3 +101,17 @@ def allauth_exception_handler(exc, context):
             return drf_response
 
     return response
+
+
+def admin_exception_handler(exc, context):
+    """
+    Custom exception handler that changes DRF errors
+    errors into the format used by `django_api_admin`.
+    """
+    response = exception_handler(exc, context)
+
+    if response is not None:
+        if isinstance(response.data, dict) and "detail" in response.data and len(response.data) == 1:
+            response.data = {"status": response.status_code}
+
+    return response

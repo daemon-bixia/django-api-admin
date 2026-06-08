@@ -4,4 +4,4 @@ class APIAdminErrorViewMixin:
     """
 
     def get_exception_handler(self):
-        pass
+        return self.admin_site.get_exception_handler()

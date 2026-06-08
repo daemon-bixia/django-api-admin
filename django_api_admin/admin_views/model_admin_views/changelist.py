@@ -18,12 +18,14 @@ from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.model_ngettext import model_ngettext
 from django_api_admin.utils.lookup_field import lookup_field
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class ChangeListView(APIView):
+class ChangeListView(APIAdminErrorViewMixin, APIView):
     serializer_class = None
     permission_classes = []
     model_admin = None
+    admin_site = None
 
     @extend_schema(
         parameters=[ChangeListSerializer],

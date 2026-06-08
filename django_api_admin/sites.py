@@ -26,7 +26,7 @@ from django.utils.translation import gettext_lazy, gettext as _
 
 from django_api_admin import actions
 from django_api_admin.admins.model_admin import APIModelAdmin
-from django_api_admin.exceptions import AlreadyRegistered, NotRegistered
+from django_api_admin.exceptions import AlreadyRegistered, NotRegistered, admin_exception_handler
 
 from rest_framework.exceptions import NotFound
 from rest_framework.renderers import JSONRenderer
@@ -474,6 +474,9 @@ class APIAdminSite:
             "url_name": f"{self.name}:openapi-specification-schema",
         }
         return SpectacularRedocView.as_view(**defaults)
+
+    def get_exception_handler(self):
+        return admin_exception_handler
 
 
 class DefaultAdminSite(LazyObject):
