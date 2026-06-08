@@ -551,16 +551,40 @@ class RowSerializer(serializers.Serializer):
     )
 
 
-class ChangelistResponseSerializer(serializers.Serializer):
+class ChangelistDataSerializer(serializers.Serializer):
     action_form = FormFieldsSerializer(help_text=_("Configuration for the action form, including fields and inlines."))
     config = ConfigSerializer(help_text=_("Configuration metadata for the changelist."))
     columns = ColumnSerializer(many=True, help_text=_("A list of column definitions for the table."))
     rows = RowSerializer(many=True, help_text=_("The actual data rows to be displayed."))
 
 
+class ChangelistResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        required=True,
+        help_text=_("The status code of the response."),
+    )
+    data = ChangelistDataSerializer(required=True, help_text=_("The changelist data for the model."))
+
+
 class ResponseMessageSerializer(serializers.Serializer):
     detail = serializers.CharField(help_text=_("A detailed description of the response message."))
 
 
-class ErrorMessageSerializer(serializers.Serializer):
-    detail = serializers.CharField(help_text=_("A detailed description of the error or response."))
+class EmptyResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        required=True,
+        help_text=_("The status code of the response."),
+    )
+
+
+class ErrorDataSerializer(serializers.Serializer):
+    param = serializers.CharField(help_text=_("The parameter name."))
+    message = serializers.CharField(help_text=_("The error message."))
+
+
+class ValidationErrorSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        required=True,
+        help_text=_("The status code of the response."),
+    )
+    errors = ErrorDataSerializer(many=True, help_text=_("The list of errors."))

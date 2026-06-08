@@ -247,30 +247,6 @@ def build_changelist_put_request_schema(result, inspector, model_admin, request,
     return json_content["schema"]
 
 
-def build_changelist_put_response_schema(result, inspector, model_admin, request, json_content):
-    """
-    Build the response schema for changelist bulk updates (PUT).
-    """
-    serializer_class = model_admin.get_changelist_serializer_class(request)
-    resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content, direction="response")
-    json_content["schema"] = {
-        "type": "object",
-        "properties": {
-            "detail": {
-                "type": "string",
-                "description": "A detail message about the bulk update operation",
-            },
-            "data": {
-                "type": "object",
-                "additionalProperties": resolved_ref,
-                "description": "A mapping of object IDs to their updated data.",
-            },
-        },
-        "required": ["detail", "data"],
-    }
-    return json_content["schema"]
-
-
 def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
     app_label, model_name = model._meta.app_label, model._meta.verbose_name
     model_admin = site.get_model_admin(model)
@@ -402,14 +378,6 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     put_content = put_request_body.setdefault("content", {})
                     put_json_content = put_content.setdefault("application/json", {})
                     build_changelist_put_request_schema(result, inspector, model_admin, request, put_json_content)
-
-                    # Add dynamic response schema to ChangelistView.put
-                    put_responses = put.setdefault("responses", {})
-                    put_response_200 = put_responses.setdefault("200", {})
-                    put_response_content = put_response_200.setdefault("content", {})
-                    put_response_json_content = put_response_content.setdefault("application/json", {})
-                    build_changelist_put_response_schema(result, inspector, model_admin, request, put_response_json_content)
-
     return result
 
 

@@ -12,7 +12,7 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 from django_api_admin.mixins import APIAdminErrorViewMixin
 from django_api_admin.exceptions import IncorrectLookupParameters
-from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer, ResponseMessageSerializer
+from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, ChangeList
 from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
@@ -42,8 +42,9 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
                     )
                 ],
             ),
-            403: CommonAPIResponses.permission_denied(),
+            400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def get(self, request):
@@ -76,20 +77,10 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
 
     @extend_schema(
         responses={
-            200: OpenApiResponse(
-                description=_("Action was executed on selected objects"),
-                response=ResponseMessageSerializer,
-                examples=[
-                    OpenApiExample(
-                        name=_("Success Response"),
-                        description=_("Example of a successful action execution"),
-                        value={"detail": "action was performed successfully"},
-                        status_codes=["200"],
-                    )
-                ],
-            ),
-            403: CommonAPIResponses.permission_denied(),
+            200: CommonAPIResponses.ok("Action was executed on selected objects"),
+            400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         }
     )
     def post(self, request):
@@ -104,11 +95,10 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
 
     @extend_schema(
         responses={
-            200: OpenApiResponse(
-                description=_("The records that were updated"),
-            ),
-            403: CommonAPIResponses.permission_denied(),
+            200: CommonAPIResponses.ok("Records were updated successfully"),
+            400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         }
     )
     def put(self, request):
@@ -121,10 +111,13 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         if not self.model_admin.has_change_permission(request):
             raise PermissionDenied
         serializer_class = self.model_admin.get_changelist_serializer_class(request)
-        # Validate that the input structure is correct
-        serializer = serializer_class(data=request.data.get("data", []), many=True)
-        if not serializer.is_valid():
-            raise ValidationError(format_error(serializer.errors))
+        # Ensure that all items have a pk field
+        errors = {}
+        for idx, item in enumerate(request.data.get("data", [])):
+            if "pk" not in item:
+                errors[f"pk.{idx}"] = ["This field is required."]
+        if errors:
+            raise ValidationError(format_error(errors))
         modified_objects = self.model_admin._get_list_editable_queryset(request)
         cl.bulk_operation = ChangelistBulkOperation(
             request, self.model_admin, modified_objects, request.data.get("data", {}), serializer_class

@@ -20,3 +20,18 @@ def format_error(errors):
             )
 
     return formatted_errors
+
+
+def flatten_errors(idx, errors):
+    flattened_errors = {}
+
+    if isinstance(errors, dict):
+        for key, value in errors.items():
+            flattened_errors[f"{key}.{idx}"] = value
+
+    elif isinstance(errors, list):
+        for error in errors:
+            for key, value in error.items():
+                flattened_errors[f"{key}.{idx}"] = value
+
+    return flattened_errors

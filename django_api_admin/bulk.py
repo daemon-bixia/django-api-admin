@@ -8,6 +8,7 @@ from rest_framework.exceptions import NotFound
 
 from django_api_admin.utils.get_related_name import get_related_name
 from django_api_admin.utils.get_changed_data import get_changed_data
+from django_api_admin.utils.format_error import flatten_errors
 
 
 class InlineBulkOperation:
@@ -259,13 +260,13 @@ class ChangelistBulkOperation:
             self.errors["non_field_errors"] = ["Change data cannot be empty"]
             return False
 
-        for data in self.data:
+        for idx, data in enumerate(self.data):
             pk = data["pk"]
             # Get the object we're editing
             instance = next((i for i in self.instances if i.pk == pk), None)
             if not instance:
                 verbose_name = self.model_admin.model._meta.verbose_name
-                self.errors["pk"] = [
+                self.errors[f"pk.{idx}"] = [
                     _(
                         (
                             "Couldn't find %s associated with the data at row %s is not found,"
@@ -280,9 +281,9 @@ class ChangelistBulkOperation:
             serializer = self.serializer_class(instance, data=data)
             if serializer.is_valid():
                 changed_data = get_changed_data(serializer)
-                self.result[pk] = (serializer, changed_data)
+                self.result[idx] = (serializer, changed_data)
             else:
-                self.errors[pk] = serializer.errors
+                self.errors.update(flatten_errors(idx, serializer.errors))
 
         return not bool(self.errors)
 
