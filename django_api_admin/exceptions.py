@@ -113,5 +113,7 @@ def admin_exception_handler(exc, context):
     if response is not None:
         if isinstance(response.data, dict) and "detail" in response.data and len(response.data) == 1:
             response.data = {"status": response.status_code}
+        else:
+            response.data = {"status": response.status_code, "errors": response.data}
 
     return response

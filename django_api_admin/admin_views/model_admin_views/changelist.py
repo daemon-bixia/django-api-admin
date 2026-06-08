@@ -1,6 +1,6 @@
 from django.db.models import Model
 from django.db import router, transaction
-from django.utils.translation import gettext_lazy as _, ngettext
+from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 
 from rest_framework import status
@@ -10,15 +10,15 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
+from django_api_admin.mixins import APIAdminErrorViewMixin
 from django_api_admin.exceptions import IncorrectLookupParameters
 from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer, ResponseMessageSerializer
 from django_api_admin.openapi import CommonAPIResponses, ChangeList
 from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
-from django_api_admin.utils.model_ngettext import model_ngettext
 from django_api_admin.utils.lookup_field import lookup_field
-from django_api_admin.mixins import APIAdminErrorViewMixin
+from django_api_admin.utils.format_error import format_error
 
 
 class ChangeListView(APIAdminErrorViewMixin, APIView):
@@ -67,7 +67,10 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         form_fields = get_form_fields_description(serializer, self.model_admin, change=False)
 
         return Response(
-            {"action_form": {"fields": form_fields}, "config": config, "columns": columns, "rows": rows},
+            {
+                "status": status.HTTP_200_OK,
+                "data": {"action_form": {"fields": form_fields}, "config": config, "columns": columns, "rows": rows},
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -118,12 +121,15 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         if not self.model_admin.has_change_permission(request):
             raise PermissionDenied
         serializer_class = self.model_admin.get_changelist_serializer_class(request)
+        # Validate that the input structure is correct
+        serializer = serializer_class(data=request.data.get("data", []), many=True)
+        if not serializer.is_valid():
+            raise ValidationError(format_error(serializer.errors))
         modified_objects = self.model_admin._get_list_editable_queryset(request)
         cl.bulk_operation = ChangelistBulkOperation(
             request, self.model_admin, modified_objects, request.data.get("data", {}), serializer_class
         )
         if cl.bulk_operation.is_valid():
-            changecount = 0
             with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
                 for serializer, changed_data in cl.bulk_operation.result.values():
                     if changed_data:
@@ -134,24 +140,17 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
                             request, (serializer, changed_data), None, False
                         )
                         self.model_admin.log_change(request, updated_object, change_message)
-                        changecount += 1
-            if changecount:
-                msg = ngettext(
-                    "%(count)s %(name)s was changed successfully.",
-                    "%(count)s %(name)s were changed successfully.",
-                    changecount,
-                ) % {
-                    "count": changecount,
-                    "name": model_ngettext(self.model_admin.opts, changecount),
-                }
 
-                return Response({"detail": msg, "data": cl.bulk_operation.validated_data}, status=status.HTTP_200_OK)
+            return Response(
+                {"status": status.HTTP_200_OK},
+                status=status.HTTP_200_OK,
+            )
 
-        raise ValidationError({"errors": cl.bulk_operation.errors})
+        raise ValidationError(format_error(cl.bulk_operation.errors))
 
     def get_columns(self, request, cl):
         """
-        return changelist columns or headers.
+        Return changelist columns or headers.
         """
         columns = []
         for field_name in self.get_fields_list(request, cl):
@@ -262,7 +261,7 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         try:
             return self.model_admin.get_changelist_instance(request)
         except IncorrectLookupParameters as e:
-            raise ValidationError(str(e))
+            raise ValidationError(format_error({"non_field_errors": [str(e)]}))
 
     def get_action_serializer_class(self, request):
         return self.model_admin.get_action_serializer_class(request)

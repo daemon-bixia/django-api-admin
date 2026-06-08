@@ -36,6 +36,7 @@ from django_api_admin.utils.lookup_spawns_duplicates import lookup_spawns_duplic
 from django_api_admin.utils.construct_change_message import construct_change_message
 from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.get_deleted_objects import get_deleted_objects
+from django_api_admin.utils.format_error import format_error
 
 
 IS_POPUP_VAR = "_popup"
@@ -214,19 +215,21 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_changelist_serializer_class(self, request, **kwargs):
         """
-        Return a Serializer class for use on the changelist page if list_editable
-        is used.
+        Return a serializer class for use on the changelist page if list_editable is used.
         """
-        defaults = {
-            "serializer_field_callback": partial(self.serializer_field_for_dbfield, request=request),
-            "class_name": f"{self.model.__name__}ChangelistSerializer",
-            **kwargs,
-        }
         return model_serializer_factory(
-            self.model,
-            self.serializer_class,
-            fields=self.list_editable,
-            **defaults,
+            model=self.model,
+            serializer_class=self.serializer_class,
+            fields=["pk", *self.list_editable],
+            serializer_field_callback=partial(self.serializer_field_for_dbfield, request=request),
+            class_name=f"{self.model.__name__}ChangelistSerializer",
+            extra_kwargs={
+                "pk": {
+                    "required": True,
+                    "read_only": False,
+                }
+            },
+            **kwargs,
         )
 
     def get_serializer_classes_with_inlines(self, request, obj=None):
@@ -683,6 +686,8 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         Handle an admin action.
         """
+        from rest_framework.exceptions import ValidationError
+
         serializer_class = self.get_action_serializer_class(request)
         serializer = serializer_class(data=request.data)
 
@@ -697,7 +702,13 @@ class APIModelAdmin(BaseAPIModelAdmin):
             selected = request.data.get("selected_ids", None)
             if not selected and not select_across:
                 msg = _("Items must be selected in order to perform actions on them. No items have been changed.")
-                return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        "errors": [{"message": msg, "param": "non_field_errors"}],
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             if selected and not select_across:
                 queryset = queryset.filter(pk__in=selected)
 
@@ -707,10 +718,12 @@ class APIModelAdmin(BaseAPIModelAdmin):
             if response:
                 return response
 
-            msg = _("Successfully performed the action")
-            return Response({"detail": msg}, status=status.HTTP_200_OK)
+            return Response(
+                {"status": status.HTTP_200_OK},
+                status=status.HTTP_200_OK,
+            )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(format_error(serializer.errors))
 
     def response_delete(self, request, obj_display, obj_id):
         """

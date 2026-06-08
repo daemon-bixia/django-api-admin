@@ -1,5 +1,5 @@
 from django.db import router
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from django.forms.models import _get_foreign_key
 from django.contrib.admin.utils import NestedObjects
 from django.utils.text import get_text_list
@@ -264,12 +264,13 @@ class ChangelistBulkOperation:
             # Get the object we're editing
             instance = next((i for i in self.instances if i.pk == pk), None)
             if not instance:
-                verbose_name = self.model_admin.model.verbose_name
+                verbose_name = self.model_admin.model._meta.verbose_name
                 self.errors["pk"] = [
                     _(
-                        "Couldn't find %s associated with the data at row %s \
-                    is not found, check that the 'pk' value represents a  \
-                    valid %s in the database"
+                        (
+                            "Couldn't find %s associated with the data at row %s is not found,"
+                            " check that the 'pk' value represents a valid %s in the database"
+                        )
                         % (verbose_name, pk, verbose_name)
                     )
                 ]
