@@ -68,8 +68,6 @@ def allauth_exception_handler(exc, context):
     from allauth.headless.base.response import AuthenticationResponse
     from allauth.headless.constants import Client
 
-    response = exception_handler(exc, context)
-
     if isinstance(exc, NotAuthenticated):
         request = context.get("request")
         if request is not None:
@@ -100,7 +98,7 @@ def allauth_exception_handler(exc, context):
 
             return drf_response
 
-    return response
+    return admin_exception_handler(exc, context)
 
 
 def admin_exception_handler(exc, context):

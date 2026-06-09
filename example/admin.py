@@ -7,6 +7,7 @@ from django_api_admin import APIAdminSite
 from django_api_admin import APIModelAdmin, display, TabularInlineAPI
 from django_api_admin.constants import CORE_FIELD_ATTRIBUTES
 from django_api_admin.admins.model_admin import ShowFacets
+from django_api_admin.exceptions import allauth_exception_handler
 
 from example.permissions import IsMFAEnabledOrGracePeriod
 from example.models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review
@@ -25,6 +26,9 @@ class AdminSite(APIAdminSite):
             IsAdminUser,
             IsMFAEnabledOrGracePeriod,
         ]
+
+    def get_exception_handler(self):
+        return allauth_exception_handler
 
 
 site = AdminSite(include_auth=True)

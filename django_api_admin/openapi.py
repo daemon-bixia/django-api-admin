@@ -389,7 +389,7 @@ class CommonAPIPathParams:
     )
 
 
-User = {
+user = {
     "id": 1,
     "last_login": "2025-01-25T13:00:49.925221Z",
     "is_superuser": True,
@@ -404,7 +404,7 @@ User = {
     "user_permissions": [],
 }
 
-ChangeList = {
+change_list = {
     "status": 200,
     "data": {
         "action_form": {
@@ -517,7 +517,7 @@ ChangeList = {
     },
 }
 
-CrudOperation = {
+crud_operation = {
     "detail": "The author “René Descartes” was changed successfully.",
     "data": {
         "id": 1,
@@ -530,4 +530,27 @@ CrudOperation = {
         "publisher": [1],
         "pk": 1,
     },
+}
+
+site_context = {
+    "site_title": "Django site admin",
+    "site_header": "Django administration",
+    "site_url": "/",
+    "has_permission": True,
+    "available_apps": [
+        {
+            "name": "Authentication and Authorization",
+            "app_label": "auth",
+            "app_url": "/api_admin/auth/",
+            "has_module_perms": True,
+            "models": [
+                {
+                    "name": "Users",
+                    "object_name": "User",
+                    "perms": {"add": True, "change": True, "delete": True, "view": True},
+                }
+            ],
+        }
+    ],
+    "is_nav_sidebar_enabled": True,
 }

@@ -7,10 +7,11 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.serializers import SiteContextSerializer
-from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.openapi import CommonAPIResponses, site_context
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class SiteContextView(APIView):
+class SiteContextView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve core attributes of the admin site.
 
@@ -31,28 +32,7 @@ class SiteContextView(APIView):
                 examples=[
                     OpenApiExample(
                         name=_("Success Response"),
-                        value={
-                            "site_title": "Django site admin",
-                            "site_header": "Django administration",
-                            "site_url": "/",
-                            "has_permission": True,
-                            "available_apps": [
-                                {
-                                    "name": "Authentication and Authorization",
-                                    "app_label": "auth",
-                                    "app_url": "/api_admin/auth/",
-                                    "has_module_perms": True,
-                                    "models": [
-                                        {
-                                            "name": "Users",
-                                            "object_name": "User",
-                                            "perms": {"add": True, "change": True, "delete": True, "view": True},
-                                        }
-                                    ],
-                                }
-                            ],
-                            "is_nav_sidebar_enabled": True,
-                        },
+                        value=site_context,
                         status_codes=["200"],
                     )
                 ],

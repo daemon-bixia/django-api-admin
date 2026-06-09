@@ -13,7 +13,7 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from django_api_admin.mixins import APIAdminErrorViewMixin
 from django_api_admin.exceptions import IncorrectLookupParameters
 from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
-from django_api_admin.openapi import CommonAPIResponses, ChangeList
+from django_api_admin.openapi import CommonAPIResponses, change_list
 from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
@@ -37,7 +37,7 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
                     OpenApiExample(
                         name=_("Success Response"),
                         description=_("Example of a success response"),
-                        value=ChangeList,
+                        value=change_list,
                         status_codes=["200"],
                     )
                 ],
