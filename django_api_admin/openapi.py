@@ -1,6 +1,15 @@
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, OpenApiExample, OpenApiParameter
-from django_api_admin.serializers import EmptyResponseSerializer, ValidationErrorSerializer
+from django_api_admin.serializers import (
+    OKResponseSerializer,
+    ValidationErrorSerializer,
+    PermissionDeniedResponseSerializer,
+    NotFoundResponseSerializer,
+    UnauthorizedResponseSerializer,
+    MethodNotAllowedResponseSerializer,
+    ConflictResponseSerializer,
+    ServerErrorResponseSerializer,
+)
 
 
 form_with_inlines_description = {
@@ -112,7 +121,7 @@ class APIResponseExamples:
             name=_("Success Response"),
             summary=_("Example of a successful field attribute response"),
             description=_("Retrieve form field attributes for the endpoint"),
-            value=form_with_inlines_description,
+            value={"status": 200, "data": form_with_inlines_description},
             status_codes=["200"],
         )
 
@@ -250,24 +259,10 @@ class CommonAPIResponses:
     """Collection of standardized OpenAPI response templates."""
 
     @staticmethod
-    def permission_denied():
-        return OpenApiResponse(
-            description=_("Forbidden"),
-            response=EmptyResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Permission denied"),
-                    value={"status": 403},
-                    status_codes=["403"],
-                )
-            ],
-        )
-
-    @staticmethod
     def ok(message=None):
         return OpenApiResponse(
             description=_(message or "OK"),
-            response=EmptyResponseSerializer,
+            response=OKResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("OK"),
@@ -278,10 +273,24 @@ class CommonAPIResponses:
         )
 
     @staticmethod
+    def permission_denied():
+        return OpenApiResponse(
+            description=_("Forbidden"),
+            response=PermissionDeniedResponseSerializer,
+            examples=[
+                OpenApiExample(
+                    name=_("Permission denied"),
+                    value={"status": 403},
+                    status_codes=["403"],
+                )
+            ],
+        )
+
+    @staticmethod
     def not_found():
         return OpenApiResponse(
             description=_("Resource not found"),
-            response=EmptyResponseSerializer,
+            response=NotFoundResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Not Found"),
@@ -309,7 +318,7 @@ class CommonAPIResponses:
     def unauthorized():
         return OpenApiResponse(
             description=_("Not authenticated"),
-            response=EmptyResponseSerializer,
+            response=UnauthorizedResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Unauthorized"),
@@ -323,7 +332,7 @@ class CommonAPIResponses:
     def method_not_allowed():
         return OpenApiResponse(
             description=_("Method not allowed"),
-            response=EmptyResponseSerializer,
+            response=MethodNotAllowedResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Method Not Allowed"),
@@ -337,7 +346,7 @@ class CommonAPIResponses:
     def conflict():
         return OpenApiResponse(
             description=_("Resource conflict"),
-            response=EmptyResponseSerializer,
+            response=ConflictResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Conflict"),
@@ -351,7 +360,7 @@ class CommonAPIResponses:
     def server_error():
         return OpenApiResponse(
             description=_("Internal server error"),
-            response=EmptyResponseSerializer,
+            response=ServerErrorResponseSerializer,
             examples=[
                 OpenApiExample(
                     name=_("Server Error"),
@@ -402,155 +411,4 @@ user = {
     "date_joined": "2025-01-24T11:43:43.500792Z",
     "groups": [],
     "user_permissions": [],
-}
-
-change_list = {
-    "status": 200,
-    "data": {
-        "action_form": {
-            "fields": [
-                {
-                    "type": "ChoiceField",
-                    "name": "action",
-                    "attrs": {
-                        "read_only": False,
-                        "write_only": False,
-                        "required": True,
-                        "default": None,
-                        "allow_null": False,
-                        "label": "Action",
-                        "help_text": None,
-                        "initial": None,
-                        "style": {},
-                        "choices": {
-                            "": "---------",
-                            "delete_selected": "Delete selected authors",
-                            "make_old": "make all authors old",
-                            "make_young": "make all authors young",
-                        },
-                        "allow_blank": False,
-                        "html_cutoff": None,
-                        "html_cutoff_text": "More than {count} items...",
-                    },
-                },
-            ]
-        },
-        "config": {
-            "actions_on_top": True,
-            "actions_on_bottom": False,
-            "actions_selection_counter": True,
-            "empty_value_display": "-",
-            "list_display": ["name", "age", "user", "is_old_enough", "title", "gender"],
-            "list_display_links": ["name"],
-            "list_editable": ["title"],
-            "exclude": ["gender"],
-            "show_full_result_count": True,
-            "list_per_page": 6,
-            "list_max_show_all": 200,
-            "date_hierarchy": "date_joined",
-            "search_help_text": None,
-            "sortable_by": None,
-            "search_fields": ["name", "publisher__name"],
-            "preserve_filters": True,
-            "full_count": 1,
-            "result_count": 1,
-            "action_choices": [
-                ["delete_selected", "Delete selected authors"],
-                ["make_old", "make all authors old"],
-                ["make_young", "make all authors young"],
-            ],
-            "filters": [
-                {
-                    "title": "is vip",
-                    "choices": [
-                        {"selected": True, "query_string": "?", "display": "All"},
-                        {"selected": False, "query_string": "?is_vip__exact=1", "display": "Yes"},
-                        {"selected": False, "query_string": "?is_vip__exact=0", "display": "No"},
-                    ],
-                },
-                {
-                    "title": "age",
-                    "choices": [
-                        {"selected": True, "query_string": "?", "display": "All"},
-                        {"selected": False, "query_string": "?age__exact=60", "display": "senior"},
-                        {"selected": False, "query_string": "?age__exact=1", "display": "baby"},
-                        {"selected": False, "query_string": "?age__exact=2", "display": "also a baby"},
-                    ],
-                },
-            ],
-            "list_display_fields": ["name", "age", "user", "title"],
-            "editing_fields": [
-                {
-                    "type": "CharField",
-                    "name": "title",
-                    "attrs": {
-                        "read_only": False,
-                        "write_only": False,
-                        "required": False,
-                        "default": None,
-                        "allow_blank": False,
-                        "allow_null": True,
-                        "style": {},
-                        "label": "Title",
-                        "help_text": None,
-                        "initial": "",
-                        "max_length": 20,
-                        "min_length": None,
-                        "trim_whitespace": True,
-                    },
-                }
-            ],
-        },
-        "columns": [
-            {"field": "name", "headerName": "name"},
-            {"field": "age", "headerName": "age"},
-            {"field": "user", "headerName": "user"},
-            {"field": "is_old_enough", "headerName": "is this author old enough"},
-            {"field": "title", "headerName": "title"},
-        ],
-        "rows": [
-            {
-                "id": 1,
-                "cells": {"name": "Muhammad", "age": "60", "user": "ms", "is_old_enough": True, "title": "-"},
-            }
-        ],
-    },
-}
-
-crud_operation = {
-    "detail": "The author “René Descartes” was changed successfully.",
-    "data": {
-        "id": 1,
-        "name": "Renene Descartes",
-        "age": 60,
-        "is_vip": True,
-        "date_joined": "2025-02-05T04:12:12.191849Z",
-        "title": None,
-        "user": 1,
-        "publisher": [1],
-        "pk": 1,
-    },
-}
-
-site_context = {
-    "site_title": "Django site admin",
-    "site_header": "Django administration",
-    "site_url": "/",
-    "has_permission": True,
-    "available_apps": [
-        {
-            "name": "Authentication and Authorization",
-            "app_label": "auth",
-            "app_url": "/api_admin/auth/",
-            "has_module_perms": True,
-            "models": [
-                {
-                    "name": "Users",
-                    "object_name": "User",
-                    "perms": {"add": True, "change": True, "delete": True, "view": True},
-                }
-            ],
-        }
-    ],
-    "is_nav_sidebar_enabled": True,
 }

@@ -165,7 +165,7 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
     # Add the serializer auto schema reference as `data`
     serializer_class = model_admin.get_serializer_class(request)
     resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content)
-    json_content["schema"]["properties"]["data"]["allOf"] = [resolved_ref]
+    json_content["schema"]["properties"]["data"]["properties"]["form"]["allOf"] = [resolved_ref]
     # Add a list of auto schema references for every inline model
     inlines = model_admin.inlines
     for inline in inlines:
@@ -180,7 +180,7 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
         inline_app_label = inline.model._meta.app_label
         inline_model_name = inline.model._meta.verbose_name
         model_id = f"{inline_app_label}.{inline_model_name}"
-        json_content["schema"]["properties"]["inlines"]["properties"][model_id] = {
+        json_content["schema"]["properties"]["data"]["properties"]["inlines"]["properties"][model_id] = {
             "type": "object",
             "description": f"Operations for inline model {inline_app_label}.{inline_model_name}",
             "properties": {
@@ -202,8 +202,12 @@ def build_serializer_with_inlines_schema(result, inspector, model_admin, request
             },
         }
         if add:
-            del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["change"]
-            del json_content["schema"]["properties"]["inlines"]["properties"][model_id]["properties"]["delete"]
+            del json_content["schema"]["properties"]["data"]["properties"]["inlines"]["properties"][model_id]["properties"][
+                "change"
+            ]
+            del json_content["schema"]["properties"]["data"]["properties"]["inlines"]["properties"][model_id]["properties"][
+                "delete"
+            ]
 
 
 def build_changelist_action_request_schema(result, inspector, model_admin, request, json_content):
@@ -247,6 +251,27 @@ def build_changelist_put_request_schema(result, inspector, model_admin, request,
     return json_content["schema"]
 
 
+def build_changelist_put_response_schema(result, inspector, model_admin, request, json_content):
+    """
+    Build the response schema for changelist bulk updates (PUT).
+    """
+    serializer_class = model_admin.get_changelist_serializer_class(request)
+    resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content, direction="response")
+    json_content["schema"] = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "number", "description": "The status code of the response.", "default": 200},
+            "data": {
+                "type": "object",
+                "additionalProperties": resolved_ref,
+                "description": "A mapping of object IDs to their updated data.",
+            },
+        },
+        "required": ["status", "data"],
+    }
+    return json_content["schema"]
+
+
 def add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator):
     app_label, model_name = model._meta.app_label, model._meta.verbose_name
     model_admin = site.get_model_admin(model)
@@ -279,17 +304,26 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 json_content["schema"] = {
                     "type": "object",
                     "properties": {
-                        "detail": {
-                            "type": "string",
-                            "description": "A detail message about the bulk update operation",
+                        "status": {
+                            "type": "number",
+                            "description": "The status code of the response.",
+                            "default": 200,
                         },
                         "data": {
-                            "description": "The updated model instance",
-                        },
-                        "inlines": {
-                            "type": "object",
-                            "properties": {},
-                            "description": "The modified inlines instances",
+                            "description": "The updated instances",
+                            "properties": {
+                                "form": {
+                                    "type": "object",
+                                    "description": "The modified instance",
+                                    "properties": {},
+                                },
+                                "inlines": {
+                                    "type": "object",
+                                    "description": "The modified inlines instances",
+                                    "properties": {},
+                                },
+                            },
+                            "required": ["form"],
                         },
                     },
                     "required": ["detail", "data", "inlines"],
@@ -334,20 +368,30 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 json_content["schema"] = {
                     "type": "object",
                     "properties": {
-                        "detail": {
-                            "type": "string",
-                            "description": "A detail message about the bulk update operation",
+                        "status": {
+                            "type": "number",
+                            "description": "The status code of the response.",
+                            "default": 200,
                         },
                         "data": {
-                            "description": "The updated model instance",
-                        },
-                        "inlines": {
                             "type": "object",
-                            "properties": {},
-                            "description": "The modified inlines instances",
+                            "description": "The created objects.",
+                            "properties": {
+                                "form": {
+                                    "type": "object",
+                                    "description": "The added instance",
+                                    "properties": {},
+                                },
+                                "inlines": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "description": "The modified inlines instances",
+                                },
+                            },
+                            "required": ["form"],
                         },
                     },
-                    "required": ["detail", "data", "inlines"],
+                    "required": ["status", "data"],
                 }
                 # Populate `data` and `inlines` schema properties
                 build_serializer_with_inlines_schema(result, inspector, model_admin, request, json_content, add=True)
@@ -378,6 +422,14 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     put_content = put_request_body.setdefault("content", {})
                     put_json_content = put_content.setdefault("application/json", {})
                     build_changelist_put_request_schema(result, inspector, model_admin, request, put_json_content)
+
+                    # Add dynamic response schema to ChangelistView.put
+                    put_responses = put.setdefault("responses", {})
+                    put_response_200 = put_responses.setdefault("200", {})
+                    put_response_content = put_response_200.setdefault("content", {})
+                    put_response_json_content = put_response_content.setdefault("application/json", {})
+                    build_changelist_put_response_schema(result, inspector, model_admin, request, put_response_json_content)
+
     return result
 
 

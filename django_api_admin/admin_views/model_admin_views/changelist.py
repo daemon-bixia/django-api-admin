@@ -8,12 +8,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.mixins import APIAdminErrorViewMixin
 from django_api_admin.exceptions import IncorrectLookupParameters
-from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer
-from django_api_admin.openapi import CommonAPIResponses, change_list
+from django_api_admin.serializers import ChangeListSerializer, ChangelistResponseSerializer, ChangelistErrorResponseSerializer
+from django_api_admin.openapi import CommonAPIResponses
 from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
@@ -33,14 +33,6 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
             200: OpenApiResponse(
                 description=_("Column definitions, and row data"),
                 response=ChangelistResponseSerializer,
-                examples=[
-                    OpenApiExample(
-                        name=_("Success Response"),
-                        description=_("Example of a success response"),
-                        value=change_list,
-                        status_codes=["200"],
-                    )
-                ],
             ),
             400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
@@ -95,8 +87,11 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
 
     @extend_schema(
         responses={
-            200: CommonAPIResponses.ok("Records were updated successfully"),
-            400: CommonAPIResponses.bad_request(),
+            200: OpenApiResponse(description=_("Records were updated successfully")),
+            400: OpenApiResponse(
+                description=_("Failed to update records"),
+                response=ChangelistErrorResponseSerializer,
+            ),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
         }
@@ -115,9 +110,9 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         errors = {}
         for idx, item in enumerate(request.data.get("data", [])):
             if "pk" not in item:
-                errors[f"pk.{idx}"] = ["This field is required."]
+                errors[idx] = format_error({"pk": ["This field is required."]})
         if errors:
-            raise ValidationError(format_error(errors))
+            raise ValidationError(errors)
         modified_objects = self.model_admin._get_list_editable_queryset(request)
         cl.bulk_operation = ChangelistBulkOperation(
             request, self.model_admin, modified_objects, request.data.get("data", {}), serializer_class
@@ -135,11 +130,11 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
                         self.model_admin.log_change(request, updated_object, change_message)
 
             return Response(
-                {"status": status.HTTP_200_OK},
+                {"status": status.HTTP_200_OK, "data": cl.bulk_operation.validated_data},
                 status=status.HTTP_200_OK,
             )
 
-        raise ValidationError(format_error(cl.bulk_operation.errors))
+        raise ValidationError(cl.bulk_operation.errors)
 
     def get_columns(self, request, cl):
         """

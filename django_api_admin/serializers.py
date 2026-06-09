@@ -457,7 +457,12 @@ class InlineSerializer(serializers.Serializer):
 
 class FormFieldsSerializer(serializers.Serializer):
     form = FormSerializer(required=True, help_text=_("The form configuration for the model."))
-    inlines = InlineSerializer(many=True, required=True, help_text=_("The inlines configuration for the model."))
+    inlines = InlineSerializer(many=True, required=False, help_text=_("The inlines configuration for the model."))
+
+
+class FormFieldsResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = FormFieldsSerializer(required=True, help_text=_("The form configuration for the model."))
 
 
 class URLsSerializer(serializers.Serializer):
@@ -560,7 +565,7 @@ class ChangelistDataSerializer(serializers.Serializer):
 
 class ChangelistResponseSerializer(serializers.Serializer):
     status = serializers.IntegerField(
-        required=True,
+        default=200,
         help_text=_("The status code of the response."),
     )
     data = ChangelistDataSerializer(required=True, help_text=_("The changelist data for the model."))
@@ -570,9 +575,51 @@ class ResponseMessageSerializer(serializers.Serializer):
     detail = serializers.CharField(help_text=_("A detailed description of the response message."))
 
 
-class EmptyResponseSerializer(serializers.Serializer):
+class OKResponseSerializer(serializers.Serializer):
     status = serializers.IntegerField(
-        required=True,
+        default=200,
+        help_text=_("The status code of the response."),
+    )
+
+
+class PermissionDeniedResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=403,
+        help_text=_("The status code of the response."),
+    )
+
+
+class UnauthorizedResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=401,
+        help_text=_("The status code of the response."),
+    )
+
+
+class NotFoundResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=404,
+        help_text=_("The status code of the response."),
+    )
+
+
+class MethodNotAllowedResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=405,
+        help_text=_("The status code of the response."),
+    )
+
+
+class ConflictResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=409,
+        help_text=_("The status code of the response."),
+    )
+
+
+class ServerErrorResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=500,
         help_text=_("The status code of the response."),
     )
 
@@ -584,7 +631,53 @@ class ErrorDataSerializer(serializers.Serializer):
 
 class ValidationErrorSerializer(serializers.Serializer):
     status = serializers.IntegerField(
-        required=True,
+        default=400,
         help_text=_("The status code of the response."),
     )
     errors = ErrorDataSerializer(many=True, help_text=_("The list of errors."))
+
+
+class FormSetErrorDataSerializer(serializers.DictField):
+    child = serializers.ListField(child=ErrorDataSerializer())
+
+
+class ChangelistErrorResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(
+        default=400,
+        help_text=_("The status code of the response."),
+    )
+    errors = FormSetErrorDataSerializer(required=True, help_text=_("The list of errors."))
+
+
+class ChangeViewInlineFormErrorSerializer(serializers.Serializer):
+    add = FormSetErrorDataSerializer(required=True, help_text=_("The list of errors for adding objects."))
+    change = FormSetErrorDataSerializer(required=True, help_text=_("The list of errors for changing objects."))
+    delete = FormSetErrorDataSerializer(required=True, help_text=_("The list of errors for deleting objects."))
+
+
+class AddViewInlineFormErrorSerializer(serializers.Serializer):
+    add = FormSetErrorDataSerializer(required=True, help_text=_("The list of errors for adding objects."))
+
+
+class ChangeViewErrorDataSerializer(serializers.Serializer):
+    form = ErrorDataSerializer(required=False, many=True, help_text=_("Object containing main form errors."))
+    inlines = serializers.DictField(
+        child=ChangeViewInlineFormErrorSerializer(), required=False, help_text=_("Object containing inlines errors.")
+    )
+
+
+class AddViewErrorDataSerializer(serializers.Serializer):
+    form = ErrorDataSerializer(required=False, many=True, help_text=_("Object containing main form errors."))
+    inlines = serializers.DictField(
+        child=AddViewInlineFormErrorSerializer(), required=False, help_text=_("Object containing inlines errors.")
+    )
+
+
+class ChangeViewErrorResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=400, help_text=_("The status code of the response."))
+    errors = ChangeViewErrorDataSerializer(help_text=_("Object containing form and inline errors."))
+
+
+class AddViewErrorResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=400, help_text=_("The status code of the response."))
+    errors = AddViewErrorDataSerializer(help_text=_("Object containing form and inline errors."))

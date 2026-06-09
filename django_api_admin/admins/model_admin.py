@@ -661,11 +661,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
         Determine the Response for the add_view stage.
         """
         data = {
-            "detail": _(f"The {self.model._meta.verbose_name} “{str(obj)}” was added successfully."),
-            "data": serializer.data,
+            "status": status.HTTP_201_CREATED,
+            "data": {"form": serializer.data},
         }
         if bulk_operation:
-            data["inlines"] = bulk_operation.validated_data
+            data["data"]["inlines"] = bulk_operation.validated_data
 
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -674,11 +674,11 @@ class APIModelAdmin(BaseAPIModelAdmin):
         Determine the Response for the change_view stage.
         """
         data = {
-            "detail": _(f"The {self.model._meta.verbose_name} “{str(obj)}” was changed successfully."),
-            "data": serializer.data,
+            "status": status.HTTP_200_OK,
+            "data": {"form": serializer.data},
         }
         if bulk_operation:
-            data["inlines"] = bulk_operation.validated_data
+            data["data"]["inlines"] = bulk_operation.validated_data
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -893,6 +893,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "admin_site": self.admin_site,
             "renderer_classes": self.admin_site.renderer_classes,
         }
         return AddView.as_view(**defaults)
@@ -905,6 +906,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "admin_site": self.admin_site,
             "renderer_classes": self.admin_site.renderer_classes,
         }
         return ChangeView.as_view(**defaults)

@@ -11,10 +11,7 @@ from rest_framework.exceptions import (
 )
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import (
-    extend_schema,
-    OpenApiResponse,
-)
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
@@ -25,12 +22,14 @@ from django_api_admin.openapi import (
     CommonAPIQueryParams,
 )
 from django_api_admin.serializers import (
-    FormFieldsSerializer,
+    FormFieldsResponseSerializer,
+    ChangeViewErrorResponseSerializer,
 )
+from django_api_admin.mixins import APIAdminErrorViewMixin
 from django_api_admin.bulk import InlineBulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
-from django_api_admin.mixins import APIAdminErrorViewMixin
+from django_api_admin.utils.format_error import format_error
 
 
 class ChangeView(APIAdminErrorViewMixin, APIView):
@@ -45,13 +44,14 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
     serializer_class = None
     permission_classes = []
     model_admin = None
+    admin_site = None
 
     @extend_schema(
         parameters=[CommonAPIPathParams.object_id, CommonAPIQueryParams.to_field],
         responses={
             200: OpenApiResponse(
                 description=_("Configurations and a list of fields representing the change form"),
-                response=FormFieldsSerializer,
+                response=FormFieldsResponseSerializer,
                 examples=[APIResponseExamples.form_description()],
             ),
             403: CommonAPIResponses.permission_denied(),
@@ -79,7 +79,7 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
         else:
             data = self.model_admin.get_form_description(request, obj)
 
-        return Response(data, status=status.HTTP_200_OK)
+        return Response({"status": status.HTTP_200_OK, "data": data}, status=status.HTTP_200_OK)
 
     @extend_schema(
         parameters=[CommonAPIPathParams.object_id],
@@ -87,14 +87,15 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
             200: OpenApiResponse(
                 description=_("The serialized instance, and inlines that were affected"),
             ),
-            403: CommonAPIResponses.permission_denied(),
+            400: OpenApiResponse(
+                description=_("Failed to add records"),
+                response=ChangeViewErrorResponseSerializer,
+            ),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def patch(self, request, object_id):
-        return self.update(request, object_id)
-
-    def update(self, request, object_id):
         with transaction.atomic(using=router.db_for_write(self.model_admin.model)):
             obj = self.get_object(request, object_id)
 
@@ -125,7 +126,7 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
                         self.model_admin.save_related(request, updated_object, serializer, bulk_operation, True)
                         inline_results = bulk_operation.result
                     else:
-                        raise ValidationError({"errors": bulk_operation.errors})
+                        raise ValidationError({"inlines": bulk_operation.errors})
                 else:
                     serializer.save_m2m()
 
@@ -137,7 +138,7 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
 
                 return self.model_admin.response_change(request, updated_object, serializer, bulk_operation)
 
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({"form": format_error(serializer.errors)})
 
     def get_serializer_instance(self, request, obj):
         serializer = None

@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
-from django_api_admin.serializers import FormFieldsSerializer
+from django_api_admin.serializers import FormFieldsResponseSerializer, AddViewErrorResponseSerializer
 from django_api_admin.bulk import InlineBulkOperation
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
@@ -26,16 +26,17 @@ class AddView(APIAdminErrorViewMixin, APIView):
     serializer_class = None
     permission_classes = []
     model_admin = None
+    admin_site = None
 
     @extend_schema(
         responses={
             200: OpenApiResponse(
                 description=_("Configurations and a list of fields representing the add form"),
-                response=FormFieldsSerializer,
+                response=FormFieldsResponseSerializer,
                 examples=[APIResponseExamples.form_description()],
             ),
-            403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def get(self, request):
@@ -49,14 +50,20 @@ class AddView(APIAdminErrorViewMixin, APIView):
         """
         if not self.model_admin.has_add_permission(request):
             raise PermissionDenied
+
         data = self.model_admin.get_form_description(request, obj=None)
-        return Response(data, status=status.HTTP_200_OK)
+
+        return Response({"status": status.HTTP_200_OK, "data": data}, status=status.HTTP_200_OK)
 
     @extend_schema(
         responses={
             200: OpenApiResponse(description=_("The serialized instance, and inlines that were affected")),
-            403: CommonAPIResponses.permission_denied(),
+            400: OpenApiResponse(
+                description=_("Failed to add records"),
+                response=AddViewErrorResponseSerializer,
+            ),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def post(self, request):
@@ -83,7 +90,7 @@ class AddView(APIAdminErrorViewMixin, APIView):
                         self.model_admin.save_related(request, new_object, serializer, bulk_operation, False)
                         inline_results = bulk_operation.result
                     else:
-                        raise ValidationError({"errors": bulk_operation.errors})
+                        raise ValidationError({"inlines": bulk_operation.errors})
                 else:
                     serializer.save_m2m()
 
@@ -93,4 +100,4 @@ class AddView(APIAdminErrorViewMixin, APIView):
 
                 return self.model_admin.response_add(request, new_object, serializer, bulk_operation)
 
-            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({"form": serializer.errors})

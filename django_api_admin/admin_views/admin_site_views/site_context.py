@@ -4,10 +4,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.serializers import SiteContextSerializer
-from django_api_admin.openapi import CommonAPIResponses, site_context
+from django_api_admin.openapi import CommonAPIResponses
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
@@ -29,13 +29,6 @@ class SiteContextView(APIAdminErrorViewMixin, APIView):
             200: OpenApiResponse(
                 response=SiteContextSerializer,
                 description=_("Retrieve site context attributes such as site title and header"),
-                examples=[
-                    OpenApiExample(
-                        name=_("Success Response"),
-                        value=site_context,
-                        status_codes=["200"],
-                    )
-                ],
             ),
             403: CommonAPIResponses.permission_denied(),
             401: CommonAPIResponses.unauthorized(),
