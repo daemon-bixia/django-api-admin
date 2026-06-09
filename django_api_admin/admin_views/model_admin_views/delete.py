@@ -3,16 +3,16 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from django_api_admin.utils.quote import unquote
 from django_api_admin.admins.model_admin import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams, CommonAPIQueryParams
 from django_api_admin.serializers import ResponseMessageSerializer
-from django_api_admin.exceptions import DisallowedModelAdminToField
+from django_api_admin.utils.quote import unquote
+from django_api_admin.utils.format_error import format_error
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
@@ -25,15 +25,17 @@ class DeleteView(APIAdminErrorViewMixin, APIView):
     serializer_class = ResponseMessageSerializer
     permission_classes = []
     model_admin = None
+    admin_site = None
 
     @extend_schema(
         parameters=[CommonAPIPathParams.object_id, CommonAPIQueryParams.to_field],
         responses={
-            204: OpenApiResponse(
-                description=_("Successfully deleted the selected objects"),
-            ),
-            403: CommonAPIResponses.permission_denied(),
+            204: OpenApiResponse(description=_("Successfully deleted the selected objects")),
+            400: CommonAPIResponses.bad_request(_("_to_field value is not allowed")),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
+            404: CommonAPIResponses.not_found(_("Model instance with the given id not found")),
+            409: CommonAPIResponses.conflict(_("Cannot delete instance because it's protected")),
         },
     )
     def delete(self, request, object_id):
@@ -43,7 +45,7 @@ class DeleteView(APIAdminErrorViewMixin, APIView):
             # Validate the reverse to field reference.
             to_field = request.query_params.get(TO_FIELD_VAR)
             if to_field and not self.model_admin.to_field_allowed(request, to_field):
-                raise DisallowedModelAdminToField("The field %s cannot be referenced." % to_field)
+                raise ValidationError(format_error({"_to_field": ["The field '%s' cannot be referenced." % to_field]}))
 
             obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
@@ -52,11 +54,7 @@ class DeleteView(APIAdminErrorViewMixin, APIView):
                 raise PermissionDenied
 
             if obj is None:
-                msg = _("%(name)s with ID “%(key)s” doesn't exist. Perhaps it was deleted?") % {
-                    "name": opts.verbose_name,
-                    "key": unquote(object_id),
-                }
-                return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"status": status.HTTP_404_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
             # Populate deleted_objects, a data structure of all related objects
             # that will also be deleted.
@@ -78,6 +76,4 @@ class DeleteView(APIAdminErrorViewMixin, APIView):
 
                 return self.model_admin.response_delete(request, obj_display, obj_id)
 
-            return Response(
-                {"detail": _("Cannot delete %(name)s") % {"name": str(opts.verbose_name)}}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"status": 409}, status=status.HTTP_409_CONFLICT)

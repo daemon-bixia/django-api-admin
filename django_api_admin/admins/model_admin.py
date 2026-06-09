@@ -729,16 +729,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         """
         Determine the Response for the delete_view stage.
         """
-        return Response(
-            {
-                "detail": _("The %(name)s “%(obj)s” was deleted successfully.")
-                % {
-                    "name": self.opts.verbose_name,
-                    "obj": obj_display,
-                }
-            },
-            status=status.HTTP_204_NO_CONTENT,
-        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_inline_formsets_description(self, request, serializer_classes, inline_instances, obj=None):
         # Edit permissions on parent model are required for editable inlines.
@@ -958,6 +949,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "authentication_classes": self.admin_site.get_authentication_classes(),
             "permission_classes": self.admin_site.get_permission_classes(),
             "model_admin": self,
+            "admin_site": self.admin_site,
             "renderer_classes": self.admin_site.renderer_classes,
         }
         return DeleteView.as_view(**defaults)

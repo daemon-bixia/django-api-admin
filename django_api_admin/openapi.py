@@ -259,9 +259,9 @@ class CommonAPIResponses:
     """Collection of standardized OpenAPI response templates."""
 
     @staticmethod
-    def ok(message=None):
+    def ok(description=None):
         return OpenApiResponse(
-            description=_(message or "OK"),
+            description=_(description or "OK"),
             response=OKResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -273,9 +273,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def permission_denied():
+    def permission_denied(description=None):
         return OpenApiResponse(
-            description=_("Forbidden"),
+            description=_(description or "Forbidden"),
             response=PermissionDeniedResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -287,9 +287,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def not_found():
+    def not_found(description=None):
         return OpenApiResponse(
-            description=_("Resource not found"),
+            description=_(description or "Resource not found"),
             response=NotFoundResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -301,9 +301,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def bad_request():
+    def bad_request(description=None):
         return OpenApiResponse(
-            description=_("Bad request"),
+            description=_(description or "Bad request"),
             response=ValidationErrorSerializer,
             examples=[
                 OpenApiExample(
@@ -315,9 +315,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def unauthorized():
+    def unauthorized(description=None):
         return OpenApiResponse(
-            description=_("Not authenticated"),
+            description=_(description or "Not authenticated"),
             response=UnauthorizedResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -329,9 +329,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def method_not_allowed():
+    def method_not_allowed(description=None):
         return OpenApiResponse(
-            description=_("Method not allowed"),
+            description=_(description or "Method not allowed"),
             response=MethodNotAllowedResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -343,9 +343,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def conflict():
+    def conflict(description=None):
         return OpenApiResponse(
-            description=_("Resource conflict"),
+            description=_(description or "Resource conflict"),
             response=ConflictResponseSerializer,
             examples=[
                 OpenApiExample(
@@ -357,9 +357,9 @@ class CommonAPIResponses:
         )
 
     @staticmethod
-    def server_error():
+    def server_error(description=None):
         return OpenApiResponse(
-            description=_("Internal server error"),
+            description=_(description or "Internal server error"),
             response=ServerErrorResponseSerializer,
             examples=[
                 OpenApiExample(
