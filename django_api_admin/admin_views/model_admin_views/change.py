@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.exceptions import (
     PermissionDenied,
     NotFound,
-    ParseError,
     ValidationError,
 )
 from rest_framework.views import APIView
@@ -167,7 +166,7 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
         # Validate the reverse to field reference
         to_field = request.query_params.get(TO_FIELD_VAR)
         if to_field and not self.model_admin.to_field_allowed(request, to_field):
-            raise ParseError({"detail": _("The field %s cannot be referenced.") % to_field})
+            raise ValidationError([{"message": "The field '%s' cannot be referenced." % to_field, "param": "_to_field"}])
 
         obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 

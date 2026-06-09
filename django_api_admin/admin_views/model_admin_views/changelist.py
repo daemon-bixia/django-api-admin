@@ -18,7 +18,6 @@ from django_api_admin.bulk import ChangelistBulkOperation
 from django_api_admin.utils.get_form_fields import get_form_fields_description
 from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.lookup_field import lookup_field
-from django_api_admin.utils.format_error import format_error
 
 
 class ChangeListView(APIAdminErrorViewMixin, APIView):
@@ -110,7 +109,7 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         errors = {}
         for idx, item in enumerate(request.data.get("data", [])):
             if "pk" not in item:
-                errors[idx] = format_error({"pk": ["This field is required."]})
+                errors[idx] = [{"message": "This field is required.", "param": "pk"}]
         if errors:
             raise ValidationError(errors)
         modified_objects = self.model_admin._get_list_editable_queryset(request)
@@ -249,7 +248,7 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         try:
             return self.model_admin.get_changelist_instance(request)
         except IncorrectLookupParameters as e:
-            raise ValidationError(format_error({"non_field_errors": [str(e)]}))
+            raise ValidationError([{"message": [str(e)], "param": "non_field_errors"}])
 
     def get_action_serializer_class(self, request):
         return self.model_admin.get_action_serializer_class(request)

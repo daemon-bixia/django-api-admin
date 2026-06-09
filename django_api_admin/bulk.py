@@ -44,9 +44,9 @@ class InlineBulkOperation:
         for key in self.data.keys():
             if key not in model_ids:
                 self.errors[key] = {
-                    "non_form_errors": format_error(
-                        {"non_form_errors": [_("There is no inline admin with this name in model admin")]}
-                    )
+                    "non_form_errors": [
+                        {"message": _("There is no inline admin with this name in model admin"), "param": "non_form_errors"}
+                    ]
                 }
                 valid = False
 
@@ -84,11 +84,13 @@ class InlineBulkOperation:
                     # Validate the number of related instances does not exceed the
                     # `max_num` set at the inline model
                     if inline.max_num is not None and related_instances_count >= inline.max_num:
-                        add_errors[idx] = {
-                            "non_field_errors": [
-                                "Cannot exceed the `max_num` of `%s` allowed" % (inline.model._meta.verbose_name_plural)
-                            ]
-                        }
+                        add_errors[idx] = [
+                            {
+                                "message": "Cannot exceed the `max_num` of `%s` allowed"
+                                % (inline.model._meta.verbose_name_plural),
+                                "param": "non_form_errors",
+                            }
+                        ]
 
                     # Add the object pk to the fk field to create the relationship
                     data[fk.name] = self.obj.pk
@@ -101,10 +103,9 @@ class InlineBulkOperation:
                         related_instances_count += 1
                     else:
                         if idx in add_errors:
-                            add_errors[idx] = {**add_errors[idx], **serializer.errors}
+                            add_errors[idx] = [*add_errors[idx], *format_error(serializer.errors)]
                         else:
-                            add_errors[idx] = serializer.errors
-                        add_errors[idx] = format_error(add_errors[idx])
+                            add_errors[idx] = format_error(serializer.errors)
 
             if "change" in value:
                 fk_field = getattr(self.obj, get_related_name(fk), None)
@@ -124,15 +125,16 @@ class InlineBulkOperation:
                             "idx": idx,
                             "inline_model": inline.model._meta.verbose_name,
                         }
-                        change_errors[idx] = {
-                            "pk": [
-                                _(
+                        change_errors[idx] = [
+                            {
+                                "message": _(
                                     "Couldn't find %(parent_model)s associated with the data at index "
                                     "%(idx)s, check that the 'pk' value "
                                     "represents a valid %(inline_model)s in the database" % params
-                                )
-                            ]
-                        }
+                                ),
+                                "param": "pk",
+                            }
+                        ]
 
                     # Validate the change data using the inline serializer
                     if idx not in change_errors:
@@ -145,10 +147,7 @@ class InlineBulkOperation:
                             changed_data = get_changed_data(serializer)
                             self.result[key]["change"].append((serializer, changed_data))
                         else:
-                            change_errors[idx] = serializer.errors
-
-                    if idx in change_errors:
-                        change_errors[idx] = format_error(change_errors[idx])
+                            change_errors[idx] = format_error(serializer.errors)
 
             if "delete" in value:
                 primary_keys = [pk for pk in value["delete"]]
@@ -161,11 +160,13 @@ class InlineBulkOperation:
                     # Validate the number of instances is not less than the `min_num`
                     # set at the inline model
                     if inline.min_num is not None and related_instances_count <= inline.min_num:
-                        delete_errors[idx] = {
-                            "non_field_errors": [
-                                "Cannot fall short of the `min_num` of `%s` allowed" % (inline.model._meta.verbose_name_plural)
-                            ]
-                        }
+                        delete_errors[idx] = [
+                            {
+                                "message": "Cannot fall short of the `min_num` of `%s` allowed"
+                                % (inline.model._meta.verbose_name_plural),
+                                "param": "non_field_errors",
+                            }
+                        ]
 
                     # Validate that all primary_keys are valid instances
                     if not instance:
@@ -182,12 +183,11 @@ class InlineBulkOperation:
                             )
                             % params
                         )
-                        error = {"pk": [msg]}
+                        error = {"message": [msg], "param": "pk"}
                         if idx not in delete_errors:
-                            delete_errors[idx] = error
+                            delete_errors[idx] = [error]
                         else:
-                            delete_errors[idx] = {**delete_errors[idx], **error}
-                        delete_errors[idx] = format_error(delete_errors[idx])
+                            delete_errors[idx].append(error)
                         continue
 
                     # Ensure no related "protected" records are going to be deleted
@@ -287,19 +287,16 @@ class ChangelistBulkOperation:
             instance = next((i for i in self.instances if i.pk == pk), None)
             if not instance:
                 verbose_name = self.model_admin.model._meta.verbose_name
-                self.errors[idx] = format_error(
+                self.errors[idx] = [
                     {
-                        "pk": [
-                            _(
-                                (
-                                    "Couldn't find %s associated with the data at row %s is not found,"
-                                    " check that the 'pk' value represents a valid %s in the database"
-                                )
-                                % (verbose_name, pk, verbose_name)
-                            )
-                        ]
+                        "message": _(
+                            "Couldn't find %s associated with the data at row %s is not found,"
+                            " check that the 'pk' value represents a valid %s in the database"
+                            % (verbose_name, pk, verbose_name)
+                        ),
+                        "param": "pk",
                     }
-                )
+                ]
                 continue
 
             # Validate the object using the `serializer_class`

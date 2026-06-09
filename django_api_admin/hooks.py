@@ -352,7 +352,22 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                 json_content = content.setdefault("application/json", {})
                 serializer_class = model_admin.get_serializer_class(request)
                 resolved_ref = build_serializer_schema(result, inspector, serializer_class, json_content)
-                json_content["schema"] = resolved_ref
+                json_content["schema"] = {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "number",
+                            "description": "The status code of the response.",
+                            "default": 200,
+                        },
+                        "data": {
+                            "type": "object",
+                            "description": "The instance data.",
+                            "allOf": [resolved_ref],
+                        },
+                    },
+                    "required": ["status", "data"],
+                }
         elif url.name == f"{app_label}_{model_name}_add":
             add_path = result.setdefault("paths", {}).setdefault(f"{site.url_prefix}/{app_label}/{model_name}/add/", {})
             if add_path:

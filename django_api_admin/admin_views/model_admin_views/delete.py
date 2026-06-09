@@ -12,7 +12,6 @@ from django_api_admin.admins.model_admin import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams, CommonAPIQueryParams
 from django_api_admin.serializers import ResponseMessageSerializer
 from django_api_admin.utils.quote import unquote
-from django_api_admin.utils.format_error import format_error
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
@@ -45,7 +44,7 @@ class DeleteView(APIAdminErrorViewMixin, APIView):
             # Validate the reverse to field reference.
             to_field = request.query_params.get(TO_FIELD_VAR)
             if to_field and not self.model_admin.to_field_allowed(request, to_field):
-                raise ValidationError(format_error({"_to_field": ["The field '%s' cannot be referenced." % to_field]}))
+                raise ValidationError([{"message": "The field '%s' cannot be referenced." % to_field, "param": "_to_field"}])
 
             obj = self.model_admin.get_object(request, unquote(object_id), to_field)
 
