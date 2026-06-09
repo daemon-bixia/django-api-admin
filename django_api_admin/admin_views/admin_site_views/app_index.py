@@ -9,9 +9,10 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 
 from django_api_admin.serializers import AppIndexSerializer, AppSerializer
 from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class AppIndexView(APIView):
+class AppIndexView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve an app that has models registered in the admin site using `app_label`.
     """

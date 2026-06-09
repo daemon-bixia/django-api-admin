@@ -18,9 +18,10 @@ from django_api_admin.openapi import (
     CommonAPIPathParams,
     CommonAPIQueryParams,
 )
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class DetailView(APIView):
+class DetailView(APIAdminErrorViewMixin, APIView):
     """
     Retrieves a single instance of the model identified by the provided `object_id`,
     supporting optional reverse lookups via the `to_field` query parameter, and

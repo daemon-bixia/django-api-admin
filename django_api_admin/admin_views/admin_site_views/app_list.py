@@ -8,9 +8,10 @@ from drf_spectacular.utils import extend_schema
 
 from django_api_admin.serializers import AppListSerializer
 from django_api_admin.openapi import CommonAPIResponses, OpenApiResponse
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class AppListView(APIView):
+class AppListView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve a list of all the apps that have models registered in the admin site.
     """

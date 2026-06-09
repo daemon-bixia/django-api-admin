@@ -13,9 +13,10 @@ from django_api_admin.admins.model_admin import TO_FIELD_VAR
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIPathParams, CommonAPIQueryParams
 from django_api_admin.serializers import ResponseMessageSerializer
 from django_api_admin.exceptions import DisallowedModelAdminToField
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class DeleteView(APIView):
+class DeleteView(APIAdminErrorViewMixin, APIView):
     """
     Deletes a single instance of the model identified by the provided object ID,
     performing permission checks and handling related object cleanup.

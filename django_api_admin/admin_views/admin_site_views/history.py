@@ -14,9 +14,10 @@ from django_api_admin.models import LogEntry
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams, APIResponseExamples
 from django_api_admin.serializers import HistoryViewResponseSerializer, HistoryViewRequestSerializer
 from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class HistoryView(APIView):
+class HistoryView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve a paginated history of administrative actions.
 

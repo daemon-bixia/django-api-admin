@@ -23,9 +23,10 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 from django_api_admin.serializers import AutoCompleteSerializer, AutocompleteResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class AutoCompleteView(APIView):
+class AutoCompleteView(APIAdminErrorViewMixin, APIView):
     """
     Handles the "search-as-you-type" functionality.
     It extracts search parameters, validates user permissions,

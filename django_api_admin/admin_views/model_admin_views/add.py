@@ -11,9 +11,10 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 from django_api_admin.openapi import CommonAPIResponses, APIResponseExamples
 from django_api_admin.serializers import FormFieldsSerializer
 from django_api_admin.bulk import InlineBulkOperation
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class AddView(APIView):
+class AddView(APIAdminErrorViewMixin, APIView):
     """
     Create a new instance of this model.
 

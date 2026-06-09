@@ -8,9 +8,10 @@ from rest_framework.exceptions import PermissionDenied
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.openapi import CommonAPIResponses
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class PermissionsView(APIView):
+class PermissionsView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve the permissions of the requesting user required to access the admin site.
 

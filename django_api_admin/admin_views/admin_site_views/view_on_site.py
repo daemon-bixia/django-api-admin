@@ -13,9 +13,10 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from django_api_admin.openapi import CommonAPIResponses
 from django_api_admin.serializers import ViewOnsiteViewResponseSerializer
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class ViewOnSiteView(APIView):
+class ViewOnSiteView(APIAdminErrorViewMixin, APIView):
     """
     Retrieve the site-specific absolute URL for a registered model instance.
 

@@ -30,9 +30,10 @@ from django_api_admin.serializers import (
 from django_api_admin.bulk import InlineBulkOperation
 from django_api_admin.utils.get_changed_data import get_changed_data
 from django_api_admin.utils.flatten_fieldsets import flatten_fieldsets
+from django_api_admin.mixins import APIAdminErrorViewMixin
 
 
-class ChangeView(APIView):
+class ChangeView(APIAdminErrorViewMixin, APIView):
     """
     Update an instance of this model identified by its object_id.
 
