@@ -50,7 +50,7 @@ def tag_result_paths(urlpatterns, endpoints, site, result, tag_name):
     return result
 
 
-# Site Views Dynamic Schema
+# Admin Site Views Dynamic Schema
 
 
 def add_site_views_dynamic_schema(result, site, request):
@@ -131,6 +131,9 @@ def add_site_views_dynamic_schema(result, site, request):
             get["operationId"] = "Retrieve openapi schema"
 
     return result
+
+
+# Model Admin Views Dynamic Schema
 
 
 def filter_changelist_paths(result, site):
@@ -505,5 +508,123 @@ def modify_schema(result, generator, request, public):
                     model._meta.verbose_name,
                 )
                 result = add_model_admin_views_dynamic_schema(result, site, model_urls, model, request, generator)
+
+    return result
+
+
+# Allauth Error Schema Hook
+
+
+def allauth_error_schema(result, generator, request, public):
+    """
+    Updates the schema's components to match the allauth error response formats.
+    """
+    schemas = result.setdefault("components", {}).setdefault("schemas", {})
+
+    schemas["AuthenticatorType"] = {
+        "type": "string",
+        "enum": ["recovery_codes", "totp", "webauthn"],
+        "description": _("The type of authenticator."),
+    }
+
+    schemas["Provider"] = {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "example": "google", "description": _("The provider ID.")},
+            "name": {"type": "string", "description": _("The name of the provider."), "example": "Google"},
+            "client_id": {
+                "type": "string",
+                "description": _("The client ID (in case of OAuth2 or OpenID Connect based providers)"),
+                "example": "123.apps.googleusercontent.com",
+            },
+            "openid_configuration_url": {
+                "type": "string",
+                "description": _("The OIDC discovery or well-known URL (in case of OAuth2 or OpenID Connect based providers)"),
+                "example": "https://accounts.google.com/.well-known/openid-configuration",
+            },
+            "flows": {
+                "type": "array",
+                "description": _("The authentication flows the provider integration supports."),
+                "items": {"type": "string", "enum": ["provider_redirect", "provider_token"]},
+            },
+        },
+        "required": ["id", "name", "flows"],
+    }
+
+    schemas["Flow"] = {
+        "type": "object",
+        "properties": {
+            "id": {
+                "type": "string",
+                "enum": [
+                    "login",
+                    "login_by_code",
+                    "mfa_authenticate",
+                    "mfa_reauthenticate",
+                    "provider_redirect",
+                    "provider_signup",
+                    "provider_token",
+                    "reauthenticate",
+                    "signup",
+                    "verify_email",
+                    "verify_phone",
+                ],
+            },
+            "provider": {"$ref": "#/components/schemas/Provider"},
+            "is_pending": {"type": "boolean", "enum": [True]},
+            "types": {
+                "type": "array",
+                "description": _("Matches `settings.MFA_SUPPORTED_TYPES`."),
+                "items": {"$ref": "#/components/schemas/AuthenticatorType"},
+            },
+        },
+        "required": ["id"],
+    }
+
+    schemas["BaseAuthenticationMeta"] = {
+        "type": "object",
+        "properties": {
+            "session_token": {
+                "type": "string",
+                "description": _("The session token. Only included if X-Session-Token is in the headers."),
+                "example": "ufwcig0zen9skyd545jc0fkq813ghar2",
+            },
+            "access_token": {
+                "type": "string",
+                "description": _("The access token. Only included if X-Session-Token is in the headers."),
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW",
+            },
+        },
+    }
+
+    schemas["AuthenticationMeta"] = {
+        "allOf": [
+            {"$ref": "#/components/schemas/BaseAuthenticationMeta"},
+            {
+                "type": "object",
+                "description": _("Metadata available in an authentication related response."),
+                "properties": {"is_authenticated": {"type": "boolean"}},
+                "required": ["is_authenticated"],
+            },
+        ]
+    }
+
+    if "UnauthorizedResponse" in schemas:
+        schemas["UnauthorizedResponse"] = {
+            "type": "object",
+            "description": _("Not authenticated."),
+            "properties": {
+                "status": {"type": "integer", "enum": [401]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "flows": {"type": "array", "items": {"$ref": "#/components/schemas/Flow"}},
+                    },
+                    "required": ["flows"],
+                },
+                "meta": {"$ref": "#/components/schemas/AuthenticationMeta"},
+            },
+            "required": ["status", "data", "meta"],
+        }
 
     return result

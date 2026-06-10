@@ -263,13 +263,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "OK"),
             response=OKResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("OK"),
-                    value={"status": 200},
-                    status_codes=["200"],
-                )
-            ],
         )
 
     @staticmethod
@@ -277,13 +270,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Forbidden"),
             response=PermissionDeniedResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Permission denied"),
-                    value={"status": 403},
-                    status_codes=["403"],
-                )
-            ],
         )
 
     @staticmethod
@@ -291,13 +277,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Resource not found"),
             response=NotFoundResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Not Found"),
-                    value={"status": 404},
-                    status_codes=["404"],
-                )
-            ],
         )
 
     @staticmethod
@@ -305,13 +284,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Bad request"),
             response=ValidationErrorSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Bad Request"),
-                    value={"status": 400, "errors": [{"message": "This field is required.", "param": "pk"}]},
-                    status_codes=["400"],
-                )
-            ],
         )
 
     @staticmethod
@@ -319,13 +291,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Not authenticated"),
             response=UnauthorizedResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Unauthorized"),
-                    value={"status": 401},
-                    status_codes=["401"],
-                )
-            ],
         )
 
     @staticmethod
@@ -333,13 +298,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Method not allowed"),
             response=MethodNotAllowedResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Method Not Allowed"),
-                    value={"status": 405},
-                    status_codes=["405"],
-                )
-            ],
         )
 
     @staticmethod
@@ -347,13 +305,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Resource conflict"),
             response=ConflictResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Conflict"),
-                    value={"status": 409},
-                    status_codes=["409"],
-                )
-            ],
         )
 
     @staticmethod
@@ -361,13 +312,6 @@ class CommonAPIResponses:
         return OpenApiResponse(
             description=_(description or "Internal server error"),
             response=ServerErrorResponseSerializer,
-            examples=[
-                OpenApiExample(
-                    name=_("Server Error"),
-                    value={"status": 500},
-                    status_codes=["500"],
-                )
-            ],
         )
 
 
