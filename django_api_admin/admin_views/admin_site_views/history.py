@@ -6,12 +6,12 @@ from django.apps import apps
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from django_api_admin.models import LogEntry
-from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams, APIResponseExamples
+from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams
 from django_api_admin.serializers import HistoryViewResponseSerializer, HistoryViewRequestSerializer
 from django_api_admin.utils.get_content_type_for_model import get_content_type_for_model
 from django_api_admin.mixins import APIAdminErrorViewMixin
@@ -44,8 +44,8 @@ class HistoryView(APIAdminErrorViewMixin, APIView):
             200: OpenApiResponse(
                 description=_("List of log entry objects"),
                 response=HistoryViewResponseSerializer(),
-                examples=[APIResponseExamples.history_view_200()],
             ),
+            400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
         },
@@ -55,7 +55,7 @@ class HistoryView(APIAdminErrorViewMixin, APIView):
         # Get the queryset
         ordering = self.request.query_params.get("o", "action_time")
         if ordering not in self.ordering_fields:
-            raise KeyError
+            raise ValidationError([{"message": "Invalid ordering provided", "param": "o"}])
         action_list = LogEntry.objects.all().order_by(ordering)
 
         # Filter the queryset.
@@ -94,13 +94,16 @@ class HistoryView(APIAdminErrorViewMixin, APIView):
 
         return Response(
             {
-                "pagination": {
-                    "num_pages": paginator.num_pages,
-                    "count": paginator.count,
-                    "has_next": page.has_next(),
-                    "has_previous": page.has_previous(),
+                "status": status.HTTP_200_OK,
+                "data": {
+                    "pagination": {
+                        "num_pages": paginator.num_pages,
+                        "count": paginator.count,
+                        "has_next": page.has_next(),
+                        "has_previous": page.has_previous(),
+                    },
+                    "results": self.serialize_messages(serializer.data),
                 },
-                "results": self.serialize_messages(serializer.data),
             },
             status=status.HTTP_200_OK,
         )

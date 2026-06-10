@@ -105,6 +105,7 @@ def add_site_views_dynamic_schema(result, site, request):
                     "status": {
                         "type": "integer",
                         "description": "The response status code.",
+                        "default": 200,
                     },
                     "data": {"$ref": f"#/components/schemas/{schema_name}"},
                 },

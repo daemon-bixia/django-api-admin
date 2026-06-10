@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from django_api_admin.serializers import SiteContextSerializer
+from django_api_admin.serializers import SiteContextResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
@@ -27,7 +27,7 @@ class SiteContextView(APIAdminErrorViewMixin, APIView):
         operation_id="Retrieve admin site context",
         responses={
             200: OpenApiResponse(
-                response=SiteContextSerializer,
+                response=SiteContextResponseSerializer,
                 description=_("Retrieve site context attributes such as site title and header"),
             ),
             403: CommonAPIResponses.permission_denied(),
@@ -36,4 +36,4 @@ class SiteContextView(APIAdminErrorViewMixin, APIView):
     )
     def get(self, request):
         context = self.admin_site.each_context(request)
-        return Response(context, status=status.HTTP_200_OK)
+        return Response({"status": status.HTTP_200_OK, "data": context}, status=status.HTTP_200_OK)

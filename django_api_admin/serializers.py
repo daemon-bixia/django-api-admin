@@ -45,9 +45,14 @@ class PaginationSerializer(serializers.Serializer):
     has_previous = serializers.BooleanField(required=True, help_text=_("Whether there is a previous page."))
 
 
-class HistoryViewResponseSerializer(serializers.Serializer):
+class HistoryDataSerializer(serializers.Serializer):
     pagination = PaginationSerializer(required=True, help_text=_("Pagination information."))
-    results = LogEntrySerializer(many=True, required=True, help_text=_("the list of log entries."))
+    results = LogEntrySerializer(many=True, required=True, help_text=_("The list of log entries."))
+
+
+class HistoryViewResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = HistoryDataSerializer(required=True, help_text=_("The data of the response."))
 
 
 class HistoryViewRequestSerializer(serializers.Serializer):
@@ -66,8 +71,13 @@ class HistoryViewRequestSerializer(serializers.Serializer):
     object_id = serializers.IntegerField(required=False, help_text=_("The ID of the specific object to filter logs for."))
 
 
-class ViewOnsiteViewResponseSerializer(serializers.Serializer):
+class ViewOnsiteViewSerializer(serializers.Serializer):
     url = serializers.CharField(required=True, help_text=_("The site-specific absolute URL of the object."))
+
+
+class ViewOnsiteViewResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = ViewOnsiteViewSerializer(required=True, help_text=_("The data of the response."))
 
 
 class ActionSerializer(serializers.Serializer):
@@ -114,15 +124,6 @@ class ChangeListSerializer(serializers.Serializer):
     o = serializers.CharField(required=False, help_text=_("The field(s) to use for ordering."))
 
 
-class AppIndexSerializer(serializers.Serializer):
-    app_label = serializers.CharField()
-
-    def validate(self, attrs):
-        if attrs["app_label"] not in self.context["registered_app_labels"]:
-            raise serializers.ValidationError(_("finish must occur after start"))
-        return super().validate(attrs)
-
-
 class ModelSerializer(serializers.Serializer):
     name = serializers.CharField(help_text=_("The name of the model."))
     object_name = serializers.CharField(help_text=_("The name of instances of that model."))
@@ -138,8 +139,23 @@ class AppSerializer(serializers.Serializer):
     models = ModelSerializer(many=True, help_text=_("The list of models in this application."))
 
 
-class AppListSerializer(serializers.Serializer):
-    app_list = AppSerializer(many=True, help_text=_("The list of registered applications."))
+class AppListResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = AppSerializer(many=True, help_text=_("The list of registered applications."))
+
+
+class AppIndexSerializer(serializers.Serializer):
+    app_label = serializers.CharField()
+
+    def validate(self, attrs):
+        if attrs["app_label"] not in self.context["registered_app_labels"]:
+            raise serializers.ValidationError(_("finish must occur after start"))
+        return super().validate(attrs)
+
+
+class AppIndexResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = AppSerializer(help_text=_("The list of registered applications."))
 
 
 class AutoCompleteSerializer(serializers.Serializer):
@@ -161,9 +177,14 @@ class AutocompletePaginationSerializer(serializers.Serializer):
     more = serializers.BooleanField(help_text=_("Whether more results are available."))
 
 
-class AutocompleteResponseSerializer(serializers.Serializer):
+class AutocompleteDataSerializer(serializers.Serializer):
     results = AutocompleteResultSerializer(many=True, help_text=_("The list of search results."))
     pagination = AutocompletePaginationSerializer(help_text=_("Pagination information."))
+
+
+class AutoCompleteResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = AutocompleteDataSerializer(required=True, help_text=_("The data of the response."))
 
 
 class FormatsSerializer(serializers.Serializer):
@@ -485,6 +506,11 @@ class SiteContextSerializer(serializers.Serializer):
     has_permission = serializers.BooleanField(help_text=_("Whether the user has permission to access the site."))
     available_apps = AppSerializer(many=True, help_text=_("The list of applications available to the user."))
     is_nav_siderbar_enabled = serializers.BooleanField(help_text=_("Whether the navigation sidebar is enabled."))
+
+
+class SiteContextResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=200, help_text=_("The status code of the response."))
+    data = SiteContextSerializer(required=True, help_text=_("The site context data."))
 
 
 class ActionChoiceSerializer(serializers.Serializer):

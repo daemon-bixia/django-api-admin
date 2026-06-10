@@ -59,6 +59,10 @@ class NotRegistered(Exception):
     pass
 
 
+class MissingSearchFields(Exception):
+    pass
+
+
 def allauth_exception_handler(exc, context):
     """
     Custom exception handler that translates DRF `NotAuthenticated`

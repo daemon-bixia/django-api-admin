@@ -14,16 +14,17 @@ from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
 
-from rest_framework.exceptions import PermissionDenied, ParseError
+from rest_framework.exceptions import PermissionDenied, ValidationError, NotFound
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from django_api_admin.serializers import AutoCompleteSerializer, AutocompleteResponseSerializer
+from django_api_admin.serializers import AutoCompleteSerializer, AutoCompleteResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, CommonAPIQueryParams
 from django_api_admin.mixins import APIAdminErrorViewMixin
+from django_api_admin.exceptions import MissingSearchFields
 
 
 class AutoCompleteView(APIAdminErrorViewMixin, APIView):
@@ -48,29 +49,28 @@ class AutoCompleteView(APIAdminErrorViewMixin, APIView):
         responses={
             200: OpenApiResponse(
                 description=_("List of objects matching the search term"),
-                response=AutocompleteResponseSerializer,
-                examples=[
-                    OpenApiExample(
-                        name=_("Success Response"),
-                        value={
-                            "results": [{"id": "1", "text": "Muhammad Salah"}, {"id": "2", "text": "Another User"}],
-                            "pagination": {"more": False},
-                        },
-                        status_codes=["200"],
-                    )
-                ],
+                response=AutoCompleteResponseSerializer,
             ),
-            403: CommonAPIResponses.permission_denied(),
+            400: CommonAPIResponses.bad_request(),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
+            404: CommonAPIResponses.not_found(_("Source model or field not found, or related model not registered in admin.")),
+            409: CommonAPIResponses.conflict(_("source model_admin missing search_fields.")),
         },
     )
     def get(self, request):
-        (
-            self.term,
-            self.model_admin,
-            self.source_field,
-            to_field_name,
-        ) = self.process_request(request)
+        try:
+            (
+                self.term,
+                self.model_admin,
+                self.source_field,
+                to_field_name,
+            ) = self.process_request(request)
+        except MissingSearchFields:
+            return Response(
+                {"status": status.HTTP_409_CONFLICT},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         if not self.has_perm(request):
             raise PermissionDenied
@@ -80,8 +80,11 @@ class AutoCompleteView(APIAdminErrorViewMixin, APIView):
 
         return Response(
             {
-                "results": [self.serialize_result(obj, to_field_name) for obj in context["object_list"]],
-                "pagination": {"more": context["page_obj"].has_next()},
+                "status": status.HTTP_200_OK,
+                "data": {
+                    "results": [self.serialize_result(obj, to_field_name) for obj in context["object_list"]],
+                    "pagination": {"more": context["page_obj"].has_next()},
+                },
             },
             status=status.HTTP_200_OK,
         )
@@ -119,30 +122,30 @@ class AutoCompleteView(APIAdminErrorViewMixin, APIView):
             app_label = request.GET["app_label"]
             model_name = request.GET["model_name"]
             field_name = request.GET["field_name"]
-        except KeyError:
-            raise ParseError({"detail": _("missing values app_label, model_name, and field_name")})
+        except KeyError as e:
+            raise ValidationError([{"message": _("missing values app_label, model_name, and field_name"), "params": e}])
 
         # Retrieve objects from parameters.
         try:
             source_model = apps.get_model(app_label, model_name)
         except LookupError:
-            raise ParseError({"detail": _("source model not found")})
+            raise NotFound()
         try:
             source_field = source_model._meta.get_field(field_name)
         except FieldDoesNotExist:
-            raise ParseError({"detail": _(f"source field not found in source model {source_model._meta.verbose_name}")})
+            raise NotFound()
         try:
             remote_model = source_field.remote_field.model
         except AttributeError:
-            raise ParseError({"detail": _(f"unable to locate the related model using source field {source_field.name}")})
+            raise NotFound()
         try:
             model_admin = self.admin_site.get_model_admin(remote_model)
         except KeyError:
-            raise ParseError({"detail": _("the remote model is not registered in the admin")})
+            raise NotFound()
 
         # Validate suitability of objects.
         if not getattr(model_admin, "search_fields"):
-            raise ParseError(_("%s must have search_fields for the autocomplete_view.") % type(model_admin).__qualname__)
+            raise MissingSearchFields
 
         to_field_name = getattr(source_field.remote_field, "field_name", remote_model._meta.pk.attname)
         to_field_name = remote_model._meta.get_field(to_field_name).attname

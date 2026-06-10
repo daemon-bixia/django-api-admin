@@ -37,6 +37,7 @@ class AddView(APIAdminErrorViewMixin, APIView):
             ),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
+            404: CommonAPIResponses.not_found("An inline in `inlines` was not found."),
         },
     )
     def get(self, request):

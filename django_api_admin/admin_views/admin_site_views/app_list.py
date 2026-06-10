@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from drf_spectacular.utils import extend_schema
 
-from django_api_admin.serializers import AppListSerializer
+from django_api_admin.serializers import AppListResponseSerializer
 from django_api_admin.openapi import CommonAPIResponses, OpenApiResponse
 from django_api_admin.mixins import APIAdminErrorViewMixin
 
@@ -22,11 +22,17 @@ class AppListView(APIAdminErrorViewMixin, APIView):
     @extend_schema(
         operation_id="List registered applications",
         responses={
-            200: OpenApiResponse(response=AppListSerializer, description=_("List of objects with application details")),
-            403: CommonAPIResponses.permission_denied(),
+            200: OpenApiResponse(
+                response=AppListResponseSerializer,
+                description=_("List of objects with application details"),
+            ),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def get(self, request):
         app_list = self.admin_site.get_app_list(request)
-        return Response({"app_list": app_list}, status=status.HTTP_200_OK)
+        return Response(
+            {"status": status.HTTP_200_OK, "data": app_list},
+            status=status.HTTP_200_OK,
+        )

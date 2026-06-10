@@ -26,11 +26,9 @@ class PermissionsView(APIAdminErrorViewMixin, APIView):
     @extend_schema(
         operation_id="Retrieve user permissions",
         responses={
-            200: OpenApiResponse(
-                description=_("Map of user permission check results"),
-            ),
-            403: CommonAPIResponses.permission_denied(),
+            200: OpenApiResponse(description=_("Map of user permission check results")),
             401: CommonAPIResponses.unauthorized(),
+            403: CommonAPIResponses.permission_denied(),
         },
     )
     def get(self, request):

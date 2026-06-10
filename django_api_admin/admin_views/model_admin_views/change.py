@@ -92,6 +92,9 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
             ),
             401: CommonAPIResponses.unauthorized(),
             403: CommonAPIResponses.permission_denied(),
+            404: CommonAPIResponses.not_found(
+                "Cannot find the instance using the `object_id` or an inline in `inlines` was not found.",
+            ),
         },
     )
     def patch(self, request, object_id):
@@ -172,10 +175,6 @@ class ChangeView(APIAdminErrorViewMixin, APIView):
 
         # If the object doesn't exist respond with not found
         if obj is None:
-            msg = _("%(name)s with ID “%(key)s” doesn't exist. Perhaps it was deleted?") % {
-                "name": self.model_admin.model._meta.verbose_name,
-                "key": unquote(object_id),
-            }
-            raise NotFound({"detail": msg})
+            raise NotFound()
 
         return obj

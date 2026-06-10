@@ -63,9 +63,7 @@ class InlineBulkOperation:
             inline = self.get_inline_by_model_id(key)
             # Raise an error if an inline is not found
             if not inline:
-                raise NotFound(
-                    {"detail": _("Inline '%s' is not registered in '%s'" % (key, self.model_admin.__class__.__name__))}
-                )
+                raise NotFound()
 
             serializer_class = inline.get_serializer_class(self.request)
             # Get the fk used to create the inline relationship
