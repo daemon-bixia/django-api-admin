@@ -1,4 +1,3 @@
-# DRF field attributes
 CORE_FIELD_ATTRIBUTES = [
     "read_only",
     "write_only",
@@ -84,3 +83,5 @@ SERIALIZER_FIELD_ATTRIBUTES = {
     "SlugRelatedField": [*CORE_FIELD_ATTRIBUTES, *RELATIONSHIP_FIELDS_ATTRIBUTES, "slug_field"],
     "HyperlinkedIdentityField": [*CORE_FIELD_ATTRIBUTES, *RELATIONSHIP_FIELDS_ATTRIBUTES],
 }
+
+READ_ONLY_FIELDS = ["HiddenField", "ReadOnlyField", "SerializerMethodField", "HyperlinkedIdentityField"]

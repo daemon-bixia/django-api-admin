@@ -19,7 +19,6 @@ def get_field_attributes(name, field, serializer, model_admin, change):
         # if the attribute is a callable then call it and pass field to it
         elif callable(attr):
             value = attr(field)
-
         # the input_format attribute should be a humanized list of date or datetime formats or
         # default to iso-8601
         elif attr_name == "input_formats":
@@ -41,6 +40,9 @@ def get_field_attributes(name, field, serializer, model_admin, change):
                     if attr
                     else humanize_datetime.time_formats(["iso-8601"]).split(", ")
                 )
+        # don't add choices for autocomplete fields
+        elif attr_name == "choices" and name in model_admin.autocomplete_fields:
+            value = {}
         else:
             # if it's a primitive value or None just use it
             value = attr

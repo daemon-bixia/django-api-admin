@@ -10,7 +10,7 @@ from django_api_admin.admins.model_admin import ShowFacets
 from django_api_admin.exceptions import allauth_exception_handler
 
 from example.permissions import IsMFAEnabledOrGracePeriod
-from example.models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review
+from example.models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review, Customer
 from example.actions import mark_out_of_stock
 
 
@@ -59,6 +59,8 @@ class ReviewInline(TabularInlineAPI):
     min_num = 0
     max_num = 5
 
+    autocomplete_fields = ("customer",)
+
 
 class ProductAdmin(APIModelAdmin):
     list_display = ("name", "category", "price", "stock_status")
@@ -76,7 +78,7 @@ class ProductAdmin(APIModelAdmin):
 
     filter_horizontal = ("related_products",)
     # raw_id_fields = ("category", )
-    autocomplete_fields = ("related_products",)
+    # autocomplete_fields = ("related_products",)
     date_hierarchy = "date_created"
 
     serializer_field_overrides = {
@@ -129,5 +131,13 @@ class ProductAdmin(APIModelAdmin):
         return sum(ratings) / len(ratings) if ratings else None
 
 
+class CustomerAdmin(APIModelAdmin):
+    search_fields = (
+        "user__first_name",
+        "user__last_name",
+    )
+
+
 # Register your models here
 site.register(Product, ProductAdmin)
+site.register(Customer, CustomerAdmin)
