@@ -166,22 +166,22 @@ class APIModelAdmin(BaseAPIModelAdmin):
 
     def get_changelist(self, request, **kwargs):
         """
-        Return the ChangeList class for use on the changelist page.
+        Return the Changelist class for use on the changelist page.
         """
-        from django_api_admin.changelist import ChangeList
+        from django_api_admin.changelist import Changelist
 
-        return ChangeList
+        return Changelist
 
     def get_changelist_instance(self, request):
         """
-        Return a `ChangeList` instance based on `request`.
+        Return a `Changelist` instance based on `request`.
         May raise `IncorrectLookupParameters`.
         """
         list_display = self.list_display
         list_display_links = self.get_list_display_links(request, list_display)
         sortable_by = self.get_sortable_by(request)
-        ChangeList = self.get_changelist(request)
-        return ChangeList(
+        Changelist = self.get_changelist(request)
+        return Changelist(
             request,
             self.model,
             list_display,
@@ -923,7 +923,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
         return queryset.filter(pk__in=object_pks)
 
     def get_changelist_view(self):
-        from django_api_admin.admin_views.model_admin_views.changelist import ChangeListView
+        from django_api_admin.admin_views.model_admin_views.changelist import ChangelistView
 
         defaults = {
             "serializer_class": self.get_changelist_serializer_class(None),
@@ -933,7 +933,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             "admin_site": self.admin_site,
             "renderer_classes": self.admin_site.renderer_classes,
         }
-        return ChangeListView.as_view(**defaults)
+        return ChangelistView.as_view(**defaults)
 
     def get_deleted_objects(self, objs, request):
         """

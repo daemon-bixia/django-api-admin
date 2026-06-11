@@ -433,8 +433,8 @@ def add_model_admin_views_dynamic_schema(result, site, model_urls, model, reques
                     result, inspector, model_admin, request, post_json_content
                 )
 
-                # Add dynamic request schema to ChangelistView.put (Bulk Editing)
                 if model_admin.list_editable:
+                    # Add dynamic request schema to ChangelistView.put (Bulk Editing)
                     put = changelist_path.setdefault("put", {})
                     put["operationId"] = f"Edit {app_label}.{model_name} changelist records"
                     put_request_body = put.setdefault("requestBody", {})

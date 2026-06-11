@@ -20,7 +20,7 @@ from django_api_admin.utils.label_for_field import label_for_field
 from django_api_admin.utils.lookup_field import lookup_field
 
 
-class ChangeListView(APIAdminErrorViewMixin, APIView):
+class ChangelistView(APIAdminErrorViewMixin, APIView):
     serializer_class = None
     permission_classes = []
     model_admin = None
@@ -55,14 +55,19 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
 
         serializer_class = self.get_action_serializer_class(request)
         serializer = serializer_class(context={"request": request})
+        action_form = get_form_fields_description(serializer, self.model_admin, change=False)
 
-        form_fields = get_form_fields_description(serializer, self.model_admin, change=False)
+        data = {
+            "status": status.HTTP_200_OK,
+            "data": {"columns": columns, "rows": rows, "config": config, "action_form": action_form},
+        }
+
+        if cl.list_editable:
+            list_editing_formset = self.get_list_editing_formset(request, cl)
+            data["data"]["list_editing_formset"] = list_editing_formset
 
         return Response(
-            {
-                "status": status.HTTP_200_OK,
-                "data": {"action_form": {"fields": form_fields}, "config": config, "columns": columns, "rows": rows},
-            },
+            data,
             status=status.HTTP_200_OK,
         )
 
@@ -181,14 +186,6 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
                     # If the value is null set result_repr to empty_value_display
                     if value is None:
                         result_repr = empty_value_display
-
-                    # If the `field_name` is in `cl.list_editable` use the form fields description
-                    if field_name in cl.list_editable:
-                        fields_description = self.model_admin.get_changelist_form_fields_description(request, result)
-                        for field_description in fields_description:
-                            if field_description["name"] == field_name:
-                                result_repr = field_description
-
                 except ObjectDoesNotExist:
                     result_repr = empty_value_display
 
@@ -237,6 +234,19 @@ class ChangeListView(APIAdminErrorViewMixin, APIView):
         config["ordering_field_columns"] = cl.get_ordering_field_columns()
 
         return config
+
+    def get_list_editing_formset(self, request, cl):
+        # A list of form field descriptions you can use to build the list-editable form
+        formset = []
+        for result in cl.result_list:
+            fields = []
+            field_descriptions = self.model_admin.get_changelist_form_fields_description(request, result)
+            for field_name in cl.list_editable:
+                for field_description in field_descriptions:
+                    if field_description["name"] == field_name:
+                        fields.append(field_description)
+            formset.append(fields)
+        return formset
 
     def get_fields_list(self, request, cl):
         list_display = cl.model_admin.list_display

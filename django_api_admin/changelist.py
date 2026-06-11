@@ -53,7 +53,7 @@ IGNORED_PARAMS = (
 )
 
 
-class ChangeList:
+class Changelist:
     search_serializer_class = ChangeListSerializer
 
     def __init__(

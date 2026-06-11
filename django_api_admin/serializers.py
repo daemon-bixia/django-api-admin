@@ -583,10 +583,15 @@ class RowSerializer(serializers.Serializer):
 
 
 class ChangelistDataSerializer(serializers.Serializer):
-    action_form = FormFieldsSerializer(help_text=_("Configuration for the action form, including fields and inlines."))
+    action_form = serializers.ListField(child=FieldSerializer(required=True), help_text=_("The fields of the action form."))
     config = ConfigSerializer(help_text=_("Configuration metadata for the changelist."))
     columns = ColumnSerializer(many=True, help_text=_("A list of column definitions for the table."))
     rows = RowSerializer(many=True, help_text=_("The actual data rows to be displayed."))
+    list_editing_formset = serializers.ListField(
+        required=False,
+        child=FieldSerializer(many=True, required=True),
+        help_text=_("The fields of the list editing formset."),
+    )
 
 
 class ChangelistResponseSerializer(serializers.Serializer):
