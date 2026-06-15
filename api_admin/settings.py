@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # my apps
     "django_api_admin.apps.DjangoApiAdminConfig",
-    "example.apps.ExampleConfig",
+    "shop.apps.ShopConfig",
     # 3rd party apps
     "corsheaders",
     "rest_framework",
@@ -176,7 +176,7 @@ EMAIL_HOST = "localhost"
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
 
-HEADLESS_ADAPTER = "example.adapters.CustomHeadlessAdapter"
+HEADLESS_ADAPTER = "shop.adapters.CustomHeadlessAdapter"
 HEADLESS_SERVE_SPECIFICATION = True
 # HEADLESS_SPECIFICATION_TEMPLATE_NAME = "headless/spec/swagger_cdn.html"
 HEADLESS_FRONTEND_URLS = {

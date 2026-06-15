@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 
 from allauth.account.models import EmailAddress
 
-from example.factories import (
+from shop.factories import (
     ProductFactory,
     ReviewFactory,
     CustomerFactory,
@@ -13,7 +13,7 @@ from example.factories import (
     TrademarkFactory,
     AdminUserFactory,
 )
-from example.models import Product, Review, Category, Trademark, Customer
+from shop.models import Product, Review, Category, Trademark, Customer
 
 User = get_user_model()
 

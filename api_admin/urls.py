@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from example.admin import site
+from shop.admin import site
 
 urlpatterns = [
     # Both the api admin and the default admin

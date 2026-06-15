@@ -178,8 +178,7 @@ class ChangelistView(APIAdminErrorViewMixin, APIView):
                         model_field = result._meta.get_field(field_name)
                         choices = getattr(model_field, "choices", None)
                         if choices:
-                            repr_list = [choice for choice in choices if choice[0] == value]
-                            result_repr = repr_list[0][1] if len(repr_list) > 1 else str(value)
+                            result_repr = next((choice[1] for choice in choices if choice[0] == value), None)
                     except FieldDoesNotExist:
                         pass
 

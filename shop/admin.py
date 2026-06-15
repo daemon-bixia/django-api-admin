@@ -9,9 +9,9 @@ from django_api_admin.constants import CORE_FIELD_ATTRIBUTES
 from django_api_admin.admins.model_admin import ShowFacets
 from django_api_admin.exceptions import allauth_exception_handler
 
-from example.permissions import IsMFAEnabledOrGracePeriod
-from example.models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review, Customer
-from example.actions import mark_out_of_stock
+from shop.permissions import IsMFAEnabledOrGracePeriod
+from shop.models import Product, ProductImage, ProductFeature, Metadata, Catalog, Review, Customer
+from shop.actions import mark_out_of_stock
 
 
 class AdminSite(APIAdminSite):

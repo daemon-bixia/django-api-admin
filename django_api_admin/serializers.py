@@ -90,7 +90,7 @@ class ActionSerializer(serializers.Serializer):
             ("", "---------"),
         ]
     )
-    selected_ids = serializers.MultipleChoiceField(choices=[("", "")])
+    selected_ids = serializers.MultipleChoiceField(required=False, choices=[("", "")])
     select_across = serializers.BooleanField(required=False, default=0)
 
 

@@ -396,7 +396,7 @@ class APIModelAdmin(BaseAPIModelAdmin):
             (action_serializer,),
             {
                 "action": serializers.ChoiceField(choices=[*self.get_action_choices(request)]),
-                "selected_ids": serializers.MultipleChoiceField(choices=[*choices]),
+                "selected_ids": serializers.MultipleChoiceField(required=False, choices=[*choices]),
             },
         )
 

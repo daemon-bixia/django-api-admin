@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
                 ('slug', models.SlugField(help_text='Unique slug for the category.', max_length=120, unique=True)),
                 ('description', models.TextField(blank=True, null=True)),
                 ('image', models.ImageField(blank=True, null=True, upload_to='category_images/')),
-                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subcategories', to='example.category')),
+                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subcategories', to='shop.category')),
             ],
             options={
                 'verbose_name_plural': 'Categories',
@@ -67,9 +67,9 @@ class Migration(migrations.Migration):
                 ('discount_price', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
                 ('description', models.TextField()),
                 ('date_created', models.DateTimeField(auto_now_add=True)),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='example.category')),
-                ('related_products', models.ManyToManyField(blank=True, to='example.product')),
-                ('trademark', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='products', to='example.trademark')),
+                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='shop.category')),
+                ('related_products', models.ManyToManyField(blank=True, to='shop.product')),
+                ('trademark', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='products', to='shop.trademark')),
             ],
         ),
         migrations.CreateModel(
@@ -78,8 +78,8 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('status', models.CharField(default='pending', max_length=50)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to='example.customer')),
-                ('products', models.ManyToManyField(related_name='orders', to='example.product')),
+                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='orders', to='shop.customer')),
+                ('products', models.ManyToManyField(related_name='orders', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -87,7 +87,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('metadata', models.JSONField(default=dict, help_text='Stores metadata in a key-value format.')),
-                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='meta_data', to='example.product')),
+                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='meta_data', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -95,7 +95,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('catalog_file', models.FileField(upload_to='catalogs/')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='catalogs', to='example.product')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='catalogs', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -103,7 +103,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('features', models.JSONField(default=list, help_text='JSON list of product features.')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='features_list', to='example.product')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='features_list', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -113,8 +113,8 @@ class Migration(migrations.Migration):
                 ('review_title', models.CharField(max_length=255)),
                 ('review_content', models.TextField()),
                 ('rating', models.PositiveSmallIntegerField(choices=[(1, 1), (2, 2), (3, 3), (4, 4), (5, 5)])),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='example.customer')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='example.product')),
+                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='shop.customer')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -122,8 +122,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('image', models.ImageField(upload_to='product_images/')),
-                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='image', to='example.product')),
-                ('tags', models.ManyToManyField(blank=True, related_name='images', to='example.tag')),
+                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='image', to='shop.product')),
+                ('tags', models.ManyToManyField(blank=True, related_name='images', to='shop.tag')),
             ],
         ),
     ]

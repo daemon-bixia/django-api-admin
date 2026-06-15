@@ -312,10 +312,10 @@ This section provides a simple example on how to use django-api-admin. If you're
 ## Roadmap
 
 - [x] Rewrite django.contrib.admin as an API
-- [x] Add support for Bulk Actions
+- [x] Add support for inline operations
+- [x] Add support for bulk actions
 - [x] Add OpenAPI documentation
-- [ ] Add support for charts
-- [ ] Add support for global full-text search
+
 
 See the [open issues](https://github.com/demon-bixia/django-api-admin/issues) for a full list of proposed features (and known issues).
 
