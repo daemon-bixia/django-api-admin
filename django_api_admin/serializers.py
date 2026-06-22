@@ -120,6 +120,7 @@ class ChangeListSerializer(serializers.Serializer):
 
     q = serializers.CharField(required=False, trim_whitespace=False, help_text=_("Search query."))
     p = serializers.IntegerField(required=False, min_value=1, help_text=_("Page number."))
+    pp = serializers.IntegerField(required=False, min_value=1, help_text=_("Number of rows per page."))
     all = serializers.BooleanField(required=False, help_text=_("Show all results."))
     o = serializers.CharField(required=False, help_text=_("The field(s) to use for ordering."))
 
@@ -562,6 +563,7 @@ class ConfigSerializer(serializers.Serializer):
     preserve_filters = serializers.BooleanField(help_text=_("Whether to preserve filters after saving an object."))
     full_count = serializers.IntegerField(help_text=_("The total number of objects in the database."))
     result_count = serializers.IntegerField(help_text=_("The number of objects matching the current filters."))
+    page_count = serializers.IntegerField(help_text=_("The number of pages."))
     action_choices = ActionChoiceSerializer(many=True, help_text=_("The list of available actions."))
     filters = FilterSerializer(many=True, help_text=_("The list of available filters."))
     list_display_fields = serializers.ListField(

@@ -158,6 +158,7 @@ class ChangelistView(APIAdminErrorViewMixin, APIView):
         # Generate changelist attributes (e.g result_list, paginator, result_count)
         cl.get_results(request)
         empty_value_display = cl.model_admin.get_empty_value_display()
+
         for result in cl.result_list:
             row = {"id": result.pk, "cells": {}}
 
@@ -189,7 +190,9 @@ class ChangelistView(APIAdminErrorViewMixin, APIView):
                     result_repr = empty_value_display
 
                 row["cells"][field_name] = result_repr
+
             rows.append(row)
+
         return rows
 
     def get_config(self, request, cl):
@@ -202,6 +205,7 @@ class ChangelistView(APIAdminErrorViewMixin, APIView):
         # Changelist pagination attributes
         config["full_count"] = cl.full_result_count
         config["result_count"] = cl.result_count
+        config["page_count"] = cl.paginator.num_pages
 
         # A list of action names and choices
         config["action_choices"] = cl.model_admin.get_action_choices(request, [])

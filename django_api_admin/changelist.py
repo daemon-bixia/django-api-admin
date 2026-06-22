@@ -40,6 +40,7 @@ from django_api_admin.utils.build_q_object_from_lookup_parameters import build_q
 ALL_VAR = "all"
 ORDER_VAR = "o"
 PAGE_VAR = "p"
+PER_PAGE_VAR = "pp"
 SEARCH_VAR = "q"
 ERROR_FLAG = "e"
 
@@ -86,7 +87,6 @@ class Changelist:
         self.date_hierarchy = date_hierarchy
         self.search_fields = search_fields
         self.list_select_related = list_select_related
-        self.list_per_page = list_per_page
         self.list_max_show_all = list_max_show_all
         self.model_admin = model_admin
         self.sortable_by = sortable_by
@@ -104,6 +104,10 @@ class Changelist:
             self.page_num = int(request.GET.get(PAGE_VAR, 1))
         except ValueError:
             self.page_num = 1
+        try:
+            self.list_per_page = int(request.GET.get(PER_PAGE_VAR, list_per_page))
+        except ValueError:
+            self.list_per_page = list_per_page
         self.show_all = ALL_VAR in request.GET
         self.add_facets = model_admin.show_facets is ShowFacets.ALWAYS or (
             model_admin.show_facets is ShowFacets.ALLOW and IS_FACETS_VAR in request.GET
@@ -117,6 +121,9 @@ class Changelist:
         if ERROR_FLAG in self.params:
             del self.params[ERROR_FLAG]
             del self.filter_params[ERROR_FLAG]
+        if PER_PAGE_VAR in self.params:
+            del self.params[PER_PAGE_VAR]
+            del self.filter_params[PER_PAGE_VAR]
         self.remove_facet_link = self.get_query_string(remove=[IS_FACETS_VAR])
         self.add_facet_link = self.get_query_string({IS_FACETS_VAR: True})
         self.list_editable = list_editable
