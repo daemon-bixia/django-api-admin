@@ -1,7 +1,6 @@
 from django.db import router
 from django.utils.translation import gettext as _
 from django.forms.models import _get_foreign_key
-from django.contrib.admin.utils import NestedObjects
 from django.utils.text import get_text_list
 
 from rest_framework.exceptions import NotFound
@@ -9,6 +8,7 @@ from rest_framework.exceptions import NotFound
 from django_api_admin.utils.get_related_name import get_related_name
 from django_api_admin.utils.get_changed_data import get_changed_data
 from django_api_admin.utils.format_error import format_error
+from django_api_admin.utils.nested_objects import NestedObjects
 
 
 class InlineBulkOperation:
